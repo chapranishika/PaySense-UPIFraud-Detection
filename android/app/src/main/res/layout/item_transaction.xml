@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    PaySense — item_transaction.xml
+    A single row in the dashboard RecyclerView.
+    Normal state  → white card, category icon, amount in dark text.
+    Fraud state   → light-red tinted card, red stroke, warning icon badge.
+-->
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/cardTransaction"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="8dp"
+    app:cardCornerRadius="14dp"
+    app:cardElevation="0dp"
+    app:strokeWidth="1dp"
+    app:strokeColor="@color/card_stroke_normal"
+    android:backgroundTint="@color/surface_card">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="14dp">
+
+        <!-- Category icon container (tinted circle) -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardIcon"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            app:cardCornerRadius="22dp"
+            app:cardElevation="0dp"
+            app:strokeWidth="0dp"
+            android:backgroundTint="@color/brand_secondary"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent">
+
+            <ImageView
+                android:id="@+id/ivCategoryIcon"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:layout_gravity="center"
+                android:src="@drawable/ic_payment"
+                app:tint="@color/brand_primary"
+                tools:src="@drawable/ic_fastfood" />
+
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Payee name -->
+        <TextView
+            android:id="@+id/tvPayee"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_marginEnd="8dp"
+            android:textColor="@color/text_primary"
+            android:textSize="14sp"
+            android:fontFamily="sans-serif-medium"
+            android:maxLines="1"
+            android:ellipsize="end"
+            app:layout_constraintStart_toEndOf="@id/cardIcon"
+            app:layout_constraintEnd_toStartOf="@id/tvAmount"
+            app:layout_constraintTop_toTopOf="@id/cardIcon"
+            tools:text="Zomato India" />
+
+        <!-- Category + date row -->
+        <LinearLayout
+            android:id="@+id/layoutSubline"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_marginTop="2dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            app:layout_constraintStart_toEndOf="@id/cardIcon"
+            app:layout_constraintEnd_toStartOf="@id/tvAmount"
+            app:layout_constraintTop_toBottomOf="@id/tvPayee">
+
+            <!-- Category chip label -->
+            <TextView
+                android:id="@+id/tvCategory"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_category_chip"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="2dp"
+                android:textColor="@color/brand_primary"
+                android:textSize="11sp"
+                android:maxLines="1"
+                tools:text="Food" />
+
+            <!-- Dot separator -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text=" · "
+                android:textColor="@color/text_tertiary"
+                android:textSize="11sp" />
+
+            <!-- Date -->
+            <TextView
+                android:id="@+id/tvDate"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/text_tertiary"
+                android:textSize="11sp"
+                tools:text="26 Apr" />
+
+        </LinearLayout>
+
+        <!-- Amount — right-aligned -->
+        <TextView
+            android:id="@+id/tvAmount"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/text_primary"
+            android:textSize="15sp"
+            android:fontFamily="sans-serif-medium"
+            app:layout_constraintEnd_toStartOf="@id/ivFraudWarning"
+            app:layout_constraintTop_toTopOf="@id/cardIcon"
+            app:layout_constraintBottom_toTopOf="@id/tvFraudScore"
+            tools:text="₹577.16" />
+
+        <!-- Fraud warning icon — GONE by default, VISIBLE when isFraud=true -->
+        <ImageView
+            android:id="@+id/ivFraudWarning"
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:layout_marginEnd="0dp"
+            android:src="@drawable/ic_warning"
+            app:tint="#F44336"
+            android:visibility="gone"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="@id/tvAmount"
+            app:layout_constraintBottom_toBottomOf="@id/tvAmount"
+            tools:visibility="visible" />
+
+        <!-- Fraud score sub-label — GONE by default -->
+        <TextView
+            android:id="@+id/tvFraudScore"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:textColor="#F44336"
+            android:textSize="11sp"
+            android:visibility="gone"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tvAmount"
+            tools:text="Score: 0.98"
+            tools:visibility="visible" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</com.google.android.material.card.MaterialCardView>
+
+<!--
+================================================================================
+  res/drawable/bg_category_chip.xml  — rounded pill background for category label
+================================================================================
+  <?xml version="1.0" encoding="utf-8"?>
+  <shape xmlns:android="http://schemas.android.com/apk/res/android"
+      android:shape="rectangle">
+      <corners android:radius="20dp" />
+      <solid android:color="@color/brand_secondary" />
+  </shape>
+================================================================================
+
+  res/values/colors.xml additions:
+  <color name="card_stroke_normal">#E5E7EB</color>
+  <color name="card_stroke_fraud">#FFCDD2</color>
+================================================================================
+-->

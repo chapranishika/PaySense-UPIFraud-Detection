@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    PaySense — layout_bottom_sheet_category.xml
+    Human-in-the-Loop category selection sheet.
+    Shown once per unknown payee. Dismissed after chip tap.
+    Design: Google Pay style — rounded top corners, handle, clean chips.
+-->
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingBottom="32dp"
+    android:background="@drawable/bg_bottom_sheet">
+
+    <!-- Drag handle -->
+    <View
+        android:layout_width="32dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="10dp"
+        android:background="@drawable/bg_drag_handle" />
+
+    <!-- Header: transaction summary -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingHorizontal="24dp"
+        android:paddingTop="20dp"
+        android:paddingBottom="4dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="What was this payment for?"
+            android:textColor="@color/text_primary"
+            android:textSize="17sp"
+            android:fontFamily="sans-serif-medium" />
+
+        <!-- Dynamic prompt: "₹150.00 to Ramesh Auto" -->
+        <TextView
+            android:id="@+id/tvPromptDetail"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textColor="@color/text_secondary"
+            android:textSize="14sp"
+            tools:text="₹150.00 to Ramesh Auto" />
+
+    </LinearLayout>
+
+    <!-- Divider -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/divider_color"
+        android:layout_marginTop="16dp"
+        android:layout_marginHorizontal="24dp" />
+
+    <!-- Category chip grid using ChipGroup with wrapping -->
+    <com.google.android.material.chip.ChipGroup
+        android:id="@+id/chipGroupCategories"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingHorizontal="20dp"
+        android:paddingTop="20dp"
+        android:paddingBottom="8dp"
+        app:chipSpacingHorizontal="8dp"
+        app:chipSpacingVertical="8dp"
+        app:singleSelection="true">
+
+        <!--
+            Each Chip is styled with style="@style/PaySenseChip" defined below.
+            The id suffix matches the category string written to Room.
+        -->
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipFood"
+            style="@style/PaySenseChip"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🍕  Food"
+            android:tag="Food" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipTravel"
+            style="@style/PaySenseChip"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🚗  Travel"
+            android:tag="Travel" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipShopping"
+            style="@style/PaySenseChip"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🛍️  Shopping"
+            android:tag="Shopping" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipBills"
+            style="@style/PaySenseChip"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="📋  Bills"
+            android:tag="Bills" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipGrocery"
+            style="@style/PaySenseChip"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🛒  Grocery"
+            android:tag="Grocery" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipEntertainment"
+            style="@style/PaySenseChip"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🎬  Entertainment"
+            android:tag="Entertainment" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipHealthcare"
+            style="@style/PaySenseChip"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🏥  Healthcare"
+            android:tag="Healthcare" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipMisc"
+            style="@style/PaySenseChip"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="•••  Misc"
+            android:tag="Misc" />
+
+    </com.google.android.material.chip.ChipGroup>
+
+    <!-- Reminder text — "You won't be asked again" -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingHorizontal="24dp"
+        android:paddingTop="12dp"
+        android:text="Tap once to save. You won't be asked about this payee again."
+        android:textColor="@color/text_tertiary"
+        android:textSize="12sp"
+        android:gravity="center" />
+
+    <!-- Skip / cancel link -->
+    <TextView
+        android:id="@+id/tvSkip"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="12dp"
+        android:text="Skip for now"
+        android:textColor="@color/text_secondary"
+        android:textSize="13sp"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="8dp" />
+
+</LinearLayout>

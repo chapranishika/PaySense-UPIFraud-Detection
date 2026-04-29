@@ -1,0 +1,71 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+    id 'org.jetbrains.kotlin.kapt'
+    id 'com.google.devtools.ksp'
+}
+
+android {
+    namespace 'com.paysense.app'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.paysense.app"
+        minSdk 24
+        targetSdk 34
+        versionCode 1
+        versionName "1.0"
+
+        ksp {
+            arg("room.schemaLocation", "$projectDir/schemas")
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+
+    buildFeatures {
+        viewBinding true
+    }
+
+    kapt {
+        correctErrorTypes = true
+    }
+}
+
+dependencies {
+    // ── Core Android ────────────────────────────────────────────────────────
+    implementation("androidx.core:core-ktx:1.13.1")
+    implementation("androidx.appcompat:appcompat:1.7.0")
+    implementation("com.google.android.material:material:1.12.0")
+
+    // ── Room (Local SQLite — Layer 2 cache) ──────────────────────────────────
+    implementation "androidx.room:room-runtime:2.8.4"
+    implementation "androidx.room:room-ktx:2.8.4"
+    ksp "androidx.room:room-compiler:2.8.4"
+
+    // ── Retrofit2 + OkHttp (FastAPI network call — Layer 3) ─────────────────
+    implementation("com.squareup.retrofit2:retrofit:2.11.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.11.0")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+
+    // ── Coroutines (async operations in SmsReceiver) ─────────────────────────
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
+
+    // ── Gson (JSON serialisation for Retrofit) ───────────────────────────────
+    implementation("com.google.code.gson:gson:2.11.0")
+}
