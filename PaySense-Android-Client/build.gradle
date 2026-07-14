@@ -1,0 +1,50 @@
+// ============================================================================
+//  PaySense — build.gradle (Module: app)
+//  Add all of these to the dependencies { } block in your module-level
+//  build.gradle file. Versions current as of mid-2025.
+// ============================================================================
+
+dependencies {
+
+    // ── Core Android ────────────────────────────────────────────────────────
+    implementation("androidx.core:core-ktx:1.13.1")
+    implementation("androidx.appcompat:appcompat:1.7.0")
+    implementation("com.google.android.material:material:1.12.0")
+
+    // ── Room (Local SQLite — Layer 2 cache) ──────────────────────────────────
+    val roomVersion = "2.6.1"
+    implementation("androidx.room:room-runtime:$roomVersion")
+    implementation("androidx.room:room-ktx:$roomVersion")        // Coroutine support
+    kapt("androidx.room:room-compiler:$roomVersion")             // Annotation processor
+
+    // ── Retrofit2 + OkHttp (FastAPI network call — Layer 3) ─────────────────
+    implementation("com.squareup.retrofit2:retrofit:2.11.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.11.0")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+
+    // ── Coroutines (async operations in SmsReceiver) ─────────────────────────
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
+
+    // ── Gson (JSON serialisation for Retrofit) ───────────────────────────────
+    implementation("com.google.code.gson:gson:2.11.0")
+}
+
+// ── Also add 'kapt' to your plugins block at the top of build.gradle ────────
+// plugins {
+//     id("com.android.application")
+//     id("org.jetbrains.kotlin.android")
+//     id("kotlin-kapt")          ← add this line for Room annotation processing
+// }
+
+// ── Add this to android { } block for Room schema export ────────────────────
+// android {
+//     defaultConfig {
+//         kapt {
+//             arguments {
+//                 arg("room.schemaLocation", "$projectDir/schemas")
+//             }
+//         }
+//     }
+// }

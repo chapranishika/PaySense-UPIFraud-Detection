@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    file_paths.xml — Phase 4: FileProvider configuration
+
+    Declares which directories FileProvider is allowed to serve as
+    content:// URIs. cache-path covers context.cacheDir, where
+    FinanceExportUtil and PdfReportGenerator write their output files.
+
+    Place this file in: res/xml/file_paths.xml
+-->
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <cache-path name="exports" path="." />
+</paths>

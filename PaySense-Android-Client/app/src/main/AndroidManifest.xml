@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+================================================================================
+  PaySense — AndroidManifest.xml (relevant snippets only)
+  Merge these blocks into your full AndroidManifest.xml at the correct locations.
+================================================================================
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.paysense.app">
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+         BLOCK 1 — PERMISSIONS
+         Place these lines INSIDE <manifest> but OUTSIDE <application>.
+
+         RECEIVE_SMS : lets the BroadcastReceiver intercept incoming messages.
+         READ_SMS    : lets us read the full message body from the SMS inbox
+                       (needed for fallback polling if broadcast is delayed).
+
+         Both are classified as "dangerous" permissions — the user must
+         explicitly grant them at runtime (see RuntimePermissionHelper.kt).
+         ══════════════════════════════════════════════════════════════════════ -->
+    <uses-permission android:name="android.permission.RECEIVE_SMS" />
+    <uses-permission android:name="android.permission.READ_SMS" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+         BLOCK 2 — RECEIVER REGISTRATION
+         Place this block INSIDE <application>.
+
+         exported="false"  : no other app can trigger our receiver directly.
+                             Security baseline — never expose SMS receivers.
+         android:priority  : 999 keeps us near the top of the broadcast chain
+                             so we intercept before any default SMS app.
+                             Max is 1000 (reserved for system).
+         ══════════════════════════════════════════════════════════════════════ -->
+    <application>
+
+        <receiver
+            android:name=".layer1.SmsReceiver"
+            android:exported="false"
+            android:permission="android.permission.BROADCAST_SMS">
+
+            <intent-filter android:priority="999">
+                <action android:name="android.provider.Telephony.SMS_RECEIVED" />
+            </intent-filter>
+
+        </receiver>
+
+        <!--
+            Also add this if you target Android 12+ (API 31+).
+            Without it, the system will refuse to start the receiver on cold boot.
+        -->
+        <receiver
+            android:name=".layer1.SmsReceiver"
+            android:exported="true"
+            android:permission="android.permission.BROADCAST_SMS">
+            <intent-filter>
+                <action android:name="android.provider.Telephony.SMS_RECEIVED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- ══════════════════════════════════════════════════════════════════════
+             BLOCK 3 — FILEPROVIDER (Phase 4: CSV/PDF export sharing)
+             Place this block INSIDE <application>, alongside the receivers.
+
+             Since Android 10, sharing file:// URIs with other apps throws
+             FileUriExposedException. FileProvider wraps export files
+             (written to context.cacheDir by FinanceExportUtil and
+             PdfReportGenerator) in a content:// URI with a temporary
+             read-permission grant for the receiving app (Gmail, Drive,
+             WhatsApp, etc.).
+
+             authorities MUST match BuildConfig.APPLICATION_ID + ".fileprovider"
+             exactly, or FileProvider.getUriForFile() throws IllegalArgumentException.
+
+             res/xml/file_paths.xml declares cacheDir as the shareable root.
+             ══════════════════════════════════════════════════════════════════════ -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
+    </application>
+
+</manifest>

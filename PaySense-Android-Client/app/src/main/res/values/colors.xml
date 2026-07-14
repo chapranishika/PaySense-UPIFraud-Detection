@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    colors.xml — PaySense Guardian colour palette
+    Turquoise + Purple + Gold theme
+
+    Usage in XML:  @color/colorPrimary
+    Usage in Kotlin: ContextCompat.getColor(context, R.color.colorPrimary)
+                     or Color.parseColor("#2D1B69") for programmatic use
+-->
+<resources>
+    <!-- Primary — Purple (replaces Navy #0D1B3E) -->
+    <color name="colorPrimary">#2D1B69</color>
+    <color name="colorPrimaryDark">#1E0F4A</color>
+    <color name="colorPrimaryLight">#4C2F9E</color>
+    <color name="colorPurple3">#6B46C1</color>
+    <color name="colorPurpleStat">#1A0F4A</color>
+
+    <!-- Accent — Turquoise (replaces Teal #028090) -->
+    <color name="colorAccent">#00B4D8</color>
+    <color name="colorAccentLight">#48CAE4</color>
+    <color name="colorAccentLighter">#90E0EF</color>
+    <color name="colorAccentBg">#E0F7FA</color>
+
+    <!-- Highlight — Gold (replaces Amber #F57F17) -->
+    <color name="colorGold">#F59E0B</color>
+    <color name="colorGoldLight">#FCD34D</color>
+    <color name="colorGoldBg">#FEF3C7</color>
+
+    <!-- Semantic -->
+    <color name="colorDanger">#E53935</color>
+    <color name="colorSuccess">#43A047</color>
+    <color name="colorWarning">#F59E0B</color>
+    <color name="colorMuted">#A89CC8</color>
+    <color name="colorSurface">#F5F0FF</color>
+    <color name="colorCardBg">#FFFFFF</color>
+    <color name="colorDivider">#EDE9FE</color>
+    <color name="colorTextPrimary">#2D1B69</color>
+    <color name="colorTextSecondary">#64748B</color>
+    <color name="colorTextHint">#94A3B8</color>
+    <color name="colorStatPillBg">#1A0F4A</color>
+
+    <!-- Budget status -->
+    <color name="colorBudgetOk">#43A047</color>
+    <color name="colorBudgetWarning">#F59E0B</color>
+    <color name="colorBudgetOver">#E53935</color>
+    <color name="colorBudgetNone">#A89CC8</color>
+</resources>

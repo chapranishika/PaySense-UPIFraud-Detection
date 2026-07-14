@@ -1,0 +1,29 @@
+version: "3.9"
+
+services:
+  paysense-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: paysense-guardian-api
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - APP_ENV=development
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-paysense-dev-secret-change-in-prod}
+      - TOKEN_EXPIRE_MIN=${TOKEN_EXPIRE_MIN:-60}
+      - API_DEMO_USER=${API_DEMO_USER:-paysense}
+      - API_DEMO_PASS=${API_DEMO_PASS:-guardian2025}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-*}
+    volumes:
+      # Mount artefacts directory so you can update models without rebuilding image
+      - ./artefacts:/app/artefacts:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped

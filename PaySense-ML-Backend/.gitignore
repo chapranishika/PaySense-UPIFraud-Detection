@@ -1,0 +1,11 @@
+# *.pkl
+# artefacts/
+*.csv
+data/
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+.idea/
+.DS_Store

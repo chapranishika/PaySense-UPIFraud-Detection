@@ -1,0 +1,12 @@
+*.apk
+*.aab
+*.pyc
+__pycache__/
+venv/
+.venv/
+*.jks
+*.keystore
+local.properties
+.idea/
+.DS_Store
+.env

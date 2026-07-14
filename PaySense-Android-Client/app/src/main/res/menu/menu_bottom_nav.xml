@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    menu_bottom_nav.xml
+    Two-tab bottom navigation for PaySense.
+    Tab 1: Dashboard (fraud detection feed)
+    Tab 2: Finance  (spending tracker — Phase 1)
+    Place this file in: res/menu/menu_bottom_nav.xml
+-->
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item
+        android:id="@+id/nav_dashboard"
+        android:icon="@drawable/ic_payment"
+        android:title="Dashboard"
+        android:contentDescription="Transaction dashboard with fraud alerts" />
+
+    <item
+        android:id="@+id/nav_finance"
+        android:icon="@drawable/ic_receipt"
+        android:title="Finance"
+        android:contentDescription="Spending tracker and category breakdown" />
+
+</menu>
