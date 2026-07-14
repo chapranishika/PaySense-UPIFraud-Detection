@@ -1,6 +1,6 @@
 """
 ================================================================================
-  PaySense Guardian — FastAPI Inference Backend  (v2 — Production Hardened)
+  PaySense: Finlatics and Finance Flow — FastAPI Inference Backend  (v2)
   ────────────────────────────────────────────────────────────────────────────
   Combines the best of PaySense (UPI-native ML, per-user z-score, Finance
   Tracker integration) and UPI Guardian (JWT auth, rate limiting, structured
@@ -128,7 +128,7 @@ async def lifespan(app: FastAPI):
 #  FASTAPI APP
 # ════════════════════════════════════════════════════════════════════════════
 app = FastAPI(
-    title       = "PaySense Guardian API",
+    title       = "PaySense: Finlatics and Finance Flow API",
     description = (
         "Three-layer UPI fraud detection with per-user personalisation, "
         "multi-model ensemble scoring, and AI-powered savings recommendations. "

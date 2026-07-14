@@ -1,4 +1,4 @@
-# PaySense — UPI Fraud Detection System
+# PaySense — Finlatics and Finance Flow
 
 > A three-layer zero-trust fraud detection system for Indian UPI payments, built as an Android application with a FastAPI + XGBoost ML backend. Every incoming bank SMS is parsed, categorised, and scored for fraud risk in real time — personalised to each individual user's spending habits.
 
