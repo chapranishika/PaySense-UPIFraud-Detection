@@ -317,3 +317,5 @@ The `PaySense-Report/` folder contains a complete **10-page IEEE-format LaTeX re
 ---
 
 *PaySense — Nishika Chapra · KJ Somaiya Institute of Technology · 2025*
+
+Created with love ❤️ by Nishika Chapra
