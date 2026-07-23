@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="PaySenseChip" parent="Widget.Material3.Chip.Filter">
+        <item name="android:textSize">13sp</item>
+        <item name="chipCornerRadius">20dp</item>
+        <item name="chipBackgroundColor">@color/brand_secondary</item>
+        <item name="checkedIconVisible">false</item>
+        <item name="chipStrokeColor">@color/brand_primary</item>
+        <item name="chipStrokeWidth">0dp</item>
+        <item name="android:textColor">@color/text_primary</item>
+    </style>
+</resources>

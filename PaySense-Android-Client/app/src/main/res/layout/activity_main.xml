@@ -30,7 +30,7 @@
             app:title="PaySense"
             app:titleTextColor="@color/text_primary"
             app:titleTextAppearance="@style/TextAppearance.Material3.HeadlineSmall"
-            app:menu="@menu/menu_main" />
+            />
 
     </com.google.android.material.appbar.AppBarLayout>
 
