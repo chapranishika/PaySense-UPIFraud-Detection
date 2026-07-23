@@ -51,6 +51,8 @@ import uvicorn
 from dotenv import load_dotenv
 
 from fastapi               import Depends, FastAPI, HTTPException, Request, status
+from fastapi.responses     import HTMLResponse
+from fastapi.staticfiles   import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security      import HTTPAuthorizationCredentials, HTTPBearer
 from jose                  import JWTError, jwt
@@ -138,6 +140,21 @@ app = FastAPI(
     version     = "2.0.0",
     lifespan    = lifespan,
 )
+
+# ── Serve static UI files ──────────────────────────────────────────────────────
+static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
+if not os.path.exists(static_dir):
+    os.makedirs(static_dir, exist_ok=True)
+
+app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
+@app.get("/", response_class=HTMLResponse, tags=["UI"], summary="Serve the dashboard UI")
+async def read_index():
+    index_path = os.path.join(static_dir, "index.html")
+    if not os.path.exists(index_path):
+        return "<html><body><h1>PaySense Dashboard Loading...</h1></body></html>"
+    with open(index_path, "r", encoding="utf-8") as f:
+        return f.read()
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)

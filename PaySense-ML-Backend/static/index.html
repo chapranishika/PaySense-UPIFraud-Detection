@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PaySense 2.0 — Guardian Hub</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+
+    <!-- ========================================== -->
+    <!--  1. AUTH SCREEN (LOGIN)                    -->
+    <!-- ========================================== -->
+    <div id="auth-screen" class="screen active">
+        <div class="auth-card glass">
+            <div class="auth-header">
+                <div class="logo">
+                    <svg viewBox="0 0 24 24" width="32" height="32" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round" class="brand-icon"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                    <span>PaySense <span class="badge-accent">Guardian 2.0</span></span>
+                </div>
+                <h2>Welcome Back</h2>
+                <p>Enter your credentials to access the secure UPI Fraud & Finance Dashboard</p>
+            </div>
+            
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" placeholder="Enter 'paysense'" required autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" placeholder="Enter 'guardian2025'" required autocomplete="current-password">
+                </div>
+                <div id="login-error" class="error-msg hide"></div>
+                <button type="submit" class="btn btn-primary btn-block">
+                    <span>Authenticate</span>
+                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                </button>
+            </form>
+
+            <div class="auth-footer">
+                <p>🔒 Demo Mode: `paysense` & `guardian2025` · Powered by XGBoost Scorer</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!--  2. DASHBOARD SCREEN                       -->
+    <!-- ========================================== -->
+    <div id="dashboard-screen" class="screen">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar glass">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round" class="brand-icon"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                    <span>PaySense</span>
+                </div>
+            </div>
+
+            <nav class="nav-menu">
+                <a href="#" class="nav-item active" data-tab="tab-overview">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
+                    <span>Overview</span>
+                </a>
+                <a href="#" class="nav-item" data-tab="tab-finance">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                    <span>Finance</span>
+                </a>
+                <a href="#" class="nav-item" data-tab="tab-assistant">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                    <span>AI Assistant</span>
+                    <span class="pulse-dot"></span>
+                </a>
+                <a href="#" class="nav-item" data-tab="tab-profile">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                    <span>Profile</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <a href="#" id="logout-btn" class="nav-item logout">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                    <span>Log Out</span>
+                </a>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="content-header">
+                <div class="header-title">
+                    <h1 id="active-tab-title">Overview</h1>
+                    <p id="active-tab-subtitle">Real-time fraud defense baselines and transaction intercept logs</p>
+                </div>
+                <div class="user-profile">
+                    <span class="user-name">Nishika Chapra</span>
+                    <div class="avatar">NC</div>
+                </div>
+            </header>
+
+            <!-- ========================================== -->
+            <!--  TAB: OVERVIEW                             -->
+            <!-- ========================================== -->
+            <section id="tab-overview" class="tab-content active">
+                <!-- Summary Metrics Cards -->
+                <div class="metrics-grid">
+                    <div class="metric-card glass">
+                        <div class="metric-info">
+                            <span class="title">User Balance</span>
+                            <h3>₹12,000.00</h3>
+                        </div>
+                        <div class="metric-icon val-green">
+                            <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect><line x1="12" y1="10" x2="12" y2="14"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+                        </div>
+                    </div>
+
+                    <div class="metric-card glass">
+                        <div class="metric-info">
+                            <span class="title">Monthly Spends</span>
+                            <h3>₹12,500.00</h3>
+                        </div>
+                        <div class="metric-icon val-blue">
+                            <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                        </div>
+                    </div>
+
+                    <div class="metric-card glass">
+                        <div class="metric-info">
+                            <span class="title">Blocked Fraud Alerts</span>
+                            <h3 id="fraud-counter">0</h3>
+                        </div>
+                        <div class="metric-icon val-red" id="alert-icon-wrapper">
+                            <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                        </div>
+                    </div>
+
+                    <div class="metric-card glass">
+                        <div class="metric-info">
+                            <span class="title">Ensemble Status</span>
+                            <span class="badge badge-online">3 Active Scorers</span>
+                        </div>
+                        <div class="metric-icon val-purple">
+                            <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l-7 4a2 2 0 0 0 2 0l7-4a2 2 0 0 0 1-1.73z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-grid">
+                    <!-- Feed & Logs -->
+                    <div class="grid-col-2 glass feed-card">
+                        <div class="card-header">
+                            <h2>Transaction Log Feed</h2>
+                            <button id="btn-open-modal" class="btn btn-secondary btn-sm">
+                                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                <span>Add Spent</span>
+                            </button>
+                        </div>
+                        <div class="transaction-list" id="transaction-feed">
+                            <!-- Populated dynamically by JS -->
+                            <div class="empty-state">
+                                <p>No transactions parsed yet. Try adding one manually or simulation SMS.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sandbox & API details -->
+                    <div class="grid-col-1 glass system-card">
+                        <div class="card-header">
+                            <h2>Gateway Controls</h2>
+                        </div>
+                        
+                        <div class="control-box">
+                            <h3>Test SMS Interceptor</h3>
+                            <p class="description">Paste raw bank alert template to test Layer 1 regex engine parsing.</p>
+                            
+                            <textarea id="test-sms-body" rows="3" class="form-input">Your a/c XX1234 debited Rs.500.00 on 26-Apr-25 to Zomato India UPI Ref: 512345678901.</textarea>
+                            
+                            <div class="btn-group">
+                                <button id="btn-send-sms" class="btn btn-secondary btn-block">Simulate SMS Intercept</button>
+                            </div>
+                        </div>
+
+                        <div class="control-box">
+                            <h3>System Health Probe</h3>
+                            <div class="health-item">
+                                <span class="label">Backend Host:</span>
+                                <span id="health-host">http://localhost:8000</span>
+                            </div>
+                            <div class="health-item">
+                                <span class="label">Status:</span>
+                                <span id="health-status" class="badge">Checking...</span>
+                            </div>
+                            <div class="health-item">
+                                <span class="label">Active Model:</span>
+                                <span id="health-model" class="badge badge-outline">None</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========================================== -->
+            <!--  TAB: FINANCE                              -->
+            <!-- ========================================== -->
+            <section id="tab-finance" class="tab-content">
+                <div class="dashboard-grid">
+                    <div class="grid-col-2 glass">
+                        <div class="card-header">
+                            <h2>Category Spending Analysis</h2>
+                        </div>
+                        <div class="chart-container">
+                            <div class="category-summary-grid" id="category-bars">
+                                <!-- Progress bars loaded dynamically by JS -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid-col-1 glass">
+                        <div class="card-header">
+                            <h2>Savings Goals</h2>
+                        </div>
+                        <div class="goal-box">
+                            <div class="goal-header">
+                                <h3>Active Budget Goal</h3>
+                                <span class="goal-amount">₹15,000 Limit</span>
+                            </div>
+                            <div class="progress-bar-wrapper">
+                                <div class="progress-bar-container">
+                                    <div id="goal-progress" class="progress-bar" style="width: 0%;"></div>
+                                </div>
+                                <span id="goal-percentage" class="progress-label">0% spent</span>
+                            </div>
+                            <p class="goal-tip">Tip: Keeping budget under ₹15,000 keeps your overall fraud risk threshold stable.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========================================== -->
+            <!--  TAB: AI ASSISTANT                         -->
+            <!-- ========================================== -->
+            <section id="tab-assistant" class="tab-content">
+                <div class="assistant-container glass">
+                    <!-- Left: Quick Actions -->
+                    <div class="assistant-actions">
+                        <h3>Ask PaySense AI</h3>
+                        <p class="description">Quickly query the local assistant for spending analysis and coaching tips.</p>
+                        <button class="btn btn-outline btn-block chat-shortcut" data-query="Give me a quick spending summary">
+                            <span>📊 Spend Summary</span>
+                        </button>
+                        <button class="btn btn-outline btn-block chat-shortcut" data-query="How can I save money on dining out?">
+                            <span>🍔 Food Savings Tip</span>
+                        </button>
+                        <button class="btn btn-outline btn-block chat-shortcut" data-query="Tell me about my fraud alert status">
+                            <span>🛡️ Fraud Security Status</span>
+                        </button>
+                    </div>
+
+                    <!-- Right: Chat Area -->
+                    <div class="chat-area">
+                        <div class="chat-messages" id="chat-box">
+                            <div class="message assistant">
+                                <div class="message-bubble">
+                                    Hi Nishika! I am your PaySense AI Assistant. I monitor your local Room database logs and coordinate with the FastAPI model to keep you secure and help you save money. Ask me anything!
+                                </div>
+                            </div>
+                        </div>
+                        <div class="chat-input-bar">
+                            <input type="text" id="chat-input" placeholder="Type your financial question..." autocomplete="off">
+                            <button id="chat-send-btn" class="btn btn-primary">
+                                <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========================================== -->
+            <!--  TAB: PROFILE                              -->
+            <!-- ========================================== -->
+            <section id="tab-profile" class="tab-content">
+                <div class="profile-container glass">
+                    <div class="profile-header-card">
+                        <div class="large-avatar">NC</div>
+                        <div class="profile-meta">
+                            <h2>Nishika Chapra</h2>
+                            <p>Author · KJ Somaiya Institute of Technology (2025)</p>
+                            <span class="badge badge-accent">Authorized User</span>
+                        </div>
+                    </div>
+
+                    <div class="profile-details-grid">
+                        <div class="detail-box">
+                            <h3>Personalized Baseline Profile</h3>
+                            <div class="detail-row">
+                                <span class="label">Home City Tier:</span>
+                                <span class="val">Tier 2</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="label">Age Group:</span>
+                                <span class="val">25-34</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="label">Preferred App:</span>
+                                <span class="val">GPay (Android)</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="label">Account Age:</span>
+                                <span class="val">365 Days</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="label">Linked Banks:</span>
+                                <span class="val">1.0</span>
+                            </div>
+                        </div>
+
+                        <div class="detail-box">
+                            <h3>XGBoost Ensemble Settings</h3>
+                            <div class="detail-row">
+                                <span class="label">Decision Threshold:</span>
+                                <span class="val">0.4000</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="label">Ensemble Weights:</span>
+                                <span class="val">Rules (0.15) · XGBoost (0.85)</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="label">Primary Scorer:</span>
+                                <span class="val val-green">Active</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- ========================================== -->
+    <!--  3. MODAL: ADD SPENT                       -->
+    <!-- ========================================== -->
+    <div id="add-spent-modal" class="modal-overlay">
+        <div class="modal-card glass">
+            <div class="modal-header">
+                <h2>Manually Add Transaction</h2>
+                <button id="btn-close-modal" class="btn-close">
+                    <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+            
+            <form id="add-transaction-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="input-payee">Payee Name</label>
+                        <input type="text" id="input-payee" placeholder="e.g. Amazon, Starbucks" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="input-amount">Amount (INR)</label>
+                        <input type="number" id="input-amount" step="0.01" min="1" placeholder="e.g. 500" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="input-category">Category</label>
+                        <select id="input-category">
+                            <option value="Food & Dining">Food & Dining</option>
+                            <option value="Shopping">Shopping</option>
+                            <option value="Grocery">Grocery</option>
+                            <option value="Travel">Travel</option>
+                            <option value="Entertainment">Entertainment</option>
+                            <option value="Uncategorized">Uncategorized</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="input-app">Payment App</label>
+                        <select id="input-app">
+                            <option value="GPay">GPay</option>
+                            <option value="PhonePe">PhonePe</option>
+                            <option value="Paytm">Paytm</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="input-device">Device Type</label>
+                        <select id="input-device">
+                            <option value="Android">Android</option>
+                            <option value="iOS">iOS (Suspicious)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="input-hour">Hour of Day</label>
+                        <input type="number" id="input-hour" min="0" max="23" value="12">
+                    </div>
+                </div>
+
+                <div class="form-row checkbox-row">
+                    <label class="checkbox-container">
+                        <input type="checkbox" id="input-new-device">
+                        <span class="checkmark"></span>
+                        New Device Flag (High risk)
+                    </label>
+                    <label class="checkbox-container">
+                        <input type="checkbox" id="input-ip-mismatch">
+                        <span class="checkmark"></span>
+                        IP Location Mismatch (High risk)
+                    </label>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" id="btn-cancel-modal" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Score & Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
