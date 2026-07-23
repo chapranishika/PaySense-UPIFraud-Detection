@@ -64,6 +64,26 @@ class DashboardContentFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         setupRecyclerView()
         observeViewModel()
+        displayRandomQuote()
+
+        binding.fabAddTransaction.setOnClickListener {
+            AddTransactionDialog.newInstance()
+                .show(parentFragmentManager, AddTransactionDialog.TAG)
+        }
+    }
+
+    private fun displayRandomQuote() {
+        val quotes = arrayOf(
+            "Do not save what is left after spending, but spend what is left after saving." to "Warren Buffett",
+            "A penny saved is a penny earned." to "Benjamin Franklin",
+            "Beware of little expenses; a small leak will sink a great ship." to "Benjamin Franklin",
+            "An investment in knowledge pays the best interest." to "Benjamin Franklin",
+            "Money is a terrible master but an excellent servant." to "P.T. Barnum",
+            "Wealth consists not in having great possessions, but in having few wants." to "Epictetus"
+        )
+        val selected = quotes.random()
+        binding.tvDailyQuote.text = "\"${selected.first}\""
+        binding.tvDailyQuoteAuthor.text = "— ${selected.second}"
     }
 
     override fun onDestroyView() {

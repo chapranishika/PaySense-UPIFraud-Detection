@@ -162,6 +162,46 @@ class PaySenseViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    fun addManualTransaction(
+        payee: String,
+        amount: Double,
+        category: String,
+        app: String,
+        device: String,
+        hour: Int,
+        newDevice: Int,
+        ipMismatch: Int
+    ) {
+        viewModelScope.launch {
+            val txnId = "TXN" + System.currentTimeMillis()
+            val dateFormat = java.text.SimpleDateFormat("dd-MMM-yy", java.util.Locale.getDefault())
+            val dateStr = dateFormat.format(java.util.Date())
+
+            val parsed = com.paysense.app.layer1.ParsedTransaction(
+                senderId  = "AD-${app.uppercase()}",
+                rawBody   = "Manually entered transaction of ₹$amount to $payee via $app",
+                amount    = amount,
+                payee     = payee,
+                txnId     = txnId,
+                date      = dateStr,
+                timestamp = System.currentTimeMillis()
+            )
+
+            try {
+                val service = com.paysense.app.layer3.FraudApiService.getInstance(getApplication())
+                service.scoreTransaction(
+                    txn = parsed,
+                    category = category,
+                    newDeviceFlag = newDevice,
+                    ipLocationMismatch = ipMismatch,
+                    deviceType = device
+                )
+            } catch (e: Exception) {
+                _error.value = "Failed to score transaction: ${e.message}"
+            }
+        }
+    }
+
     /**
      * Clears any error state once the UI has shown the error to the user.
      */

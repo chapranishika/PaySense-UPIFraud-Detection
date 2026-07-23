@@ -173,3 +173,20 @@ data class TransactionResponse(
     @SerializedName("model_version")
     val modelVersion: String
 )
+
+data class WeeklyInsight(
+    @SerializedName("period")
+    val period: String,
+    @SerializedName("total_spent")
+    val totalSpent: Double,
+    @SerializedName("top_category")
+    val topCategory: String,
+    @SerializedName("top_category_pct")
+    val topCategoryPct: Double,
+    @SerializedName("fraud_alerts")
+    val fraudAlerts: Int,
+    @SerializedName("savings_tip")
+    val savingsTip: String,
+    @SerializedName("budget_status")
+    val budgetStatus: String
+)

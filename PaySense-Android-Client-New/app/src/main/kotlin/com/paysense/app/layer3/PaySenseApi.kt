@@ -40,4 +40,17 @@ interface PaySenseApi {
      */
     @GET("/health")
     suspend fun healthCheck(): Response<Map<String, Any>>
+
+    /**
+     * GET /insights/weekly
+     * Retrieve weekly spending savings tips from FastAPI backend.
+     */
+    @GET("/insights/weekly")
+    suspend fun getWeeklyInsights(
+        @retrofit2.http.Query("total_spent") totalSpent: Double,
+        @retrofit2.http.Query("top_category") topCategory: String,
+        @retrofit2.http.Query("top_category_pct") topCategoryPct: Double,
+        @retrofit2.http.Query("fraud_alerts") fraudAlerts: Int,
+        @retrofit2.http.Query("vs_last_week_pct") vsLastWeekPct: Double = 12.0
+    ): Response<WeeklyInsight>
 }

@@ -96,7 +96,13 @@ class FraudApiService private constructor(private val context: Context) {
     //  MAIN ENTRY POINT
     //  Query-before-save ordering is preserved — see inline comments.
     // ──────────────────────────────────────────────────────────────────────────
-    suspend fun scoreTransaction(txn: ParsedTransaction, category: String) {
+    suspend fun scoreTransaction(
+        txn: ParsedTransaction,
+        category: String,
+        newDeviceFlag: Int = 0,
+        ipLocationMismatch: Int = 0,
+        deviceType: String = "Android"
+    ) {
         withContext(Dispatchers.IO) {
 
             val sinceMs = System.currentTimeMillis() - STATS_WINDOW_MS
@@ -135,7 +141,7 @@ class FraudApiService private constructor(private val context: Context) {
             )
 
             // Step 3: build 43-field request with computed stats
-            val request = buildTransactionRequest(txn, category, stats)
+            val request = buildTransactionRequest(txn, category, stats, newDeviceFlag, ipLocationMismatch, deviceType)
             Log.d(TAG, "🚀  Sending | amount=₹${txn.amount} " +
                        "z_amount=${request.amountDeviationScore.fmt()} " +
                        "z_hour=${request.transactionFrequencyScore.fmt()}")
@@ -241,7 +247,10 @@ class FraudApiService private constructor(private val context: Context) {
     private fun buildTransactionRequest(
         txn      : ParsedTransaction,
         category : String,
-        stats    : DeviationStats
+        stats    : DeviationStats,
+        newDevice: Int = 0,
+        ipMismatch: Int = 0,
+        device   : String = "Android"
     ): TransactionRequest {
 
         val cal       = Calendar.getInstance().apply { timeInMillis = txn.timestamp }
@@ -275,7 +284,7 @@ class FraudApiService private constructor(private val context: Context) {
             receiverType              = recvType,
             transactionType           = if (recvType == "User") "P2P" else "P2M",
             paymentApp                = detectPaymentApp(txn.senderId),
-            deviceType                = "Android",
+            deviceType                = device,
             usrAgeGroup               = "25-34",
             usrPreferredApp           = detectPaymentApp(txn.senderId),
             usrPreferredDevice        = "Android",
@@ -299,8 +308,8 @@ class FraudApiService private constructor(private val context: Context) {
             transactionFrequencyScore = zHour,      // ← hour deviation (retrained model)
             failedAttemptsLast24h     = 0.0,
             recurringPaymentFlag      = 0,
-            newDeviceFlag             = 0,
-            ipLocationMismatch        = 0,
+            newDeviceFlag             = newDevice,
+            ipLocationMismatch        = ipMismatch,
             userCityTier              = 2,
             userAvgMonthlyTxn         = 30.0,
             userAvgTxnValue           = userAvgAmount,
@@ -317,8 +326,8 @@ class FraudApiService private constructor(private val context: Context) {
             mrcAvgDailyTxn            = if (recvType == "User") 0.0 else 50.0,
             mrcIsRegistered           = 1,
             mrcRating                 = if (recvType == "User") null else 4.0,
-            deviceRiskScore           = null,
-            ipRiskScore               = null
+            deviceRiskScore           = if (newDevice == 1) 0.9 else null,
+            ipRiskScore               = if (ipMismatch == 1) 0.95 else null
         )
     }
 
@@ -336,6 +345,33 @@ class FraudApiService private constructor(private val context: Context) {
         senderId.contains("PHONEPE", ignoreCase = true) -> "PhonePe"
         senderId.contains("PAYTM",   ignoreCase = true) -> "Paytm"
         else -> "GPay"
+    }
+
+    suspend fun getWeeklyInsights(
+        totalSpent: Double,
+        topCategory: String,
+        topCategoryPct: Double,
+        fraudAlerts: Int
+    ): WeeklyInsight? {
+        return withContext(Dispatchers.IO) {
+            try {
+                val response = api.getWeeklyInsights(
+                    totalSpent = totalSpent,
+                    topCategory = topCategory,
+                    topCategoryPct = topCategoryPct,
+                    fraudAlerts = fraudAlerts
+                )
+                if (response.isSuccessful) {
+                    response.body()
+                } else {
+                    Log.e(TAG, "❌ Insights API failed: ${response.code()}")
+                    null
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ Insights API exception: ${e.message}")
+                null
+            }
+        }
     }
 
     private fun Double.fmt() = "%.4f".format(this)

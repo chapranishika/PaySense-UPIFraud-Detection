@@ -60,6 +60,8 @@ class MainActivity : AppCompatActivity() {
     // Fragment instances — created once, shown/hidden to preserve state
     private val dashboardContent by lazy { DashboardContentFragment.newInstance() }
     private val financeFragment   by lazy { FinanceFragment.newInstance() }
+    private val assistantFragment by lazy { AssistantFragment.newInstance() }
+    private val profileFragment   by lazy { ProfileFragment.newInstance() }
     private var activeFragment: Fragment = dashboardContent
 
     // ── Permission launcher ───────────────────────────────────────────────────
@@ -112,6 +114,29 @@ class MainActivity : AppCompatActivity() {
             )
         }
 
+        // ── Auth Handling ────────────────────────────────────────────────────
+        val prefs = getSharedPreferences("paysense_prefs", Context.MODE_PRIVATE)
+        val isAuthenticated = prefs.getBoolean("is_authenticated", false)
+        if (!isAuthenticated) {
+            showLoginOverlay()
+        } else {
+            hideLoginOverlay()
+        }
+
+        binding.btnLoginSubmit.setOnClickListener {
+            val username = binding.etLoginUsername.text.toString().trim()
+            val password = binding.etLoginPassword.text.toString().trim()
+            if (username == "paysense" && password == "guardian2025") {
+                binding.tvLoginError.visibility = View.GONE
+                prefs.edit().putBoolean("is_authenticated", true).apply()
+                hideLoginOverlay()
+                binding.etLoginUsername.text?.clear()
+                binding.etLoginPassword.text?.clear()
+            } else {
+                binding.tvLoginError.visibility = View.VISIBLE
+            }
+        }
+
         setupFragments()
         setupBottomNavigation()
         observeViewModel()
@@ -136,6 +161,10 @@ class MainActivity : AppCompatActivity() {
     // ──────────────────────────────────────────────────────────────────────────
     private fun setupFragments() {
         supportFragmentManager.beginTransaction()
+            .add(R.id.fragment_container, profileFragment,   "profile")
+            .hide(profileFragment)
+            .add(R.id.fragment_container, assistantFragment, "assistant")
+            .hide(assistantFragment)
             .add(R.id.fragment_container, financeFragment,   "finance")
             .hide(financeFragment)
             .add(R.id.fragment_container, dashboardContent, "dashboard")
@@ -149,6 +178,8 @@ class MainActivity : AppCompatActivity() {
             when (item.itemId) {
                 R.id.nav_dashboard -> switchTo(dashboardContent)
                 R.id.nav_finance   -> switchTo(financeFragment)
+                R.id.nav_assistant -> switchTo(assistantFragment)
+                R.id.nav_profile   -> switchTo(profileFragment)
             }
             true
         }
@@ -162,11 +193,32 @@ class MainActivity : AppCompatActivity() {
             .commit()
         activeFragment = fragment
 
-        // Update toolbar subtitle to reflect active tab
-        binding.toolbar.subtitle = when (fragment) {
-            is FinanceFragment -> "Spending Tracker"
-            else               -> "UPI Fraud Detection"
+        // Hide main activity toolbar on Dashboard fragment since it contains its own custom header
+        if (fragment is DashboardContentFragment) {
+            binding.appBarLayout.visibility = View.GONE
+        } else {
+            binding.appBarLayout.visibility = View.VISIBLE
+            binding.toolbar.subtitle = when (fragment) {
+                is FinanceFragment -> "Spending Tracker"
+                is AssistantFragment -> "AI Finlatics Assistant"
+                is ProfileFragment -> "User Profile & Settings"
+                else               -> "UPI Fraud Detection"
+            }
         }
+    }
+
+    fun showLoginOverlay() {
+        binding.layoutLoginOverlay.visibility = View.VISIBLE
+        binding.fragmentContainer.visibility = View.GONE
+        binding.bottomNavigation.visibility = View.GONE
+        binding.appBarLayout.visibility = View.GONE
+    }
+
+    fun hideLoginOverlay() {
+        binding.layoutLoginOverlay.visibility = View.GONE
+        binding.fragmentContainer.visibility = View.VISIBLE
+        binding.bottomNavigation.visibility = View.VISIBLE
+        binding.appBarLayout.visibility = View.VISIBLE
     }
 
     // ──────────────────────────────────────────────────────────────────────────

@@ -20,4 +20,16 @@
         android:title="Finance"
         android:contentDescription="Spending tracker and category breakdown" />
 
+    <item
+        android:id="@+id/nav_assistant"
+        android:icon="@drawable/ic_assistant"
+        android:title="Assistant"
+        android:contentDescription="AI spending coach and money saving tips" />
+
+    <item
+        android:id="@+id/nav_profile"
+        android:icon="@drawable/ic_profile"
+        android:title="Profile"
+        android:contentDescription="User profile and settings" />
+
 </menu>

@@ -21,106 +21,258 @@
             android:paddingHorizontal="16dp"
             android:paddingTop="12dp">
 
-            <!-- SUMMARY CARD: Total Spent This Month -->
+            <!-- App Branding Header (Centered) -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:layout_marginBottom="16dp">
+                
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Pay"
+                    android:textColor="@color/colorGold"
+                    android:textSize="24sp"
+                    android:fontFamily="sans-serif-medium" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Sense"
+                    android:textColor="@color/colorPrimary"
+                    android:textSize="24sp"
+                    android:fontFamily="sans-serif-medium" />
+            </LinearLayout>
+
+            <!-- CUSTOM GREETING HEADER: Avatar + Welcome Text + Settings -->
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp">
+
+                <!-- Avatar Card -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardAvatar"
+                    android:layout_width="52dp"
+                    android:layout_height="52dp"
+                    android:layout_alignParentStart="true"
+                    android:layout_centerVertical="true"
+                    app:cardCornerRadius="26dp"
+                    app:strokeWidth="0dp">
+                    <ImageView
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:scaleType="centerCrop"
+                        android:src="@drawable/user_avatar" />
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Text Greeting -->
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_toEndOf="@id/cardAvatar"
+                    android:layout_centerVertical="true"
+                    android:layout_marginStart="12dp"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Welcome back,"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="14sp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Nishika!"
+                        android:textColor="@color/text_primary"
+                        android:textSize="18sp"
+                        android:fontFamily="sans-serif-medium" />
+                </LinearLayout>
+
+                <!-- Settings Gear Icon -->
+                <ImageView
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:src="@android:drawable/ic_menu_preferences"
+                    app:tint="@color/text_primary" />
+
+            </RelativeLayout>
+
+            <!-- SUMMARY CARD with Gradient and Shield Illustration -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/cardTotalSpent"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="20dp"
-                app:cardCornerRadius="20dp"
-                app:cardElevation="0dp"
-                app:strokeWidth="0dp"
-                android:backgroundTint="@color/brand_primary">
+                app:cardCornerRadius="24dp"
+                app:cardElevation="4dp"
+                app:strokeWidth="0dp">
+
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="160dp"
+                    android:background="@drawable/bg_dashboard_card">
+
+                    <!-- Left side: 3D Shield Illustration -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/cardShield"
+                        android:layout_width="110dp"
+                        android:layout_height="110dp"
+                        android:layout_alignParentStart="true"
+                        android:layout_centerVertical="true"
+                        android:layout_marginStart="16dp"
+                        app:cardCornerRadius="16dp"
+                        app:strokeWidth="0dp">
+                        <ImageView
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:scaleType="centerCrop"
+                            android:src="@drawable/shield_illustration" />
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <!-- Right side: Financial Metrics -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_toEndOf="@id/cardShield"
+                        android:layout_centerVertical="true"
+                        android:layout_marginStart="16dp"
+                        android:layout_marginEnd="16dp"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Spending This Month"
+                            android:textColor="#FFFFFF"
+                            android:textSize="12sp"
+                            android:letterSpacing="0.04" />
+
+                        <TextView
+                            android:id="@+id/tvTotalSpent"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="₹0.00"
+                            android:textColor="#FFFFFF"
+                            android:textSize="26sp"
+                            android:fontFamily="sans-serif-medium" />
+
+                        <!-- Transaction Pill Row -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:layout_marginTop="12dp"
+                            android:gravity="center_vertical">
+
+                            <!-- Transactions count -->
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical">
+                                <TextView
+                                    android:id="@+id/tvTxnCount"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="0"
+                                    android:textColor="#FFFFFF"
+                                    android:textSize="14sp"
+                                    android:fontFamily="sans-serif-medium" />
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="transactions"
+                                    android:textColor="#CCFFFFFF"
+                                    android:textSize="9sp" />
+                            </LinearLayout>
+
+                            <View
+                                android:layout_width="1dp"
+                                android:layout_height="24dp"
+                                android:background="#44FFFFFF"
+                                android:layout_marginHorizontal="12dp" />
+
+                            <!-- Active Alerts -->
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical">
+                                <TextView
+                                    android:id="@+id/tvFraudCount"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="0"
+                                    android:textColor="@color/colorGold"
+                                    android:textSize="14sp"
+                                    android:fontFamily="sans-serif-medium" />
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="fraud alerts"
+                                    android:textColor="#CCFFFFFF"
+                                    android:textSize="9sp" />
+                            </LinearLayout>
+
+                        </LinearLayout>
+
+                    </LinearLayout>
+
+                </RelativeLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Quote of the Day Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp"
+                app:cardCornerRadius="16dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/card_stroke_normal"
+                android:backgroundTint="@color/colorCardBg">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="24dp">
+                    android:orientation="horizontal"
+                    android:padding="16dp"
+                    android:gravity="center_vertical">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Total spent this month"
-                        android:textColor="#AAFFFFFF"
-                        android:textSize="13sp"
-                        android:letterSpacing="0.04" />
+                        android:text="✍️"
+                        android:textSize="22sp"
+                        android:layout_marginEnd="12dp" />
 
-                    <TextView
-                        android:id="@+id/tvTotalSpent"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
-                        android:text="₹0.00"
-                        android:textColor="@android:color/white"
-                        android:textSize="36sp"
-                        android:fontFamily="sans-serif-medium"
-                        tools:text="₹12,450.00" />
-
-                    <!-- Micro stats row -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:layout_marginTop="16dp">
+                        android:orientation="vertical">
 
-                        <!-- Transactions count pill -->
-                        <LinearLayout
-                            android:layout_width="0dp"
+                        <TextView
+                            android:id="@+id/tvDailyQuote"
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:orientation="vertical">
+                            android:text="&quot;Do not save what is left after spending, but spend what is left after saving.&quot;"
+                            android:textColor="@color/text_primary"
+                            android:textSize="13sp"
+                            android:fontFamily="sans-serif-italic" />
 
-                            <TextView
-                                android:id="@+id/tvTxnCount"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="0"
-                                android:textColor="@android:color/white"
-                                android:textSize="18sp"
-                                android:fontFamily="sans-serif-medium"
-                                tools:text="34" />
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="transactions"
-                                android:textColor="#AAFFFFFF"
-                                android:textSize="11sp" />
-                        </LinearLayout>
-
-                        <!-- Divider -->
-                        <View
-                            android:layout_width="1dp"
-                            android:layout_height="36dp"
-                            android:background="#33FFFFFF"
-                            android:layout_marginHorizontal="16dp"
-                            android:layout_gravity="center_vertical" />
-
-                        <!-- Fraud alerts pill -->
-                        <LinearLayout
-                            android:layout_width="0dp"
+                        <TextView
+                            android:id="@+id/tvDailyQuoteAuthor"
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:orientation="vertical">
-
-                            <TextView
-                                android:id="@+id/tvFraudCount"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="0"
-                                android:textColor="@color/fraud_amber"
-                                android:textSize="18sp"
-                                android:fontFamily="sans-serif-medium"
-                                tools:text="2" />
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="fraud alerts"
-                                android:textColor="#AAFFFFFF"
-                                android:textSize="11sp" />
-                        </LinearLayout>
+                            android:text="— Warren Buffett"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="11sp"
+                            android:layout_marginTop="4dp"
+                            android:fontFamily="sans-serif-medium" />
 
                     </LinearLayout>
                 </LinearLayout>
@@ -182,7 +334,32 @@
                 android:clipToPadding="false"
                 tools:listitem="@layout/item_transaction" />
 
+            <!-- Dashboard Footer -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="created with ❤️ by Nishika Chapra"
+                android:textColor="@color/text_tertiary"
+                android:textSize="11sp"
+                android:fontFamily="sans-serif-medium"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="32dp"
+                android:layout_marginBottom="16dp"
+                android:alpha="0.8" />
+
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
+
+    <!-- Floating Action Button for Manual Entry -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fabAddTransaction"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="16dp"
+        android:src="@drawable/ic_add"
+        app:tint="@android:color/white"
+        app:backgroundTint="@color/brand_primary"
+        android:contentDescription="Add transaction manually" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
