@@ -39,7 +39,7 @@ class AddTransactionDialog : DialogFragment() {
     }
 
     private fun setupSpinners() {
-        val categories = arrayOf("Food & Dining", "Shopping", "Grocery", "Travel", "Entertainment", "Uncategorized")
+        val categories = arrayOf("Food & Dining", "Shopping", "Grocery", "Travel", "Entertainment", "Income", "Refund", "Uncategorized")
         val apps = arrayOf("GPay", "PhonePe", "Paytm")
         val devices = arrayOf("Android", "iOS")
 

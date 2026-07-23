@@ -78,6 +78,12 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
     private val _monthTotal     = MutableStateFlow(0.0)
     val monthTotal: StateFlow<Double> = _monthTotal.asStateFlow()
 
+    private val _totalEarnings  = MutableStateFlow(0.0)
+    val totalEarnings: StateFlow<Double> = _totalEarnings.asStateFlow()
+
+    private val _netBalance     = MutableStateFlow(0.0)
+    val netBalance: StateFlow<Double> = _netBalance.asStateFlow()
+
     private val _avgDailySpend  = MutableStateFlow(0.0)
     val avgDailySpend: StateFlow<Double> = _avgDailySpend.asStateFlow()
 
@@ -121,9 +127,19 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
     }
 
     private suspend fun recomputeBudgetProgress(budgets: List<Budget>) {
-        val categories = txnDao.getCategorySpend(monthStart())
+        val allCategories = txnDao.getCategorySpend(monthStart())
+        
+        val spendCats = allCategories.filter { it.category != "Income" && it.category != "Refund" }
+        val earnCats = allCategories.filter { it.category == "Income" || it.category == "Refund" }
+        
+        val totalEarn = earnCats.sumOf { it.total }
+        val totalSpend = spendCats.sumOf { it.total }
+        
+        _totalEarnings.value = totalEarn
+        _netBalance.value = totalEarn - totalSpend
+        
         val budgetMap  = budgets.associateBy { it.category }
-        _budgetProgress.value = categories.map { cat ->
+        _budgetProgress.value = spendCats.map { cat ->
             val budget = budgetMap[cat.category]
             BudgetProgress(
                 categorySpend = cat,
@@ -139,8 +155,8 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
                 }
             )
         }
-        _monthTotal.value    = categories.sumOf { it.total }
-        _topCategory.value   = categories.firstOrNull()?.category ?: "—"
+        _monthTotal.value    = totalSpend
+        _topCategory.value   = spendCats.firstOrNull()?.category ?: "—"
         val day = currentDayOfMonth()
         _avgDailySpend.value = if (day > 0) _monthTotal.value / day else 0.0
         _isLoading.value     = false

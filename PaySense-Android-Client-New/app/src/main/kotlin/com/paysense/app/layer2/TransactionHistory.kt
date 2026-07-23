@@ -89,6 +89,7 @@ interface TransactionDao {
         SELECT COALESCE(SUM(amount), 0.0)
         FROM   transaction_history
         WHERE  timestamp >= :monthStartMs
+        AND    category NOT IN ('Income', 'Refund')
     """)
     suspend fun getTotalSpentSince(monthStartMs: Long): Double
 
@@ -175,6 +176,7 @@ interface TransactionDao {
                  COUNT(*)     AS txnCount
         FROM     transaction_history
         WHERE    timestamp >= :sinceMs
+        AND      category NOT IN ('Income', 'Refund')
         AND      isFraud    = 0
         GROUP BY month
         ORDER BY month ASC
@@ -188,6 +190,7 @@ interface TransactionDao {
                  COUNT(*)     AS txnCount
         FROM     transaction_history
         WHERE    timestamp >= :sinceMs
+        AND      category NOT IN ('Income', 'Refund')
         AND      isFraud    = 0
         GROUP BY payee
         ORDER BY total DESC
@@ -209,6 +212,7 @@ interface TransactionDao {
         FROM   transaction_history
         WHERE  timestamp >= :startMs
         AND    timestamp <  :endMs
+        AND    category NOT IN ('Income', 'Refund')
         AND    isFraud    = 0
     """)
     suspend fun getTotalSpendBetween(startMs: Long, endMs: Long): Double
@@ -225,6 +229,7 @@ interface TransactionDao {
         FROM     transaction_history
         WHERE    timestamp >= :startMs
         AND      timestamp <  :endMs
+        AND      category NOT IN ('Income', 'Refund')
         AND      isFraud    = 0
         GROUP BY category
         ORDER BY total DESC
@@ -240,6 +245,7 @@ interface TransactionDao {
         SELECT COALESCE(SUM(amount), 0.0)
         FROM   transaction_history
         WHERE  timestamp >= :sinceMs
+        AND    category NOT IN ('Income', 'Refund')
         AND    isFraud    = 0
     """)
     suspend fun getTotalSpendSince(sinceMs: Long): Double

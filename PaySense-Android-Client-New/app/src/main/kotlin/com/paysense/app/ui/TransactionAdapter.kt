@@ -1,5 +1,6 @@
 package com.paysense.app.ui
 
+import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.core.content.ContextCompat
@@ -80,8 +81,10 @@ class TransactionAdapter(
             // ── Text fields ───────────────────────────────────────────────────
             binding.tvPayee.text    = txn.payee.ifBlank { "Unknown Payee" }
             binding.tvCategory.text = txn.category
-            binding.tvAmount.text   = currencyFormat.format(txn.amount)
-                .replace("₹", "₹")      // Ensure proper rupee symbol
+            val isEarn = txn.category == "Income" || txn.category == "Refund"
+            val prefix = if (isEarn) "+" else "-"
+            binding.tvAmount.text = prefix + currencyFormat.format(txn.amount).replace("₹", "₹")
+
             binding.tvDate.text     = if (txn.timestamp > 0L)
                 dateFormat.format(Date(txn.timestamp))
             else
@@ -92,15 +95,6 @@ class TransactionAdapter(
             binding.ivCategoryIcon.setImageResource(iconRes)
 
             // ── FRAUD TINTING ─────────────────────────────────────────────────
-            //
-            //  When isFraud=true (set by Layer 3 after FastAPI responds):
-            //    1. Card background → light red (#FFF0F0)
-            //    2. Card stroke     → red (#FFCDD2)
-            //    3. Warning icon    → VISIBLE
-            //    4. Fraud score     → VISIBLE below the amount
-            //    5. Amount text     → red colour
-            //  When isFraud=false: all defaults restored (white card, normal text)
-            //
             if (txn.isFraud) {
                 binding.cardTransaction.apply {
                     setCardBackgroundColor(
@@ -121,9 +115,8 @@ class TransactionAdapter(
                     )
                     strokeColor = ContextCompat.getColor(context, R.color.card_stroke_normal)
                 }
-                binding.tvAmount.setTextColor(
-                    ContextCompat.getColor(binding.root.context, R.color.text_primary)
-                )
+                val amountColor = if (isEarn) Color.parseColor("#00D2C4") else ContextCompat.getColor(binding.root.context, R.color.text_primary)
+                binding.tvAmount.setTextColor(amountColor)
                 binding.ivFraudWarning.visibility = android.view.View.GONE
                 binding.tvFraudScore.visibility   = android.view.View.GONE
             }

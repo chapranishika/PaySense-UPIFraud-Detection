@@ -139,12 +139,12 @@ class PaySenseViewModel(application: Application) : AndroidViewModel(application
 
         // Total spent this calendar month
         _totalSpent.value = txnList
-            .filter { it.timestamp >= monthStart }
+            .filter { it.timestamp >= monthStart && it.category != "Income" && it.category != "Refund" }
             .sumOf { it.amount }
 
         // Transaction count this month
         _monthlyTxnCount.value = txnList
-            .count { it.timestamp >= monthStart }
+            .count { it.timestamp >= monthStart && it.category != "Income" && it.category != "Refund" }
 
         // Fraud alert count (all-time, not just this month — shows total risk)
         _fraudCount.value = txnList.count { it.isFraud }

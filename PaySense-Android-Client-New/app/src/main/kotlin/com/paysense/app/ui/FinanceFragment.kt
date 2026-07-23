@@ -250,9 +250,38 @@ class FinanceFragment : Fragment() {
             setBackgroundColor(Color.parseColor("#2D1B69"))
             setPadding(dp(16), dp(16), dp(16), dp(20))
         }
-        tv(card, "This Month", 11f, "#A89CC8")
-        tv(card, currFmt.format(viewModel.monthTotal.value), 30f, "#FFFFFF",
-            bold = true, topPad = 2)
+        
+        val net = viewModel.netBalance.value
+        val netColor = if (net >= 0) "#00D2C4" else "#FF5A5F"
+        val netSign = if (net >= 0) "+" else ""
+        
+        tv(card, "Net Balance", 11f, "#A89CC8")
+        tv(card, netSign + currFmt.format(net), 30f, netColor, bold = true, topPad = 2)
+
+        // Side-by-side inflow and outflow
+        val balanceRow = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.HORIZONTAL
+            setPadding(0, dp(12), 0, dp(12))
+        }
+
+        val earnBlock = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        }
+        earnBlock.addView(tv2("Earnings (Inflow)", 10f, "#A89CC8"))
+        earnBlock.addView(tv2("+" + currFmt.format(viewModel.totalEarnings.value), 16f, "#00D2C4", bold = true))
+
+        val spendBlock = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = android.view.Gravity.END
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        }
+        spendBlock.addView(tv2("Spending (Outflow)", 10f, "#A89CC8").apply { gravity = android.view.Gravity.END })
+        spendBlock.addView(tv2("-" + currFmt.format(viewModel.monthTotal.value), 16f, "#FF5A5F", bold = true).apply { gravity = android.view.Gravity.END })
+
+        balanceRow.addView(earnBlock)
+        balanceRow.addView(spendBlock)
+        card.addView(balanceRow)
 
         // Pace badge
         viewModel.spendingPace.value?.let { pace ->
@@ -299,6 +328,75 @@ class FinanceFragment : Fragment() {
         addSectionHeader("Spending by Category")
         val card = buildCard()
         val total = viewModel.monthTotal.value
+
+        // Donut Chart Container
+        val chartContainer = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = android.view.Gravity.CENTER_VERTICAL
+            setPadding(dp(16), dp(16), dp(16), dp(16))
+        }
+
+        // Left side: Donut Chart View
+        val donutView = DonutChartView(requireContext()).apply {
+            layoutParams = LinearLayout.LayoutParams(dp(120), dp(120)).apply {
+                marginEnd = dp(20)
+            }
+        }
+        val chartData = progress.map { bp ->
+            val totalVal = bp.categorySpend.total.toFloat()
+            val colorStr = categoryColors[bp.categorySpend.category] ?: "#757575"
+            totalVal to Color.parseColor(colorStr)
+        }
+        donutView.setData(chartData)
+        chartContainer.addView(donutView)
+
+        // Right side: Flow-like vertical legend
+        val legendLayout = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        }
+
+        progress.take(4).forEach { bp ->
+            val cat = bp.categorySpend.category
+            val colorStr = categoryColors[cat] ?: "#757575"
+            val totalVal = bp.categorySpend.total
+            
+            val legendRow = LinearLayout(requireContext()).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = android.view.Gravity.CENTER_VERTICAL
+                setPadding(0, dp(4), 0, dp(4))
+            }
+            
+            val dot = View(requireContext()).apply {
+                setBackgroundColor(Color.parseColor(colorStr))
+                layoutParams = LinearLayout.LayoutParams(dp(8), dp(8)).apply {
+                    marginEnd = dp(8)
+                }
+            }
+            
+            val label = TextView(requireContext()).apply {
+                text = cat
+                textSize = 11f
+                setTextColor(Color.parseColor("#1A2A4A"))
+                typeface = Typeface.DEFAULT_BOLD
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            }
+            
+            val valText = TextView(requireContext()).apply {
+                text = currFmt.format(totalVal)
+                textSize = 10f
+                setTextColor(Color.parseColor("#64748B"))
+            }
+            
+            legendRow.addView(dot)
+            legendRow.addView(label)
+            legendRow.addView(valText)
+            legendLayout.addView(legendRow)
+        }
+        
+        chartContainer.addView(legendLayout)
+        card.addView(chartContainer)
+        card.addView(divider())
 
         progress.forEachIndexed { idx, bp ->
             val cat   = bp.categorySpend
