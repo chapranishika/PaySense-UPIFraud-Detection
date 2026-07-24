@@ -135,7 +135,7 @@ class AssistantFragment : Fragment() {
         }
 
         // Aggregate category counts
-        val categories = txns.filter { !it.isFraud }.groupBy { it.category }
+        val categories = txns.filter { !it.isFraud && it.category != "Income" && it.category != "Refund" }.groupBy { it.category }
         var topCategoryName = "Uncategorized"
         var topCategorySpent = 0.0
         
@@ -160,7 +160,7 @@ class AssistantFragment : Fragment() {
         val txns = viewModel.transactions.value
 
         // Find top category
-        val categories = txns.filter { !it.isFraud }.groupBy { it.category }
+        val categories = txns.filter { !it.isFraud && it.category != "Income" && it.category != "Refund" }.groupBy { it.category }
         var topCategoryName = "Food"
         var topCategorySpent = 0.0
         for ((cat, catTxns) in categories) {

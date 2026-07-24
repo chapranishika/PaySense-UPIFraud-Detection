@@ -16,6 +16,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.paysense.app.layer2.FinanceExportUtil
 import com.paysense.app.layer2.PdfReportGenerator
+import com.paysense.app.layer2.MonthlyCashFlow
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
@@ -95,6 +96,7 @@ class FinanceFragment : Fragment() {
                 launch { viewModel.budgetProgress.collect { renderAll() } }
                 launch { viewModel.monthOverMonth.collect { renderAll() } }
                 launch { viewModel.goals.collect          { renderAll() } }
+                launch { viewModel.monthlyCashFlow.collect { renderAll() } }
             }
         }
     }
@@ -690,42 +692,101 @@ class FinanceFragment : Fragment() {
         container.addView(card, cardLp())
     }
 
-    // ── 5. MONTHLY TREND ──────────────────────────────────────────────────────
+    // ── 5. MONTHLY TREND / CASH FLOW CHART ────────────────────────────────────
     private fun renderMonthlyTrend() {
-        val months = viewModel.monthlySpend.value
+        val months = viewModel.monthlyCashFlow.value
         if (months.isEmpty()) return
-        addSectionHeader("6-Month Trend")
+        addSectionHeader("Cash Flow (Income vs Expenses)")
         val card = buildCard()
-        card.setPadding(dp(14), dp(12), dp(14), dp(14))
-        val maxTotal = months.maxOfOrNull { it.total } ?: 1.0
+        card.setPadding(dp(14), dp(16), dp(14), dp(16))
+        
+        val maxVal = months.maxOfOrNull { kotlin.math.max(it.income, it.expense) } ?: 1.0
+        
         val chartRow = LinearLayout(requireContext()).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = android.view.Gravity.BOTTOM
+            setPadding(0, dp(10), 0, 0)
         }
+        
         months.forEach { month ->
-            val frac = (month.total / maxTotal).toFloat()
-            val col  = LinearLayout(requireContext()).apply {
+            val incFrac = (month.income / maxVal).toFloat()
+            val expFrac = (month.expense / maxVal).toFloat()
+            
+            val col = LinearLayout(requireContext()).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = android.view.Gravity.CENTER_HORIZONTAL
-                layoutParams = LinearLayout.LayoutParams(0,
-                    LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
-                    marginStart = dp(4); marginEnd = dp(4) }
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                    marginStart = dp(2); marginEnd = dp(2)
+                }
             }
-            col.addView(tv2("₹${(month.total/1000).toInt()}k", 8f, "#94A3B8").apply {
-                gravity = android.view.Gravity.CENTER })
-            col.addView(View(requireContext()).apply {
-                setBackgroundColor(Color.parseColor("#00B4D8"))
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    dp((120 * frac).toInt().coerceAtLeast(4))).apply { topMargin = dp(4) }
-            })
-            col.addView(tv2(month.month.takeLast(5).replace("-", "/"), 8f, "#64748B").apply {
+            
+            // Value labels
+            val labelsLayout = LinearLayout(requireContext()).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = android.view.Gravity.CENTER_HORIZONTAL
+            }
+            labelsLayout.addView(tv2("+₹${(month.income/1000).toInt()}k", 8f, "#00D2C4").apply {
                 gravity = android.view.Gravity.CENTER
-                setPadding(0, dp(4), 0, 0) })
+            })
+            labelsLayout.addView(tv2("-₹${(month.expense/1000).toInt()}k", 8f, "#FF5A5F").apply {
+                gravity = android.view.Gravity.CENTER
+            })
+            col.addView(labelsLayout)
+            
+            // Side-by-side bars container
+            val barsRow = LinearLayout(requireContext()).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = android.view.Gravity.BOTTOM
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    dp(130)
+                ).apply {
+                    topMargin = dp(6)
+                    bottomMargin = dp(6)
+                }
+            }
+            
+            // Income bar (Turquoise)
+            val incBar = View(requireContext()).apply {
+                setBackgroundColor(Color.parseColor("#00D2C4"))
+                layoutParams = LinearLayout.LayoutParams(dp(10), dp((120 * incFrac).toInt().coerceAtLeast(4))).apply {
+                    marginEnd = dp(2)
+                }
+            }
+            
+            // Expense bar (Red/Coral)
+            val expBar = View(requireContext()).apply {
+                setBackgroundColor(Color.parseColor("#FF5A5F"))
+                layoutParams = LinearLayout.LayoutParams(dp(10), dp((120 * expFrac).toInt().coerceAtLeast(4))).apply {
+                    marginStart = dp(2)
+                }
+            }
+            
+            barsRow.addView(incBar)
+            barsRow.addView(expBar)
+            col.addView(barsRow)
+            
+            // Month label
+            col.addView(tv2(formatMonthName(month.month), 9f, "#64748B").apply {
+                gravity = android.view.Gravity.CENTER
+            })
+            
             chartRow.addView(col)
         }
         card.addView(chartRow)
         container.addView(card, cardLp())
+    }
+
+    private fun formatMonthName(monthStr: String): String {
+        return try {
+            val parts = monthStr.split("-")
+            val year = parts[0].takeLast(2)
+            val monthInt = parts[1].toInt()
+            val monthNames = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+            monthNames[monthInt - 1] + " '" + year
+        } catch (e: Exception) {
+            monthStr.takeLast(5).replace("-", "/")
+        }
     }
 
     // ── 6. TOP MERCHANTS ──────────────────────────────────────────────────────

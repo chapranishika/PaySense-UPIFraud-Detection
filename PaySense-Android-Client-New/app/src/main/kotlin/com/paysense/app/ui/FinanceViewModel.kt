@@ -7,6 +7,7 @@ import com.paysense.app.layer2.Budget
 import com.paysense.app.layer2.CategorySpend
 import com.paysense.app.layer2.MerchantSpend
 import com.paysense.app.layer2.MonthlySpend
+import com.paysense.app.layer2.MonthlyCashFlow
 import com.paysense.app.layer2.PaySenseDatabase
 import com.paysense.app.layer2.SavingsGoal
 import com.paysense.app.layer2.TransactionHistory
@@ -72,6 +73,9 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
     private val _monthlySpend   = MutableStateFlow<List<MonthlySpend>>(emptyList())
     val monthlySpend: StateFlow<List<MonthlySpend>> = _monthlySpend.asStateFlow()
 
+    private val _monthlyCashFlow = MutableStateFlow<List<MonthlyCashFlow>>(emptyList())
+    val monthlyCashFlow: StateFlow<List<MonthlyCashFlow>> = _monthlyCashFlow.asStateFlow()
+
     private val _topMerchants   = MutableStateFlow<List<MerchantSpend>>(emptyList())
     val topMerchants: StateFlow<List<MerchantSpend>> = _topMerchants.asStateFlow()
 
@@ -109,18 +113,34 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
     private val _isLoading      = MutableStateFlow(true)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
+    private var lastBudgets: List<Budget> = emptyList()
+
     init {
-        observeBudgetProgress()
-        observeGoals()
-        loadStaticData()
+        viewModelScope.launch {
+            PaySenseDatabase.seedMockDataIfEmpty(PaySenseDatabase.getInstance(application))
+            observeTransactions()
+            observeBudgetProgress()
+            observeGoals()
+            loadStaticData()
+        }
     }
 
     // ──────────────────────────────────────────────────────────────────────────
     //  REACTIVE: Budget progress (Phase 2 — unchanged)
     // ──────────────────────────────────────────────────────────────────────────
+    private fun observeTransactions() {
+        viewModelScope.launch {
+            txnDao.getAllTransactionsFlow().collect {
+                loadStaticData()
+                recomputeBudgetProgress(lastBudgets)
+            }
+        }
+    }
+
     private fun observeBudgetProgress() {
         viewModelScope.launch {
             budgetDao.getAllBudgetsFlow().collect { budgets ->
+                lastBudgets = budgets
                 recomputeBudgetProgress(budgets)
             }
         }
@@ -179,6 +199,7 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
             try {
                 // Phase 1
                 _monthlySpend.value = txnDao.getMonthlySpend(sixMonthsAgo())
+                _monthlyCashFlow.value = txnDao.getMonthlyCashFlow(sixMonthsAgo())
                 _topMerchants.value = txnDao.getTopMerchants(monthStart(), topN = 5)
 
                 // Phase 3 — MoM comparison

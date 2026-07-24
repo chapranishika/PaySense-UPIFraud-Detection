@@ -252,9 +252,7 @@ interface TransactionDao {
 
     /**
      * Returns full TransactionHistory rows (not aggregates) in a window,
-     * excluding fraud-flagged rows. Used by FinanceExportUtil for CSV export —
-     * the only Phase 1-4 query that returns full entity rows rather than
-     * an aggregate, because CSV export needs per-transaction detail.
+     * excluding fraud-flagged rows. Used by FinanceExportUtil for CSV export.
      */
     @Query("""
         SELECT * FROM transaction_history
@@ -264,6 +262,21 @@ interface TransactionDao {
         ORDER BY timestamp DESC
     """)
     suspend fun getTransactionsBetween(startMs: Long, endMs: Long): List<TransactionHistory>
+
+    @Query("SELECT COUNT(*) FROM transaction_history")
+    suspend fun getTransactionCount(): Int
+
+    @Query("""
+        SELECT   strftime('%Y-%m', datetime(timestamp/1000, 'unixepoch')) AS month,
+                 SUM(CASE WHEN category IN ('Income', 'Refund') THEN amount ELSE 0.0 END) AS income,
+                 SUM(CASE WHEN category NOT IN ('Income', 'Refund') THEN amount ELSE 0.0 END) AS expense
+        FROM     transaction_history
+        WHERE    timestamp >= :sinceMs
+        AND      isFraud    = 0
+        GROUP BY month
+        ORDER BY month ASC
+    """)
+    suspend fun getMonthlyCashFlow(sinceMs: Long): List<MonthlyCashFlow>
 }
 
 // ── Finance Tracker data classes (Phase 1) ────────────────────────────────────
@@ -287,4 +300,10 @@ data class MerchantSpend(
     val category  : String,
     val total     : Double,
     val txnCount  : Int
+)
+
+data class MonthlyCashFlow(
+    val month     : String,
+    val income    : Double,
+    val expense   : Double
 )
