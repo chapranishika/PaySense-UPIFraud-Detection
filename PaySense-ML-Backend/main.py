@@ -486,12 +486,13 @@ async def weekly_insights(
         try:
             import httpx
             prompt = (
+                "You are the user's friendly, supportive personal finance buddy. "
                 f"The user spent ₹{total_spent:.0f} this week. "
-                f"Top category: {top_category} ({top_category_pct:.0f}% of total). "
-                f"Spending changed {vs_last_week_pct:+.0f}% vs last week. "
-                f"Fraud alerts this week: {fraud_alerts}. "
-                "Give ONE actionable savings tip in under 25 words. "
-                "Be specific, friendly, and direct. No preamble."
+                f"Their top spending category is {top_category} ({top_category_pct:.0f}% of total). "
+                f"Their weekly spending changed by {vs_last_week_pct:+.0f}% compared to last week. "
+                f"They had {fraud_alerts} fraud alerts. "
+                "Give them a detailed response with 3 friendly, highly actionable savings tips in a buddy-like, supportive tone. "
+                "Use bullet points for the tips. Address the user as 'buddy' or 'friend'. No preamble or conversational introduction, get straight to the friendly advice."
             )
             async with httpx.AsyncClient(timeout=5.0) as client:
                 resp = await client.post(
@@ -530,20 +531,60 @@ async def weekly_insights(
 
 
 def _rule_based_tip(category: str, pct: float, vs_last: float) -> str:
-    """Deterministic savings tip when Gemini is not configured."""
+    """Friendly buddy-style savings tips with multiple bullet points."""
     tips = {
-        "Food":      "Try cooking 2 extra meals at home — saves ≈₹800/week on average.",
-        "Food & Dining": "Limit restaurant visits to weekends to cut food spend by 30%.",
-        "Travel":    "Book rides 15 min before departure — surge pricing drops fast.",
-        "Shopping":  "Add items to cart, wait 24h — impulse urge passes 60% of the time.",
-        "Grocery":   "Buy staples in bulk monthly — saves ≈15% vs weekly small trips.",
-        "Entertainment":"Share OTT subscriptions — you can legally share with 1 household.",
-        "Recharge":  "Switch to a quarterly recharge plan — saves ₹50–120 per cycle.",
-        "Healthcare":"Schedule non-urgent appointments in bulk to save on consultation fees.",
+        "Food": (
+            "Yo! Let's get that food budget under control, buddy. 🍔 Here's our game plan:\n"
+            "• **Meal Prep Sunday:** Cook just 2 extra meals at home this week. That's an easy ₹800 saved right there!\n"
+            "• **Drink Water:** Swap sweet beverages and sodas for water when dining out. It shaves ₹150 off your bill every time.\n"
+            "• **Cart Check:** Before checking out on Zomato/Swiggy, delete one impulse side dish. Your wallet (and health) will thank you!"
+        ),
+        "Food & Dining": (
+            "Hey buddy, dining out is fun but it's eating into your savings! 🍕 Let's try this:\n"
+            "• **Weekend Only Rule:** Limit fancy café or restaurant visits strictly to weekends. This alone can cut your food bill by 30%!\n"
+            "• **Skip Delivery Apps:** Pick up food on your way home instead of ordering delivery to avoid high service fees and markups.\n"
+            "• **Shared Platters:** Split larger portions with friends instead of ordering individual dishes. Better value, less waste!"
+        ),
+        "Travel": (
+            "Alright friend, commute costs are climbing! 🚗 Let's optimize our routes:\n"
+            "• **The 15-Min Surge Window:** If ride-share prices are spiked, wait just 15 minutes. Surge pricing drops fast once drivers clear out.\n"
+            "• **Compare Apps:** Check both Uber and local ride alternatives side-by-side. You'd be surprised by the ₹50-100 price differences.\n"
+            "• **Metro/Bus Match:** For distances under 5km, consider public transit or a quick walk. It's pocket-friendly and keeps you active!"
+        ),
+        "Shopping": (
+            "Whoa buddy, shopping therapy is real! 🛍️ Let's be smart about it:\n"
+            "• **The 24-Hour Rule:** Add items to your cart but don't checkout. Wait a full day. Impulse urges pass 60% of the time!\n"
+            "• **Discount Hunt:** Always search for promo codes before tapping buy. Never pay retail if you can help it.\n"
+            "• **One-In, One-Out:** For every new item of clothing or gadget you buy, sell or donate an old one. Keeps spending highly intentional!"
+        ),
+        "Grocery": (
+            "Hey there! Grocery shopping can get stealthily expensive. 🛒 Let's hack it:\n"
+            "• **Bulk Buying:** Buy staples like rice, flour, and oil in bulk monthly. It saves about 15% compared to weekly small runs.\n"
+            "• **Never Shop Hungry:** Seriously, buddy! Going to the grocery store on an empty stomach leads to 30% more impulse snack purchases.\n"
+            "• **Store Brands:** Swap branded spices and pantry items for local supermarket brands. Same quality, but much cheaper."
+        ),
+        "Entertainment": (
+            "Yo buddy! Entertainment spend is looking a bit high. 🎬 Let's stream smarter:\n"
+            "• **Subscription Audit:** Cancel any streaming service or app you haven't watched in the last 2 weeks. You can always resubscribe later!\n"
+            "• **Co-op Sharing:** Share OTT accounts legally within your household. No need for everyone to pay for premium packages.\n"
+            "• **Free Events:** Look out for local community screenings, live gigs with free entry, or outdoor parks for weekend hangouts."
+        ),
+        "Recharge": (
+            "Hey buddy, let's optimize your mobile/data bills! 📱 Here is how:\n"
+            "• **Quarterly Value:** Switch from monthly recharges to quarterly or annual plans. You save ₹50–120 per cycle on average.\n"
+            "• **Wi-Fi Auto-Join:** Ensure your phone auto-joins home and work Wi-Fi to avoid running out of mobile data and buying pricey top-up packs.\n"
+            "• **Plan Check:** Review your actual data usage. If you only use 1GB/day, don't pay for a 3GB/day plan!"
+        ),
+        "Healthcare": (
+            "Hey friend, health is wealth, but let's spend wisely! 🩺 Here are some tips:\n"
+            "• **Generic Medicines:** Ask your doctor or pharmacist if there is a generic equivalent for your prescription. They cost up to 70% less!\n"
+            "• **Preventative Care:** Regular walks, healthy eating, and drinking water prevent expensive clinic visits down the line.\n"
+            "• **Teleconsultation:** For minor queries, use digital healthcare apps which offer cheaper initial consultation fees."
+        ),
     }
-    base_tip = tips.get(category, f"Your top spend is {category} at {pct:.0f}% of total.")
+    base_tip = tips.get(category, f"Your top spend category is **{category}**, taking up {pct:.0f}% of your budget. Let's try to cut down by setting a budget goal, buddy!")
     if vs_last > 20:
-        return f"Spending spiked {vs_last:.0f}% this week. {base_tip}"
+        return f"⚠️ **Whoa buddy! Your spending spiked {vs_last:.0f}% vs last week!**\n\n{base_tip}"
     return base_tip
 
 
