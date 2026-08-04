@@ -47,7 +47,7 @@ private const val TAG = "PaySense_Layer3"
 class FraudApiService private constructor(private val context: Context) {
 
     companion object {
-        private const val BASE_URL        = "http://10.0.2.2:8000/"
+        private const val BASE_URL        = "https://paysense-api.onrender.com/"
         private const val STATS_WINDOW_MS = 90L * 24 * 60 * 60 * 1000
         private const val MIN_SAMPLES     = 5
 
