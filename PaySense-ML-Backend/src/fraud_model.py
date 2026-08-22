@@ -12,7 +12,9 @@
 
   Model 2 — LightLR (5 inference-matched features, weight=0.25)
     Logistic regression on 5 features available at inference time with no
-    padding. Zero false positives in test set at its own threshold.
+    padding. Trained by train_light_lr.py on paysense_master_dataset.csv
+    (SMOTE, train-only, 80/20 stratified split). Held-out test metrics:
+    ROC-AUC 0.8691, PR-AUC 0.4755 (precision 18.03% / recall 67.98% @ 0.50).
     Adapted from UPI Guardian's lightweight scorer.
 
   Model 3 — Rule-Based Guardian (weight=0.15)
@@ -93,7 +95,12 @@ class EnsembleState:
         scorers = ["rules"]  # always available
         if self.ps_model and self.ps_prep and self.ps_features:
             scorers.append("paysense")
-        if self.lr_model:
+        # Same condition score() uses: a truthy lr_model alone isn't enough —
+        # _build_default_light_lr() always returns a truthy object even when
+        # light_lr.pkl doesn't exist on disk. Without the os.path.exists()
+        # check here, /health could report light_lr as active while /predict
+        # is silently excluding it from every score's weighted average.
+        if self.lr_model is not None and os.path.exists(LR_MODEL_PATH):
             scorers.append("light_lr")
         return scorers
 
@@ -194,8 +201,8 @@ def _score_paysense(txn_dict: dict) -> Optional[float]:
 def _score_light_lr(txn_dict: dict) -> Optional[float]:
     """
     LightLR scorer — 5 features only.
-    This scorer has ZERO false positives at its calibrated threshold,
-    trading recall for perfect precision on a small high-confidence slice.
+    Trained by train_light_lr.py; held-out test ROC-AUC 0.8691, PR-AUC 0.4755
+    (see artefacts/light_lr_metrics.json for the full evaluation).
     """
     if not _state.lr_model:
         return None

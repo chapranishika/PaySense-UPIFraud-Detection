@@ -12,12 +12,19 @@
 |---|---|
 | ROC-AUC | **0.8851** |
 | PR-AUC *(primary)* | **0.5303** — 12.6× above random baseline |
-| Precision @ t=0.50 | **100%** — zero false alerts |
-| Recall @ t=0.50 | 37.94% |
+| Precision @ deployed threshold (t=0.40) | **66.14%** |
+| Recall @ deployed threshold (t=0.40) | **52.17%** |
 | Datasets evaluated | 18 |
 | Master dataset | 30,000 rows · 40 model-ready features · 4.21% fraud |
 | SMOTE applied | Training partition only (24K → 45,980 rows) |
 | Tests passing | **105** (28 Android unit tests · 77 backend pytest) |
+
+`artefacts/paysense_threshold.pkl` freezes **t=0.40** as the shipped decision
+threshold — it's the F1-optimal operating point from `paysense_phase3.py`'s
+threshold sweep (F1=0.584 vs. 0.550 at t=0.50), and it's what `/predict`
+actually runs in production. The t=0.50 checkpoint above (100% precision /
+37.94% recall) was Phase 2's pre-tuning default — kept here only as context
+for how much the threshold sweep improved recall, not as the deployed number.
 
 ---
 

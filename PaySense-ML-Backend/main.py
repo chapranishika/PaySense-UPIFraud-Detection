@@ -357,6 +357,10 @@ class PredictionResponse(BaseModel):
     light_lr_score  : Optional[float] = Field(None, description="LightLR 5-feature score")
     rules_score     : Optional[float] = Field(None, description="Rule-based score")
     active_scorers  : list[str]       = Field(default_factory=list)
+    weights_used    : dict[str, float] = Field(
+        default_factory=dict,
+        description="Renormalised ensemble weight actually applied to each active scorer.",
+    )
 
 
 class CategoryRequest(BaseModel):
@@ -456,6 +460,7 @@ async def predict(
         light_lr_score  = result.light_lr_score,
         rules_score     = result.rules_score,
         active_scorers  = result.active_scorers,
+        weights_used    = result.weights_used,
     )
 
 

@@ -1,0 +1,38 @@
+{
+  "roc_auc": 0.8691037289776897,
+  "pr_auc": 0.4754959426983146,
+  "confusion_matrix": [
+    [
+      4965,
+      782
+    ],
+    [
+      81,
+      172
+    ]
+  ],
+  "tn": 4965,
+  "fp": 782,
+  "fn": 81,
+  "tp": 172,
+  "n_test": 6000,
+  "n_fraud_test": 253,
+  "features": [
+    "amount_deviation_score",
+    "new_device_flag",
+    "ip_location_mismatch",
+    "transaction_velocity",
+    "failed_attempts_last_24h"
+  ],
+  "coefficients": [
+    0.3822832573666761,
+    2.4711912545503627,
+    2.5497288167090972,
+    0.65139383917755,
+    0.375503189000522
+  ],
+  "intercept": -1.7045871743278282,
+  "random_state": 42,
+  "smote_applied": "train_only",
+  "trained_at_unix": 1787399204.8584502
+}

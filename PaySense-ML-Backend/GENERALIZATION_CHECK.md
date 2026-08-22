@@ -248,13 +248,94 @@ examples — is closer to a coin flip than to real discrimination, and should
 be read as exactly the low-power, low-confidence result the task brief asked
 to flag explicitly, not as independent evidence of anything.
 
+### 4.4 Full production ensemble vs. raw XGBoost — does the ensemble do better?
+
+Everything above (§4.1–4.3) scores the raw frozen XGBoost artifact directly
+via `model.predict_proba()`. That never exercises the rules scorer or
+LightLR — the other two members of the 3-model ensemble that `/predict`
+actually runs in production (`src/fraud_model.py`'s `score()`). LightLR in
+particular is built for exactly this scenario: its 5 features were chosen as
+the ones "consistently available at inference time," i.e. the case where
+most of the 40-feature vector is missing — which is precisely what this OOD
+dataset is. `generalization_check_ensemble.py` re-scores the identical
+Dataset 1 rows, with the identical 6-column honest mapping from §3.1 (reused
+verbatim, not re-derived), through the real `score()` ensemble path instead
+of the raw model — same frozen artifacts, same frozen threshold, no
+retraining or fine-tuning on this data anywhere.
+
+| Metric | Raw XGBoost only (§4.1) | Full ensemble (XGBoost + rules + LightLR) |
+|---|---:|---:|
+| ROC-AUC | 0.8064 | **0.8107** |
+| PR-AUC (average precision) | 0.4052 | **0.4136** |
+| Confusion matrix @ threshold 0.40 | TN=74,216 FP=0 / FN=701 TP=0 | TN=74,216 FP=0 / FN=701 TP=0 |
+| Precision / Recall / F1 (fraud class) | 0.0000 / 0.0000 / 0.0000 | 0.0000 / 0.0000 / 0.0000 |
+| Max predicted score (any row) | 0.0095 | 0.0772 |
+| LightLR score range across all 74,917 rows | — | **constant: 0.153867** |
+| Rules score range across all 74,917 rows | — | **two values: 0.17 / 0.22** |
+
+**Why the extra scorers barely move the needle, and why that's expected
+rather than a bug:** none of LightLR's 5 features
+(`amount_deviation_score`, `new_device_flag`, `ip_location_mismatch`,
+`transaction_velocity`, `failed_attempts_last_24h`) appear anywhere in
+Dataset 1's honest 6-column mapping (§3.1) — check the mapping table again:
+`new_device_flag` and `ip_location_mismatch` were both explicitly **not**
+mapped (payee novelty ≠ device novelty; no IP-mismatch-equivalent column
+exists in this dataset at all), and the other three LightLR features have
+no candidate source column either. So every one of LightLR's 5 inputs falls
+back to its `.get(key, 0.0)` default for all 74,917 rows, and LightLR
+produces the exact same score (0.153867, its intercept-driven baseline) for
+every single transaction — a constant, not a signal. The rules scorer fares
+only marginally better: of its four hard-signal fields
+(`new_device_flag`, `ip_location_mismatch`, `kyc_verified_flag`,
+`usr_is_high_risk`), all four are also absent from the honest mapping, so
+`kyc_verified_flag`'s missing-value default alone fixes +0.15 on every row,
+and the *only* honestly-mapped field the rules scorer actually reads is
+`is_night_transaction` — worth +0.05. That's why the rules score takes
+exactly two values (0.17 baseline, 0.22 at night) across all 74,917 rows,
+driven by one binary flag, not the "highest-SHAP hard signals" the scorer
+was designed around.
+
+**Honest verdict: the full ensemble does not meaningfully outperform raw
+XGBoost on this dataset, and it fails in the identical operational way.**
+At the frozen 0.40 threshold it still catches **0 of 701** real frauds —
+same confusion matrix, same zero recall, as the raw-model-only check. The
+ROC-AUC/PR-AUC nudge upward (+0.0043 / +0.0084) is real but marginal, and
+traceable entirely to `is_night_transaction` carrying weak organic signal
+through the rules scorer — not to any contribution from LightLR, which
+degenerates to a constant here because its entire feature set is
+unavailable in this dataset, exactly the caveat this check exists to
+surface rather than hide. The reason isn't a flaw in LightLR or the rules
+scorer's design — both are doing exactly what they're supposed to do with
+the inputs they're given — it's that this specific external dataset doesn't
+supply the device/IP-risk signals either scorer needs, the same 85%-of-features-missing
+problem that limits raw XGBoost. **No result here was manufactured into a
+win**: the ensemble's real value (rules + LightLR catching device/IP-based
+fraud) simply cannot be exercised by a dataset that doesn't carry those
+columns, and that limitation is reported plainly rather than glossed over.
+
+Reproduce with:
+```
+cd PaySense-ML-Backend
+venv\Scripts\python.exe generalization_check_ensemble.py
+```
+(Takes several minutes — the full ensemble path runs `fraud_model.score()`
+once per row, the same real per-request code path `/predict` uses, rather
+than a single vectorised `model.predict_proba()` call.)
+
 ---
 
 ## 5. Verdict
 
 **The frozen PaySense model does not generalize in any operationally useful
 sense to data outside its own training pipeline, and this check found no
-evidence to spin that into a positive result.** On the one dataset trustworthy
+evidence to spin that into a positive result.** This holds whether you score
+the raw XGBoost artifact alone (§4.1) or the full production 3-model
+ensemble through `fraud_model.score()` (§4.4) — both catch **0 of 701** real
+frauds at the frozen threshold on Dataset 1, because the two scorers meant
+to compensate for missing XGBoost features (rules, LightLR) depend on the
+same device/IP-risk columns this dataset doesn't honestly provide, so they
+contribute a near-constant offset rather than real per-row signal here. On
+the one dataset trustworthy
 enough to test (Dataset 1), the model retains a real but modest ability to
 *rank* fraud above non-fraud (ROC-AUC 0.81) using the ~15% of its feature
 vector that could be honestly reconstructed from a different dataset's
@@ -284,11 +365,21 @@ comparison, neither of which this check had access to.
 
 ## 6. Reproducing this check
 
+Raw-XGBoost-only check (§4.1–4.3):
 ```
 cd PaySense-ML-Backend
 venv\Scripts\python.exe generalization_check.py
 ```
 
+Full production ensemble check (§4.4), scoring through `fraud_model.score()`:
+```
+cd PaySense-ML-Backend
+venv\Scripts\python.exe generalization_check_ensemble.py
+```
+
 Requires the datasets at their original paths under `E:\Projects\upi\` (not
 copied into this repo, per the task's data-hygiene conventions) and the
-existing `venv/` — no new packages were installed.
+existing `venv/` — no new packages were installed. The ensemble check also
+requires `artefacts/light_lr.pkl` to exist (see `train_light_lr.py`) so it's
+actually testing the 3-model ensemble and not silently falling back to
+XGBoost + rules only.
