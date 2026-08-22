@@ -15,8 +15,9 @@
 | Precision @ t=0.50 | **100%** — zero false alerts |
 | Recall @ t=0.50 | 37.94% |
 | Datasets evaluated | 18 |
-| Master dataset | 30,000 rows · 41 features · 4.21% fraud |
+| Master dataset | 30,000 rows · 40 model-ready features · 4.21% fraud |
 | SMOTE applied | Training partition only (24K → 45,980 rows) |
+| Tests passing | **105** (28 Android unit tests · 77 backend pytest) |
 
 ---
 
@@ -78,29 +79,28 @@ paysense/
 │       ├── paysense_class_imbalance.png
 │       └── paysense_feature_engineering.png
 │
-├── PaySense-Android-Client/          ← Kotlin Android app
-│   └── app/src/main/
-│       ├── AndroidManifest.xml
-│       ├── res/layout/
-│       │   ├── activity_main.xml
-│       │   ├── item_transaction.xml
-│       │   └── layout_bottom_sheet_category.xml
-│       └── kotlin/com/paysense/app/
-│           ├── layer1/SmsReceiver.kt
-│           ├── layer2/
-│           │   ├── PayeeCache.kt
-│           │   ├── PayeeDao.kt
-│           │   ├── PayeeCacheRepository.kt
-│           │   ├── PaySenseDatabase.kt
-│           │   └── TransactionHistory.kt
-│           ├── layer3/
-│           │   ├── ApiModels.kt
-│           │   ├── PaySenseApi.kt
-│           │   └── FraudApiService.kt
-│           └── ui/
-│               ├── MainActivity.kt
-│               ├── TransactionAdapter.kt
-│               └── CategoryBottomSheet.kt
+├── PaySense-Android-Client-New/      ← Kotlin Android app (active — builds & tests green)
+│   └── app/src/
+│       ├── main/
+│       │   ├── AndroidManifest.xml
+│       │   ├── res/{layout,values,drawable,color,font}/
+│       │   └── kotlin/com/paysense/app/
+│       │       ├── layer1/SmsReceiver.kt
+│       │       ├── layer2/
+│       │       │   ├── PayeeCache.kt · PayeeDao.kt · PayeeCacheRepository.kt
+│       │       │   ├── PaySenseDatabase.kt · TransactionHistory.kt
+│       │       │   └── Budget.kt · SavingsGoal.kt · PdfReportGenerator.kt · FinanceExportUtil.kt
+│       │       ├── layer3/
+│       │       │   ├── ApiModels.kt · PaySenseApi.kt · FraudApiService.kt
+│       │       └── ui/
+│       │           ├── MainActivity.kt · TransactionAdapter.kt
+│       │           ├── DashboardContentFragment.kt · FinanceFragment.kt · AssistantFragment.kt · ProfileFragment.kt
+│       │           └── AddTransactionDialog.kt · CategoryBottomSheet.kt · BudgetBottomSheet.kt · GoalBottomSheet.kt · DonutChartView.kt
+│       └── test/kotlin/com/paysense/app/     ← 28 unit tests (layer1/2/3)
+│
+│  (PaySense-Android-Client/ is an early, incomplete scaffold — superseded by -New, kept for history)
+│
+├── screenshots/                      ← 10 real device screenshots of the app
 │
 └── PaySense-Report/                  ← IEEE LaTeX report (Overleaf ready)
     ├── paysense_report.tex
@@ -152,7 +152,7 @@ uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 **Verify:**
 ```bash
 curl http://localhost:8000/health
-# → {"status":"ok","model_loaded":true,"threshold":0.5,"feature_count":41}
+# → {"status":"ok","model_loaded":true,"threshold":0.5,"feature_count":40}
 ```
 
 **Swagger UI:** [http://localhost:8000/docs](http://localhost:8000/docs)
@@ -190,45 +190,26 @@ curl -X POST http://localhost:8000/predict \
 ## Local Run — Android App
 
 ### Prerequisites
-- Android Studio Hedgehog or newer
-- Android SDK API 34
-- FastAPI backend running at `http://localhost:8000`
+- Android Studio (Ladybug or newer) with SDK Platform 34 + Build-Tools 36
+- JDK 17 (Android Studio's bundled JBR works)
 
 ### Setup
 
-1. Open Android Studio → **File → Open** → select `PaySense-Android-Client/`
+1. Open Android Studio → **File → Open** → select `PaySense-Android-Client-New/`. All dependencies (Room 2.8.4 via KSP, Retrofit, OkHttp, Coroutines, Material 1.12) are already declared in `app/build.gradle.kts` — no manual edits needed, just let Gradle sync.
 
-2. Add to `dependencies {}` in `build.gradle (Module: app)`:
-```gradle
-implementation("androidx.room:room-runtime:2.6.1")
-implementation("androidx.room:room-ktx:2.6.1")
-kapt("androidx.room:room-compiler:2.6.1")
-implementation("com.squareup.retrofit2:retrofit:2.11.0")
-implementation("com.squareup.retrofit2:converter-gson:2.11.0")
-implementation("com.squareup.okhttp3:okhttp:4.12.0")
-implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
-implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
-implementation("com.google.code.gson:gson:2.11.0")
-implementation("com.google.android.material:material:1.12.0")
-```
-
-3. Add to `plugins {}`:
-```gradle
-id("kotlin-kapt")
-```
-
-4. Add to `android {}`:
-```gradle
-buildFeatures { viewBinding = true }
-```
-
-5. In `FraudApiService.kt`, confirm:
+2. By default the app points at the live deployed backend:
 ```kotlin
-private const val BASE_URL = "http://10.0.2.2:8000/"
-// 10.0.2.2 = Android emulator's alias for your laptop's localhost
+// FraudApiService.kt
+private const val BASE_URL = "https://paysense-api.onrender.com/"
 ```
+   To hit a locally-running backend instead (`uvicorn main:app` from the steps above), change this to `http://10.0.2.2:8000/` (the emulator's alias for your laptop's localhost) and rebuild.
 
-6. Click **Run ▶**
+3. Click **Run ▶**, or from the command line:
+```bash
+cd PaySense-Android-Client-New
+./gradlew assembleDebug   # build the APK
+./gradlew test            # run the 28 Layer 1/2/3 unit tests
+```
 
 ### Test SMS via Emulator
 
@@ -256,6 +237,56 @@ Expected:
 PaySense_Layer3: 🚨 HIGH ALERT | score=0.98 | alert=high
 ```
 UI: Red card with ⚠ icon and "Score: 98%"
+
+---
+
+## Testing
+
+105 tests, all passing. Also wired into CI (`.github/workflows/ci.yml`) — runs both suites on every push/PR to `main`.
+
+| Suite | Tests | What's covered |
+|---|---|---|
+| `PaySense-ML-Backend/tests/test_api.py` | 45 | `/predict`, `/health`, `/classify` — auth, request validation, VPA format, P2P consistency, cold start, alert-level consistency, one correctness check per category class |
+| `PaySense-ML-Backend/tests/test_pipeline_logic.py` | 32 | SMOTE applied post-split/train-only, alert-level threshold boundaries, `DROP_COLS` schema, frozen preprocessor/feature-count artefacts |
+| `PaySense-Android-Client-New/app/src/test/kotlin/.../layer1/SmsReceiverTest.kt` | 12 | Gate 1 (TRAI sender regex), Gate 2 (transaction keywords), Gate 3 (named-group extraction + quarantine on unparseable amount) |
+| `.../layer2/NlpKeywordRulesTest.kt` | 9 | Merchant→category keyword table, confidence floor, unknown-payee fallthrough to HITL |
+| `.../layer3/DeviationStatsCalculatorTest.kt` | 7 | Cold-start neutral z-score, personalised amount/hour z-scores, stddev clamping (÷0 guard) |
+
+Run them:
+```bash
+# Backend
+cd PaySense-ML-Backend && pytest tests/ -v
+
+# Android
+cd PaySense-Android-Client-New && ./gradlew test
+```
+
+Two real bugs the suite (and the process of writing it) caught, both now fixed rather than just flagged:
+- **Auth-bypass-by-default**: `.env` shipped `APP_ENV=development`, under which `/predict`/`/classify` skipped JWT checks entirely when no `Authorization` header was sent — which had also been silently passing three auth tests for the wrong reason. `.env.example`'s default is now `production`, `conftest.py` pins `production` for the test run, and (see **Authentication** below) the client no longer depends on the bypass anyway.
+- **Dead code with a live twin**: `main.py` had its own `compute_alert_level()`, byte-for-byte duplicate logic of the one actually used by `/predict` (`EnsembleResult.alert_level` in `src/fraud_model.py`), never called anywhere. Deleted, along with the 20 tests that existed only to guard it against drifting from its live counterpart.
+
+The Android z-score math (`computeDeviationStats` in `FraudApiService.kt`) and the Layer 2 keyword classifier (`runNlpClassifier` in `PayeeCacheRepository.kt`) both needed an Android `Context`/Room DB to construct — rather than pull in Robolectric, the pure calculation logic was extracted into standalone `internal object DeviationStatsCalculator` and `internal object NlpKeywordRules`, so it's directly unit-testable with plain JUnit.
+
+---
+
+## Authentication
+
+The login screen used to be theater: a local, hardcoded `username == "paysense" && password == "guardian2025"` string comparison in `MainActivity.kt` that never talked to the network, while the backend's real `POST /auth/token` endpoint (and its JWT protection on `/predict`, `/classify`, `/insights/weekly`) sat completely disconnected from it — the client worked at all only because the server's dev-mode bypass let every request through unauthenticated.
+
+That's fixed. The login screen now calls `/auth/token` for real; on success the JWT is persisted and an `OkHttp` `Interceptor` attaches `Authorization: Bearer <token>` to every subsequent request automatically; a 401 (expired/invalid token) clears the stored auth state so the next launch asks you to log in again. The hardcoded credential string is gone from the Kotlin source — the one real check is server-side, in `main.py`, via `API_DEMO_USER`/`API_DEMO_PASS`.
+
+Verified against a locally-running instance of the backend, not just asserted:
+```bash
+# No token — now genuinely rejected (previously would have passed under the dev bypass):
+curl -X POST http://localhost:8000/predict -H "Content-Type: application/json" -d '{...}'
+# → 401 {"detail":"Not authenticated"}
+
+# Real token, obtained the same way the app does:
+curl -X POST http://localhost:8000/auth/token -H "Content-Type: application/json" \
+  -d '{"username":"paysense","password":"guardian2025"}'
+# → 200 {"access_token":"...", "token_type":"bearer", "expires_in":3600}
+```
+And on-device: the login flow was run on a real emulator against this same local backend, both with the correct demo credentials (JWT issued, dashboard loads, a subsequent authenticated call to `/insights/weekly` succeeds with the token attached) and with wrong ones (401, visible "Invalid username or password" error) — confirmed via `adb logcat` and the backend's own request log, not just a compiling build.
 
 ---
 
@@ -308,9 +339,32 @@ The `PaySense-Report/` folder contains a complete **10-page IEEE-format LaTeX re
 
 ---
 
+## Layer 2 NLP Classifier
+
+The architecture diagram above says "Tier 2: NLP classifier" — until now, that tier didn't actually exist. `runNlpClassifier()` in `PayeeCacheRepository.kt` was a keyword-matching stub, even though the paper's bibliography already cited `FinText-6K` as the dataset "used to train the Layer 2 NLP classifier." That dataset had never been touched by any training code. It now has been: a TF-IDF + linear SVM classifier trained on FinText-6K's 5,000-row split, served via a new `POST /classify` endpoint, and wired into the Android client's Tier 2 (gated by the same 0.65 confidence threshold as before — below it, falls through to the human prompt exactly as it did previously).
+
+**Honest caveat, stated up front:** the held-out test set scores 100% accuracy — verified independently, not just claimed — because FinText-6K's 5,000 rows are generated from only 40 fixed sentence templates with the amount/reference number swapped, and the test split draws from those same 40 templates. That's a real property of the dataset, not a bug or a leak, but it means 100% is a ceiling on "can it read this style of templated narration," not a claim about arbitrary free-text SMS. Full metrics, the exact template-overlap check, and the category-vocabulary reconciliation (FinText-6K's 5 classes vs. the app's pre-existing, inconsistent category lists) are in `PaySense-ML-Backend/CATEGORY_CLASSIFIER.md`.
+
+---
+
+## Generalization Check
+
+The 0.8851 ROC-AUC above is measured on a held-out split of the model's *own* training pipeline — it proves the model didn't memorize its own test rows, not that it works on data it's never seen. `PaySense-ML-Backend/GENERALIZATION_CHECK.md` closes that gap: the frozen model, unmodified, was scored against real UPI/fraud datasets it was never trained on, using the same dataset-vetting rigor as the Trojan Family discovery (one 100K-row candidate with a suspicious flat 20.00% fraud rate and near-deterministic feature→label correlations was rejected outright, the same way the pre-balanced Trojan file was).
+
+On the one dataset that passed vetting (74,917 real rows, 0.94% fraud, only 6 of 40 features honestly mappable to PaySense's schema — the rest imputed):
+
+| Metric | Value |
+|---|---|
+| ROC-AUC | 0.8064 — real ranking signal, using ~15% of the feature vector |
+| Recall @ production threshold (0.40) | **0 / 701** — the model's max output on this dataset was 0.0095, ~42× below its own decision threshold |
+
+**Honest read:** the model learned *something* transferable — it isn't pure memorization — but it is not operationally useful on any transaction stream that can't supply its full 40-feature, personalization-heavy vector (per-user z-scores, device/IP risk, KYC flags), and no such real-world dataset appears to exist outside this project's own synthetic pipeline. That's a real generalization gap, reported rather than hidden.
+
+---
+
 ## Honest Limitations
 
-- All training data is **synthetic** — real-world performance requires a live shadow-mode trial
+- All training data is **synthetic**, and the generalization check above confirms the gap directly: **0/701** frauds caught on real out-of-distribution data at the production threshold — a live shadow-mode trial (or a dataset that can supply the full 40-feature vector) is required before this could be trusted on real traffic
 - **67.98% recall ceiling** at any threshold — Platt Scaling is proposed as Phase 4 fix
 - `new_device_flag` uses a placeholder default in the demo — production needs device fingerprinting APIs
 
