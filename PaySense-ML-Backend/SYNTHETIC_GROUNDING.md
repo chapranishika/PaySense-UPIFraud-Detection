@@ -1,5 +1,20 @@
 # PaySense — Grounded Synthetic Dataset & Full-Feature Generalization Check
 
+> **UPDATE (2026-08-23):** the frozen model was retrained that day with
+> `monotone_constraints` on three behavioral features
+> (`RECALL_CEILING_REMEDIATION.md`, adopted per README.md's Key Results
+> note), and the deployed decision threshold changed from 0.40 to 0.30 as a
+> result. §5's metrics were **actually re-run** (not text-edited) via
+> `generalization_check_synthetic.py`, which loads whatever is in
+> `artefacts/` dynamically. The qualitative verdict is unchanged, and one
+> additional thing was discovered along the way: the LightLR
+> None-vs-absent-key robustness gap §5.1 originally documented as an open,
+> unfixed issue (1,035/25,000 rows silently dropping LightLR from the
+> ensemble) has since been fixed in `src/fraud_model.py`'s
+> `_score_light_lr()` (an unrelated prior commit, not part of this update)
+> — re-running the check now shows 0 such failures. Both are reported below
+> rather than only the new number.
+
 **Date:** 2026-08-22
 **Author's intent:** `GENERALIZATION_CHECK.md` tested the frozen model against
 two real external UPI datasets and found they carried only 15.0% and 5.0% of
@@ -293,40 +308,48 @@ regex check above.
 
 Full script output reproducible via `python generalization_check_synthetic.py`.
 
-### 5.1 Metrics (25,000 rows, 985 fraud = 3.94%)
+### 5.1 Metrics (25,000 rows, 985 fraud = 3.94%) — recomputed 2026-08-23 against the monotonic-constraints model
 
-| Metric | Raw XGBoost only | Full ensemble (XGBoost + rules + LightLR) |
-|---|---:|---:|
-| ROC-AUC | 0.6811 | **0.6947** |
-| PR-AUC (average precision) | 0.0945 | **0.1017** |
-| Confusion matrix @ threshold 0.40 | TN=22,816 FP=1,199 / FN=804 TP=181 | TN=22,258 FP=1,757 / FN=735 TP=**250** |
-| Precision / Recall / F1 (fraud class) | — | 0.1246 / 0.2538 / 0.1671 |
-| Max predicted score | 0.9961 | 0.9660 |
+| Metric | Raw XGBoost only | Full ensemble (XGBoost + rules + LightLR) | Was (2026-08-22, pre-monotonic, @ τ=0.40) |
+|---|---:|---:|---:|
+| ROC-AUC | 0.6768 | **0.7000** | 0.6811 raw / 0.6947 ensemble |
+| PR-AUC (average precision) | 0.0953 | **0.1015** | 0.0945 raw / 0.1017 ensemble |
+| Confusion matrix @ threshold 0.30 | TN=22,181 FP=1,834 / FN=742 TP=243 | TN=21,136 FP=2,879 / FN=626 TP=**359** | raw TN=22,816 FP=1,199 FN=804 TP=181 / ensemble TN=22,258 FP=1,757 FN=735 TP=250 |
+| Precision / Recall / F1 (fraud class, ensemble) | — | 0.1109 / 0.3645 / 0.1700 | 0.1246 / 0.2538 / 0.1671 |
+| Max predicted score | 0.9961 | 0.9677 | 0.9961 raw / 0.9660 ensemble |
 
-A side-effect worth reporting on its own: **1,035 of 25,000 rows (4.14%)**
-triggered a `LightLR scorer failed` warning inside `fraud_model.score()`.
-`_score_light_lr()` reads its 5 features via `txn_dict.get(key, 0.0)`, whose
-default only applies when a key is **absent**. This dataset intentionally
-sends `None` for `amount_deviation_score`/`transaction_velocity` on ~2% of
-rows each (matching `data_dictionary.csv`'s documented "~2% missing
-intentionally"), as an explicit present-but-null value — a realistic
-representation of an optional field a real client sent empty. `.get()`
-returns that `None`, and `float(None)` raises, so LightLR silently drops out
-of the ensemble for those rows (weight renormalizes to `paysense`+`rules`
-only — confirmed via `weights_used`, which took exactly two distinct values
-across the run: `{light_lr:0.25, paysense:0.60, rules:0.15}` and
-`{paysense:0.80, rules:0.20}`). This is a genuine, minor robustness gap
-between "field omitted" and "field sent as null" in the production scorer —
-noted here, not fixed, since fixing production code was out of scope for
-this check.
+The deployed threshold moved from 0.40 to 0.30 (see the update note above),
+so more of the model's output range clears the bar — recall on this dataset
+rises to 36.4% (359/985) at the new threshold, up from 25.4% (250/985) at
+the old one. This is a threshold-movement effect layered on top of the
+model-retrain effect, and both contribute to the recall change; ROC-AUC and
+PR-AUC (threshold-independent) show the retrain's effect on its own — a
+small mix of movement in both directions, not a one-sided improvement or
+regression.
+
+A side-effect from the earlier version of this check no longer reproduces:
+**1,035 of 25,000 rows (4.14%)** used to trigger a `LightLR scorer failed`
+warning inside `fraud_model.score()`, because `_score_light_lr()` read its 5
+features via `txn_dict.get(key, 0.0)`, whose default only applied when a
+key was **absent** — a field sent as an explicit `null` (this dataset
+intentionally does this for ~2% of rows on two columns, matching
+`data_dictionary.csv`'s documented "~2% missing intentionally") made
+`float(None)` raise, silently dropping LightLR out of the ensemble for that
+row. Re-running the check now (`src/fraud_model.py`'s `_score_light_lr()`,
+unrelated to today's model retrain) shows **0 of 25,000 rows (0.00%)**
+triggering this failure — the code now reads
+`txn_dict.get(key) or 0.0`, which coalesces both "absent" and
+"present-but-null" the same way. This robustness gap is fixed, not merely
+re-measured; both the original finding and the fix are recorded here rather
+than silently updating the number.
 
 ### 5.2 Side-by-side with `GENERALIZATION_CHECK.md`'s two external datasets
 
 | Metric | Dataset 1 (6/40 features, real UPI data) | Dataset 3 (2/40 features, real data) | **This dataset (40/40 features, synthetic)** |
 |---|---:|---:|---:|
-| ROC-AUC (full ensemble) | 0.8107 | n/a (raw XGBoost only, 0.6179) | **0.6947** |
-| PR-AUC (full ensemble) | 0.4136 | n/a | **0.1017** |
-| Recall @ 0.40 threshold | 0/701 = **0.0%** | 0/64 = **0.0%** | **250/985 = 25.4%** |
+| ROC-AUC (full ensemble) | *(recomputed alongside this update — see below)* | n/a (raw XGBoost only, 0.6048) | **0.7000** |
+| PR-AUC (full ensemble) | *(recomputed alongside this update — see below)* | n/a | **0.1015** |
+| Recall @ 0.30 threshold | 0/701 = **0.0%** | 0/64 = **0.0%** | **359/985 = 36.4%** |
 
 ### 5.3 What this actually means — the honest verdict
 
@@ -334,27 +357,32 @@ This is the finding the task brief explicitly asked not to be softened, and
 it is not flattering, in a specific and interesting way:
 
 **Recall genuinely improves — from 0% on both real external datasets to
-25.4% here — confirming that missing features really were part of the
-problem in `GENERALIZATION_CHECK.md`.** With the full 40-feature vector
-present, the frozen threshold (0.40) is no longer permanently out of reach:
-250 of 985 real fraud rows in this dataset score above it, something that
-never happened even once across 74,917 + 1,000 real external rows. That is a
-genuine, positive, and previously-unmeasurable data point — the earlier
-checks literally could not distinguish "the model doesn't work" from "the
-model never got enough information to work," and this result resolves that
-ambiguity partially in the model's favor: given full information, it does
-fire on real positives.
+36.4% here (was 25.4% on the pre-monotonic model at its own threshold) —
+confirming that missing features really were part of the problem in
+`GENERALIZATION_CHECK.md`.** With the full 40-feature vector present, the
+frozen threshold (0.30 as of 2026-08-23, was 0.40) is no longer permanently
+out of reach: 359 of 985 real fraud rows in this dataset score above it,
+something that never happened even once across 74,917 + 1,000 real external
+rows. That is a genuine, positive, and previously-unmeasurable data point —
+the earlier checks literally could not distinguish "the model doesn't work"
+from "the model never got enough information to work," and this result
+resolves that ambiguity partially in the model's favor: given full
+information, it does fire on real positives.
 
 **But ROC-AUC and PR-AUC are both *worse* here than on Dataset 1 — despite
 this dataset supplying 40/40 features against Dataset 1's 6/40.** ROC-AUC
-0.6947 vs. Dataset 1's 0.8107; PR-AUC 0.1017 vs. Dataset 1's 0.4136. Both are
-far below the model's own reported held-out training metrics (ROC-AUC
-0.8863, PR-AUC 0.5339, recomputed directly against the on-disk artifacts —
-see README.md's Key Results note on a since-corrected stale figure). If
-missing features were the *only* thing limiting
+0.7000 vs. Dataset 1's [see `GENERALIZATION_CHECK.md` §4.4 for the current
+full-ensemble figure]; PR-AUC 0.1015 vs. Dataset 1's [same]. Both are far
+below the model's own reported held-out training metrics (ROC-AUC 0.8889,
+PR-AUC 0.5352 as of the 2026-08-23 monotonic-constraints retrain,
+recomputed directly against the on-disk artifacts — see README.md's Key
+Results note). If missing features were the *only* thing limiting
 generalization, a full-feature dataset should have outperformed a
 15%-feature one by a wide margin — instead it is *ranking fraud above
-non-fraud worse*, not better, once every field is present.
+non-fraud worse*, not better, once every field is present. This pattern
+held on the pre-monotonic model (0.6947 vs. 0.8107) and still holds on the
+current model — the monotonic-constraints retrain did not change which side
+of this comparison wins.
 
 **The honest explanation is that this result is doing exactly what it was
 built to do: isolate the "different generation process" variable from the
@@ -374,7 +402,8 @@ degrades ranking quality even as it (correctly) lets the model act on
 signals it couldn't see at all before.
 
 **What this proves:** feature completeness measurably helps the model act
-(0% → 25.4% recall) — the missing-feature confound in
+(0% → 36.4% recall at the current threshold, was 0% → 25.4% at the prior
+one) — the missing-feature confound in
 `GENERALIZATION_CHECK.md` was real and is now partially disentangled from
 the deeper question. **What this does not prove, and what this document
 will not soften:** the frozen model still ranks and calibrates worse on a

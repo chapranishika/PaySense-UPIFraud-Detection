@@ -1,5 +1,28 @@
 # PaySense — Platt Scaling: Does It Move the Recall Ceiling?
 
+> **UPDATE (2026-08-23, later the same day):** every specific number in this
+> document (the fitted sigmoid A=−12.946041, B=4.009092; the 69.9605%/177/76
+> ceiling figures; every Brier/ECE value; the ROC-AUC 0.886349 / PR-AUC
+> 0.533859 baseline) was computed against the **pre-monotonic baseline
+> model** — the frozen artifact as it existed before
+> `RECALL_CEILING_REMEDIATION.md`'s `monotone_constraints` variant was
+> adopted as the new deployed model (see that document's own update note,
+> and README.md's Key Results note). That baseline is preserved unchanged at
+> `artefacts/paysense_model_vanilla_replica.pkl`. This experiment was
+> **not** re-run against the new monotonic model, deliberately: the
+> qualitative finding here — that a strictly monotonic transform (Platt
+> scaling or otherwise) cannot change a classifier's ranking, and therefore
+> cannot move a ranking-based recall ceiling — is a mathematical property of
+> monotonic transforms in general, not a fact about this one specific model.
+> It holds identically for the now-deployed monotonic-constraints model (or
+> any other classifier). What should **not** be assumed is that the exact
+> numbers below (the ceiling's precise 69.96%, the specific 76 invisible
+> rows, the fitted A/B, the Brier/ECE tables) still describe today's
+> deployed artifact — they describe the superseded baseline. The new
+> model's own recall-ceiling figure (71.94% at τ=0.05, recovering 10 of the
+> original 76 rows) is reported in `RECALL_CEILING_REMEDIATION.md`'s update
+> note and in README.md/`paysense_report.tex`.
+
 **Date:** 2026-08-23
 **Author's intent:** README.md and `PaySense-Report/paysense_report.tex` have
 long stated that the frozen model's 69.96% recall ceiling (at the most

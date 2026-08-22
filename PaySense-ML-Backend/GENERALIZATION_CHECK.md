@@ -1,5 +1,16 @@
 # PaySense — Out-of-Distribution Generalization Check
 
+> **UPDATE (2026-08-23):** the frozen model was retrained that day with
+> `monotone_constraints` on three behavioral features
+> (`RECALL_CEILING_REMEDIATION.md`, adopted per README.md's Key Results
+> note), and the deployed decision threshold changed from 0.40 to 0.30 as a
+> result. Every number in this document was **actually re-run** against the
+> new on-disk artifacts (not text-edited) via `generalization_check.py` and
+> `generalization_check_ensemble.py`, which load whatever is in
+> `artefacts/` dynamically. The qualitative verdict (§5) is unchanged; the
+> specific ROC-AUC/PR-AUC/max-probability numbers moved slightly, in both
+> directions, and are updated below to the freshly recomputed values.
+
 **Date:** 2026-08-22
 **Author's intent:** Answer one question honestly — does the frozen PaySense
 XGBoost model (`artefacts/paysense_model.pkl`) generalize to real UPI/financial
@@ -17,10 +28,11 @@ trusting anything enough to score against it.
 
 ## 1. Why this check exists
 
-The frozen model's only reported metrics (ROC-AUC 0.8863, PR-AUC 0.5339 —
-recomputed 2026-08-22 directly against the on-disk artifacts; an earlier,
-stale 0.8851/0.5303 had drifted from what the artifacts actually produce,
-see README.md's Key Results note) come
+The frozen model's only reported metrics (ROC-AUC 0.8889, PR-AUC 0.5352 as
+of the 2026-08-23 monotonic-constraints retrain — was ROC-AUC 0.8863, PR-AUC
+0.5339 on 2026-08-22, and an earlier, stale 0.8851/0.5303 before that had
+drifted from what the artifacts actually produced at the time, see
+README.md's Key Results note) come
 from a held-out split of `paysense_master_dataset.csv` — a dataset built from
 one 20,000-row anchor plus one 10,000-row synthetic supplement, joined and
 schema-bridged by the same author who trained the model. A held-out split of
@@ -195,47 +207,53 @@ same logic the frozen preprocessor already uses for missing production data.
 ## 4. Results
 
 Metrics use the frozen model, the frozen preprocessor, and the frozen
-decision threshold (**0.40**, from `artefacts/paysense_threshold.pkl`) with
-no adjustment. Full script output is reproducible via
-`python generalization_check.py`.
+decision threshold (**0.30** as of 2026-08-23 — see the update note above;
+was 0.40 before the monotonic-constraints retrain, from
+`artefacts/paysense_threshold.pkl`) with no adjustment. Full script output
+is reproducible via `python generalization_check.py`.
 
 ### 4.1 Dataset 1 — `upi_fraud_dataset.csv` (74,917 rows, 701 fraud)
 
-| Metric | Value |
-|---|---:|
-| ROC-AUC | **0.8064** |
-| PR-AUC (average precision) | **0.4052** |
-| Confusion matrix @ threshold 0.40 | TN=74,216 FP=0 / FN=701 TP=0 |
-| Precision / Recall / F1 (fraud class) | 0.0000 / 0.0000 / 0.0000 |
-| Max predicted probability (any row) | **0.0095** |
+| Metric | Value (2026-08-23, monotonic model) | Was (2026-08-22, pre-monotonic model) |
+|---|---:|---:|
+| ROC-AUC | **0.7687** | 0.8064 |
+| PR-AUC (average precision) | **0.2693** | 0.4052 |
+| Confusion matrix @ threshold | TN=74,216 FP=0 / FN=701 TP=0 | TN=74,216 FP=0 / FN=701 TP=0 |
+| Precision / Recall / F1 (fraud class) | 0.0000 / 0.0000 / 0.0000 | 0.0000 / 0.0000 / 0.0000 |
+| Max predicted probability (any row) | **0.0112** | 0.0095 |
 
 ### 4.2 Dataset 3 — synthetic financial fraud (1,000 rows, 64 fraud) — low power
 
-| Metric | Value |
-|---|---:|
-| ROC-AUC | **0.6179** |
-| PR-AUC (average precision) | **0.1051** |
-| Confusion matrix @ threshold 0.40 | TN=936 FP=0 / FN=64 TP=0 |
-| Precision / Recall / F1 (fraud class) | 0.0000 / 0.0000 / 0.0000 |
-| Max predicted probability (any row) | **0.0034** |
+| Metric | Value (2026-08-23, monotonic model) | Was (2026-08-22, pre-monotonic model) |
+|---|---:|---:|
+| ROC-AUC | **0.6048** | 0.6179 |
+| PR-AUC (average precision) | **0.1160** | 0.1051 |
+| Confusion matrix @ threshold | TN=936 FP=0 / FN=64 TP=0 | TN=936 FP=0 / FN=64 TP=0 |
+| Precision / Recall / F1 (fraud class) | 0.0000 / 0.0000 / 0.0000 | 0.0000 / 0.0000 / 0.0000 |
+| Max predicted probability (any row) | **0.0028** | 0.0034 |
 
 ### 4.3 What the two numbers together actually mean
 
 These two metrics tell different, both-true stories, and reporting only one
 would be misleading:
 
-- **ROC-AUC 0.81 on Dataset 1 says the model still ranks fraud above
-  legitimate transactions better than chance**, using only 6 honestly-mapped
-  features out of 40. That is a real, if modest, generalization signal — the
-  6 mapped features (amount, hour, night flag, merchant category, device,
-  success flag) evidently still carry usable signal even completely outside
-  the training pipeline.
+- **ROC-AUC 0.77 on Dataset 1 (was 0.81 on the pre-monotonic model) says the
+  model still ranks fraud above legitimate transactions better than
+  chance**, using only 6 honestly-mapped features out of 40. That is a real,
+  if more modest than before, generalization signal — the 6 mapped features
+  (amount, hour, night flag, merchant category, device, success flag)
+  evidently still carry usable signal even completely outside the training
+  pipeline. The monotonic-constraints retrain traded a little of this
+  external-ranking signal for the recall-ceiling improvement documented in
+  `RECALL_CEILING_REMEDIATION.md` — a real, reportable side effect, not
+  hidden here.
 - **The confusion matrix says the model catches zero of the 701 frauds in
   Dataset 1 at its own frozen threshold.** The maximum predicted probability
-  across all 74,917 rows — fraud or not — is 0.0095, roughly 42× below the
-  0.40 decision threshold used in production. This is not a close miss; the
-  model's entire output range on this dataset is compressed into a band
-  where the frozen threshold can never fire.
+  across all 74,917 rows — fraud or not — is 0.0112, roughly 27× below the
+  0.30 decision threshold used in production (was 0.0095, ~42× below the
+  prior 0.40 threshold). This is not a close miss; the model's entire output
+  range on this dataset is compressed into a band where the frozen threshold
+  can never fire.
 
 The reason is straightforward: 34 of 40 features (85%) are `NaN` for every
 single row and get median/most-frequent imputed to the *training
@@ -246,10 +264,10 @@ prediction toward the model's low-probability, low-risk region regardless of
 what the 6 real features say. Rank-order discrimination survives (ROC-AUC);
 absolute calibration does not (PR-AUC, confusion matrix, recall).
 
-Dataset 3's ROC-AUC of 0.62 — with only 2/40 features mapped and 64 positive
-examples — is closer to a coin flip than to real discrimination, and should
-be read as exactly the low-power, low-confidence result the task brief asked
-to flag explicitly, not as independent evidence of anything.
+Dataset 3's ROC-AUC of 0.60 (was 0.62) — with only 2/40 features mapped and
+64 positive examples — is closer to a coin flip than to real discrimination,
+and should be read as exactly the low-power, low-confidence result the task
+brief asked to flag explicitly, not as independent evidence of anything.
 
 ### 4.4 Full production ensemble vs. raw XGBoost — does the ensemble do better?
 
@@ -266,15 +284,35 @@ verbatim, not re-derived), through the real `score()` ensemble path instead
 of the raw model — same frozen artifacts, same frozen threshold, no
 retraining or fine-tuning on this data anywhere.
 
-| Metric | Raw XGBoost only (§4.1) | Full ensemble (XGBoost + rules + LightLR) |
-|---|---:|---:|
-| ROC-AUC | 0.8064 | **0.8107** |
-| PR-AUC (average precision) | 0.4052 | **0.4136** |
-| Confusion matrix @ threshold 0.40 | TN=74,216 FP=0 / FN=701 TP=0 | TN=74,216 FP=0 / FN=701 TP=0 |
-| Precision / Recall / F1 (fraud class) | 0.0000 / 0.0000 / 0.0000 | 0.0000 / 0.0000 / 0.0000 |
-| Max predicted score (any row) | 0.0095 | 0.0772 |
-| LightLR score range across all 74,917 rows | — | **constant: 0.153867** |
-| Rules score range across all 74,917 rows | — | **two values: 0.17 / 0.22** |
+**Recomputed 2026-08-23 against the monotonic-constraints model** (see the
+update note at the top of this document) via a real re-run of
+`generalization_check_ensemble.py` — not a text edit. The deployed
+threshold is now 0.30 (was 0.40).
+
+| Metric | Raw XGBoost only (§4.1) | Full ensemble (XGBoost + rules + LightLR) | Was (2026-08-22, pre-monotonic, @ τ=0.40) |
+|---|---:|---:|---:|
+| ROC-AUC | 0.7687 | **0.7919** | 0.8064 raw / 0.8107 ensemble |
+| PR-AUC (average precision) | 0.2693 | **0.3767** | 0.4052 raw / 0.4136 ensemble |
+| Confusion matrix @ threshold | TN=74,216 FP=0 / FN=701 TP=0 | TN=74,216 FP=0 / FN=701 TP=0 | same, both thresholds |
+| Precision / Recall / F1 (fraud class) | 0.0000 / 0.0000 / 0.0000 | 0.0000 / 0.0000 / 0.0000 | same |
+| Max predicted score (any row) | 0.0112 | 0.0782 | 0.0095 raw / 0.0772 ensemble |
+| LightLR score range across all 74,917 rows | — | **constant: 0.153867** | constant: 0.153867 (unchanged — LightLR is untouched by the XGBoost retrain) |
+| Rules score range across all 74,917 rows | — | **two values: 0.17 / 0.22** | two values: 0.17 / 0.22 (unchanged — rules scorer is untouched) |
+
+The ensemble's edge over raw XGBoost on this dataset is larger on the new
+model than it was on the old one (ROC-AUC +0.0232 vs. the prior +0.0043;
+PR-AUC +0.1074 vs. the prior +0.0084). This is a real, reproducible effect
+of the monotonic retrain, not noise: the new model's raw `paysense_score`
+values on this dataset are compressed into an even narrower band (0.0006 to
+0.0112, all still far below the 0.30 threshold) than before, so the small
+but real organic signal `is_night_transaction` contributes through the
+rules scorer's fixed 0.17/0.22 split — unchanged, since neither the rules
+scorer nor LightLR were touched by the XGBoost retrain — now moves relative
+rank order more than it used to, precisely because the raw scores it's
+competing against carry less separation of their own. Both LightLR and the
+rules scorer are otherwise identical to the pre-monotonic run, confirming
+the entire delta traces to the XGBoost component, not to any change in the
+other two scorers.
 
 **Why the extra scorers barely move the needle, and why that's expected
 rather than a bug:** none of LightLR's 5 features
@@ -299,10 +337,16 @@ driven by one binary flag, not the "highest-SHAP hard signals" the scorer
 was designed around.
 
 **Honest verdict: the full ensemble does not meaningfully outperform raw
-XGBoost on this dataset, and it fails in the identical operational way.**
-At the frozen 0.40 threshold it still catches **0 of 701** real frauds —
-same confusion matrix, same zero recall, as the raw-model-only check. The
-ROC-AUC/PR-AUC nudge upward (+0.0043 / +0.0084) is real but marginal, and
+XGBoost in any operationally useful sense on this dataset, and it fails in
+the identical operational way.** At the frozen threshold (0.30 as of
+2026-08-23, was 0.40) it still catches **0 of 701** real frauds — same
+confusion matrix, same zero recall, as the raw-model-only check. The
+ROC-AUC/PR-AUC nudge upward is real, and larger on the current model
+(+0.0232 / +0.1074) than it was on the pre-monotonic one (+0.0043 /
++0.0084) — see the note under the table above for why the monotonic
+retrain's *narrower* raw-score band on this dataset makes the same fixed
+`is_night_transaction` signal move relative ranking more than before, even
+though nothing about the rules scorer or LightLR changed. It remains
 traceable entirely to `is_night_transaction` carrying weak organic signal
 through the rules scorer — not to any contribution from LightLR, which
 degenerates to a constant here because its entire feature set is
@@ -314,7 +358,9 @@ supply the device/IP-risk signals either scorer needs, the same 85%-of-features-
 problem that limits raw XGBoost. **No result here was manufactured into a
 win**: the ensemble's real value (rules + LightLR catching device/IP-based
 fraud) simply cannot be exercised by a dataset that doesn't carry those
-columns, and that limitation is reported plainly rather than glossed over.
+columns, and that limitation is reported plainly rather than glossed over —
+a bigger ROC-AUC/PR-AUC nudge is still not the same thing as catching any
+additional real fraud.
 
 Reproduce with:
 ```

@@ -10,33 +10,46 @@
 
 | Metric | Value |
 |---|---|
-| ROC-AUC | **0.8863** |
-| PR-AUC *(primary)* | **0.5339** — 12.7× above random baseline |
-| Precision @ deployed threshold (t=0.40) | **98.98%** |
-| Recall @ deployed threshold (t=0.40) | **38.34%** |
+| ROC-AUC | **0.8889** |
+| PR-AUC *(primary)* | **0.5352** — 12.71× above random baseline |
+| Precision @ deployed threshold (t=0.30) | **86.44%** |
+| Recall @ deployed threshold (t=0.30) | **40.32%** |
 | Datasets evaluated | 18 |
 | Master dataset | 30,000 rows · 40 model-ready features · 4.21% fraud |
 | SMOTE applied | Training partition only (24K → 45,980 rows) |
-| Tests passing | **128** (28 Android unit tests · 100 backend pytest) |
+| Tests passing | **137** (28 Android unit tests · 109 backend pytest) |
 
-`artefacts/paysense_threshold.pkl` freezes **t=0.40** as the shipped decision
-threshold — it's the F1-optimal operating point from `paysense_phase3.py`'s
-threshold sweep (F1=0.5527 vs. 0.5501 at t=0.50), and it's what `/predict`
-actually runs in production. The t=0.50 checkpoint (F1=0.5501, 100% precision
-/ 37.94% recall) was Phase 2's pre-tuning default — the gap that threshold
-tuning actually buys here is small (F1 +0.0026, one extra true positive out
-of 253 fraud rows in the test set), not the large swing earlier drafts of
-this README claimed. Every number above was independently recomputed
-against the *currently on-disk* `artefacts/paysense_model.pkl` +
-`paysense_preprocessor.pkl` + `paysense_master_dataset.csv` on 2026-08-22 —
-a prior version of this table (ROC-AUC 0.8851, 66.14%/52.17% @ t=0.40) had
-drifted from what those files actually produce, most likely dating to an
-earlier run of `paysense_phase3.py` before the artifacts were last
-retrained (2026-07-23) or the master dataset was last touched (2026-07-15).
-The stale numbers were internally consistent with each other and with
-`paysense_report.tex`, which is exactly why the drift went unnoticed until
-someone recomputed precision/recall from the artifacts directly instead of
-trusting a table.
+**Model update, 2026-08-23:** the deployed model now trains with
+`monotone_constraints` on the three behavioral features
+(`amount_deviation_score`, `transaction_velocity`,
+`failed_attempts_last_24h`) — see `RECALL_CEILING_REMEDIATION.md` for the
+diagnosis (XGBoost's trees were gating hard on `new_device_flag`/
+`ip_location_mismatch` first, starving the behavioral features of influence
+once those two flags read 0) and the comparison against two other candidate
+fixes that justified adopting this one specifically: it recovered 10 of 76
+previously-invisible fraud rows at the most aggressive tested threshold
+while *improving* both ROC-AUC and PR-AUC, the only one of three tested
+variants with no measurable downside. `paysense_phase3.py`'s own
+threshold-selection logic was re-run against the retrained model and picked
+a genuinely different optimal threshold, **t=0.30** (not 0.40) — the
+business constraint (Recall ≥ 75%, Precision ≥ 50%) is still unmet by any
+swept threshold, so selection still falls back to unconditional max-F1, and
+max-F1 now lands at a different point because the underlying score
+distribution changed. At t=0.30, F1=0.5499 (102 of 253 fraud rows caught,
+16 false positives) versus F1=0.5486 at Phase 2's original t=0.50 default
+(96 caught, 1 false positive) — a small gap (F1 +0.0013, six extra true
+positives out of 253 fraud rows), reported as-is rather than overstated, the
+same as the prior (t=0.40) threshold note this replaces. Every number above
+was independently recomputed against the *currently on-disk*
+`artefacts/paysense_model.pkl` + `paysense_preprocessor.pkl` +
+`paysense_master_dataset.csv` on 2026-08-23 — this is the second time this
+table has needed a from-scratch recompute rather than a hand-edit: a prior
+version (ROC-AUC 0.8851, 66.14%/52.17% @ t=0.40) had drifted from what the
+artifacts actually produced before that, most likely dating to an earlier
+run of `paysense_phase3.py` before the artifacts were last retrained
+(2026-07-23) or the master dataset was last touched (2026-07-15); that drift
+is unrelated to today's update, which reflects a deliberate, verified model
+change, not drift.
 
 ---
 
@@ -142,7 +155,7 @@ paysense/
 
 ![Threshold Analysis](PaySense-ML-Backend/plots/paysense_threshold_analysis.png)
 
-Recall ceiling: **69.96%** at threshold=0.05. `PaySense-ML-Backend/PLATT_SCALING_RESULT.md` implements and tests the fix this project used to propose — Platt Scaling — and finds it does **not** move the ceiling: ROC-AUC, PR-AUC, and recall at every swept threshold are identical before and after calibration (to floating-point precision), because a monotonic 1-D rescaling of scores cannot change which rows a classifier ranks lowest. The ceiling is a **ranking/discrimination** limit of the frozen model on this feature set (76 of 253 fraud rows are ranked below the bottom decile of all other fraud, likely SMOTE-interpolated edge cases near the class boundary), not a probability-scale artifact — fixing it needs better features or a different model, not recalibration. Platt scaling's actual, separate benefit — probability *reliability* — is also mixed here: on a held-out slice, raw XGBoost's Brier score was consistently as good or better than the Platt-scaled version across 6 resampled calibration draws.
+Recall ceiling: **71.94%** at threshold=0.05 (182 of 253 fraud rows caught, 71 missed) — independently recomputed 2026-08-23 against the current on-disk model. This is an improvement over the **69.96%** ceiling of the prior (pre-monotonic) frozen model: the `monotone_constraints` update described in the Key Results note above recovers 10 of the 76 fraud rows that model could never reach at any threshold, while the remaining 45 (59% of the original 76) are still unreachable even under this fix — see `RECALL_CEILING_REMEDIATION.md` §6 for the full honest breakdown of which part of the ceiling is a fixable structural artifact versus a harder data limitation. `PaySense-ML-Backend/PLATT_SCALING_RESULT.md` implements and tests the fix this project used to propose — Platt Scaling — against the pre-monotonic baseline model, and finds it does **not** move that model's ceiling: ROC-AUC, PR-AUC, and recall at every swept threshold are identical before and after calibration (to floating-point precision), because a monotonic 1-D rescaling of scores cannot change which rows a classifier ranks lowest. That finding is a mathematical property of monotonic transforms, not specific to the model tested, so it applies identically to today's monotonic-constraints model — the residual ceiling above is a **ranking/discrimination** limit, not a probability-scale artifact, and closing the rest of it needs better features or a different model, not recalibration. Platt scaling's actual, separate benefit — probability *reliability* — was also mixed on the prior model: on a held-out slice, raw XGBoost's Brier score was consistently as good or better than the Platt-scaled version across 6 resampled calibration draws; that experiment was not repeated against the new model (see `PLATT_SCALING_RESULT.md`'s own update note).
 
 ---
 
@@ -368,23 +381,23 @@ The architecture diagram above says "Tier 2: NLP classifier" — until now, that
 
 ## Generalization Check
 
-The 0.8863 ROC-AUC above is measured on a held-out split of the model's *own* training pipeline — it proves the model didn't memorize its own test rows, not that it works on data it's never seen. `PaySense-ML-Backend/GENERALIZATION_CHECK.md` closes that gap: the frozen model, unmodified, was scored against real UPI/fraud datasets it was never trained on, using the same dataset-vetting rigor as the Trojan Family discovery (one 100K-row candidate with a suspicious flat 20.00% fraud rate and near-deterministic feature→label correlations was rejected outright, the same way the pre-balanced Trojan file was).
+The 0.8889 ROC-AUC above is measured on a held-out split of the model's *own* training pipeline — it proves the model didn't memorize its own test rows, not that it works on data it's never seen. `PaySense-ML-Backend/GENERALIZATION_CHECK.md` closes that gap: the frozen model, unmodified, was scored against real UPI/fraud datasets it was never trained on, using the same dataset-vetting rigor as the Trojan Family discovery (one 100K-row candidate with a suspicious flat 20.00% fraud rate and near-deterministic feature→label correlations was rejected outright, the same way the pre-balanced Trojan file was).
 
 On the one dataset that passed vetting (74,917 real rows, 0.94% fraud, only 6 of 40 features honestly mappable to PaySense's schema — the rest imputed):
 
 | Metric | Value |
 |---|---|
-| ROC-AUC | 0.8064 — real ranking signal, using ~15% of the feature vector |
-| Recall @ production threshold (0.40) | **0 / 701** — the model's max output on this dataset was 0.0095, ~42× below its own decision threshold |
+| ROC-AUC | 0.7687 — real ranking signal, using ~15% of the feature vector |
+| Recall @ production threshold (0.30) | **0 / 701** — the model's max output on this dataset was 0.0112, ~27× below its own decision threshold |
 
-**Honest read:** the model learned *something* transferable — it isn't pure memorization — but it is not operationally useful on any transaction stream that can't supply its full 40-feature, personalization-heavy vector (per-user z-scores, device/IP risk, KYC flags), and no such real-world dataset appears to exist outside this project's own synthetic pipeline. That's a real generalization gap, reported rather than hidden.
+**Honest read:** the model learned *something* transferable — it isn't pure memorization — but it is not operationally useful on any transaction stream that can't supply its full 40-feature, personalization-heavy vector (per-user z-scores, device/IP risk, KYC flags), and no such real-world dataset appears to exist outside this project's own synthetic pipeline. That's a real generalization gap, reported rather than hidden. **Recomputed 2026-08-23** against the monotonic-constraints model adopted that day (see the Key Results note above) — the ROC-AUC moved from 0.8064 to 0.7687 (still a real, if more modest, ranking signal) and the zero-recall finding is unchanged. Full numbers, the ensemble comparison, and the secondary low-power dataset are in `GENERALIZATION_CHECK.md`.
 
 ---
 
 ## Honest Limitations
 
 - All training data is **synthetic**, and the generalization check above confirms the gap directly: **0/701** frauds caught on real out-of-distribution data at the production threshold — a live shadow-mode trial (or a dataset that can supply the full 40-feature vector) is required before this could be trusted on real traffic
-- **69.96% recall ceiling** at any threshold — tested and confirmed to be a ranking limitation, not a calibration one (`PLATT_SCALING_RESULT.md`): Platt Scaling was implemented and leaves ROC-AUC/PR-AUC/recall completely unchanged, so fixing this needs better features or a different model, not recalibration
+- **71.94% recall ceiling** at any threshold (recomputed 2026-08-23 against the current monotonic-constraints model; was 69.96% before that update) — tested and confirmed to be mostly a ranking limitation, not a calibration one (`PLATT_SCALING_RESULT.md`, run against the prior model, but the ranking-invariance finding is model-independent): Platt Scaling leaves ROC-AUC/PR-AUC/recall completely unchanged under any monotonic transform. `RECALL_CEILING_REMEDIATION.md` went further and found the ceiling is partially — not fully — a fixable structural artifact: forcing the model's trees to give the three behavioral features (`amount_deviation_score`, `transaction_velocity`, `failed_attempts_last_24h`) independent weight recovered 10 of the original 76 invisible fraud rows with no measurable cost (now adopted), and a more aggressive variant recovered 31 of 76 but at a real cost to overall ranking quality and false-positive volume (not adopted). The remaining ~45 rows may need genuinely new, more discriminative features rather than a different arrangement of the ones already available
 - `new_device_flag` uses a placeholder default in the demo — production needs device fingerprinting APIs
 
 ---

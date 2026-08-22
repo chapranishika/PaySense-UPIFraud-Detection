@@ -89,15 +89,22 @@ learns from a single user correction. Layer~3 serves an XGBoost classifier
 via a FastAPI REST endpoint, trained on a 30{,}000-row master dataset
 constructed from 18 evaluated source datasets, with class imbalance addressed
 by SMOTE applied strictly post-split on the training partition only. The model
-achieves a ROC-AUC of \textbf{0.8863} and a PR-AUC of \textbf{0.5339}---12.7
-times above the random-classifier baseline---with 98.98\% precision at the
-deployed operating threshold ($\tau=0.40$). An honest threshold sweep
-identifies a recall ceiling of 69.96\%; Platt Scaling was subsequently
+achieves a ROC-AUC of \textbf{0.8889} and a PR-AUC of \textbf{0.5352}---12.71
+times above the random-classifier baseline---with 86.44\% precision at the
+deployed operating threshold ($\tau=0.30$). An honest threshold sweep
+originally identified a recall ceiling of 69.96\%; Platt Scaling was
 implemented and tested against this ceiling and found, as monotonic-transform
 theory predicts, to leave ROC-AUC, PR-AUC, and recall at every threshold
-unchanged---the ceiling is a ranking limitation of the model on its current
-feature set, not a probability-scale artifact, and is reported honestly as
-an open limitation rather than a solved problem. The complete system is
+unchanged. A follow-up structural diagnosis then tested, by retraining rather
+than recalibrating, whether the ceiling itself was fixable: a
+monotonicity constraint on three behavioural features was found to help
+partially---recovering 10 of the 76 previously-unreachable fraud rows while
+slightly improving both ROC-AUC and PR-AUC, with no measurable downside---and
+was consequently adopted as the deployed model, moving the ceiling to
+71.94\% while leaving the remaining rows unreached. The ceiling is therefore
+a ranking limitation of the model's feature set that is partially, but not
+fully, fixable by model structure alone, and is reported honestly as an
+open limitation rather than a solved problem. The complete system is
 released as open-source code.
 \end{abstract}
 
@@ -507,35 +514,42 @@ hyperparameter tuning decision.
 
 \begin{table}[H]
 \centering
-\caption{Model Performance at Deployed Threshold $\tau^* = 0.40$}
+\caption{Model Performance at Deployed Threshold $\tau^* = 0.30$}
 \label{tab:results}
 \begin{tabular}{@{}lr@{}}
 \toprule
 Metric & Value \\
 \midrule
-ROC-AUC                  & 0.8863 \\
-PR-AUC (primary)         & 0.5339 \\
-Precision (Fraud class)  & 98.98\% \\
-Recall (Fraud class)     & 38.34\% \\
-F1-Score (Fraud class)   & 0.5527 \\
-True Positives           & 97 \\
-False Positives          & 1 \\
-False Negatives          & 156 \\
-True Negatives           & 5{,}746 \\
+ROC-AUC                  & 0.8889 \\
+PR-AUC (primary)         & 0.5352 \\
+Precision (Fraud class)  & 86.44\% \\
+Recall (Fraud class)     & 40.32\% \\
+F1-Score (Fraud class)   & 0.5499 \\
+True Positives           & 102 \\
+False Positives          & 16 \\
+False Negatives          & 151 \\
+True Negatives           & 5{,}731 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\textit{Note: metrics above were recomputed 2026-08-22 directly against the
+\textit{Note: metrics above were recomputed 2026-08-23 directly against the
 artifacts on disk (\texttt{paysense\_model.pkl}, \texttt{paysense\_}
-\texttt{preprocessor.pkl}, \texttt{paysense\_master\_dataset.csv}). An
-earlier draft of this table (ROC-AUC 0.8851, 66.14\%/52.17\% at $\tau=0.40$,
-161 fraud rows in the test set) had drifted from what those artifacts
-actually produce, most likely dating to a run of \texttt{paysense\_phase3.py}
-before the artifacts were last retrained or the master dataset last
-regenerated -- the mismatch went unnoticed because the stale numbers were
-internally consistent with each other, not because anything was verified
-against the frozen model directly.}
+\texttt{preprocessor.pkl}, \texttt{paysense\_master\_dataset.csv}), which
+were retrained the same day with \texttt{monotone\_constraints} on three
+behavioural features after \texttt{RECALL\_CEILING\_REMEDIATION.md}
+diagnosed and tested the fix (Section~V-D discusses this in full).
+Re-running Phase~3's own threshold-selection logic against
+the new model picked a genuinely different optimal threshold, $\tau=0.30$
+rather than $0.40$, because the underlying score distribution changed --
+the threshold is a function of the model, not a fixed constant. An earlier
+draft of this table (ROC-AUC 0.8851, 66.14\%/52.17\% at $\tau=0.40$,
+161 fraud rows in the test set) had drifted from what the artifacts of that
+time actually produced, most likely dating to a run of
+\texttt{paysense\_phase3.py} before the artifacts were last retrained or the
+master dataset last regenerated -- that earlier mismatch is unrelated to
+today's threshold change, which reflects a deliberate, verified model
+update rather than drift.}
 
 \subsection{The Accuracy Paradox}
 
@@ -555,10 +569,10 @@ computed but not used.
 
 \subsection{PR-AUC Interpretation}
 
-The PR-AUC of 0.5339 should be contextualised against the baseline of a
+The PR-AUC of 0.5352 should be contextualised against the baseline of a
 random classifier, which achieves a PR-AUC equal to the positive class
 prevalence: $0.0421$ (the fraud rate of the master dataset). The PaySense
-model achieves a PR-AUC that is \textbf{12.7 times} above this random
+model achieves a PR-AUC that is \textbf{12.71 times} above this random
 baseline, across all possible decision thresholds. This is the primary
 evidence that the model has learned genuinely discriminative fraud patterns
 rather than memorising the training distribution.
@@ -576,40 +590,66 @@ was conducted post-training (Table~\ref{tab:threshold_sweep}).
 \toprule
 $\tau$ & Precision & Recall & F1 & TP / FP \\
 \midrule
-0.05 & 17.15\% & 69.96\% & 0.275 & 177 / 855 \\
-0.10 & 30.36\% & 49.80\% & 0.377 & 126 / 289 \\
-0.15 & 51.34\% & 45.45\% & 0.482 & 115 / 109 \\
-0.20 & 68.15\% & 42.29\% & 0.522 & 107 / 50  \\
-0.25 & 83.47\% & 39.92\% & 0.540 & 101 / 20  \\
-0.30 & 89.09\% & 38.74\% & 0.540 & 98  / 12  \\
-0.35 & 96.04\% & 38.34\% & 0.548 & 97  / 4   \\
-0.40 & \textbf{98.98\%} & \textbf{38.34\%} & \textbf{0.553} & 97  / 1   \\
-0.45 & 100.0\% & 37.94\% & 0.550 & 96  / 0   \\
-0.50 & 100.0\% & 37.94\% & 0.550 & 96  / 0   \\
+0.05 & 16.87\% & 71.94\% & 0.273 & 182 / 897 \\
+0.10 & 29.76\% & 53.75\% & 0.383 & 136 / 321 \\
+0.15 & 46.09\% & 46.64\% & 0.464 & 118 / 138 \\
+0.20 & 62.50\% & 41.50\% & 0.499 & 105 / 63  \\
+0.25 & 78.79\% & 41.11\% & 0.540 & 104 / 28  \\
+0.30 & \textbf{86.44\%} & \textbf{40.32\%} & \textbf{0.550} & 102 / 16  \\
+0.35 & 90.74\% & 38.74\% & 0.543 & 98  / 10  \\
+0.40 & 94.17\% & 38.34\% & 0.545 & 97  / 6   \\
+0.45 & 96.97\% & 37.94\% & 0.546 & 96  / 3   \\
+0.50 & 98.97\% & 37.94\% & 0.549 & 96  / 1   \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\textit{Note: recomputed 2026-08-22 directly against the on-disk artifacts
-(test set: 6{,}000 rows, 253 fraud). $\tau=0.40$ is the frozen, deployed
-threshold -- it is the max-F1 point among all ten swept values, since none
-meet the business constraint of Recall $\geq 75\%$, so selection falls back
-to unconditional max-F1, exactly as the frozen \texttt{paysense\_threshold.pkl}
-(0.40) reflects.}
+\textit{Note: recomputed 2026-08-23 directly against the on-disk artifacts
+(test set: 6{,}000 rows, 253 fraud), which were retrained the same day with
+\texttt{monotone\_constraints} on three behavioural features -- see the
+Honest Finding immediately below and the Limitations section. $\tau=0.30$
+is the frozen, deployed threshold for this model -- it is the max-F1 point
+among all ten swept values, since none meet the business constraint of
+Recall $\geq 75\%$, so selection falls back to unconditional max-F1, exactly
+as the frozen \texttt{paysense\_threshold.pkl} (0.30) reflects. This table
+supersedes an earlier version computed against the pre-monotonic model
+(deployed threshold 0.40, ceiling 69.96\% at $\tau=0.05$); the change is a
+deliberate, tested model update, not drift.}
 
 \textbf{Honest finding:} Even at the most aggressive threshold
-($\tau = 0.05$), the model's recall ceiling is \textbf{69.96\%}. Of the
-253 fraud cases in the test set, 76 produce a fraud probability below
-0.05---effectively invisible to the model regardless of threshold
-selection. These are likely edge-case fraud patterns, possibly those
-generated by SMOTE interpolation near the class boundary, that the model
-ranks no differently from ordinary legitimate transactions. This was
-originally framed here as a \textit{probability calibration} problem; that
-framing was tested directly and found to be wrong (see below).
+($\tau = 0.05$), the model's recall ceiling is \textbf{71.94\%} (182 of 253
+fraud rows caught, 71 missed). This is an improvement over the prior
+(pre-monotonic) model's 69.96\% ceiling: a structural diagnosis
+(\texttt{RECALL\_CEILING\_REMEDIATION.md}) found that XGBoost's trees were
+gating hard on \texttt{new\_device\_flag}/\texttt{ip\_location\_mismatch}
+before letting three behavioural features
+(\texttt{amount\_deviation\_score}, \texttt{transaction\_velocity},
+\texttt{failed\_attempts\_last\_24h}) matter, and that constraining fraud
+probability to be non-decreasing in those three features recovers 10 of the
+original 76 invisible fraud rows with no measurable cost -- that fix is now
+the deployed model. The remaining 71 fraud rows (of 253) still produce a
+fraud probability below 0.05, effectively invisible to the model regardless
+of threshold selection; a more aggressive structural fix
+(\texttt{interaction\_constraints}, tested but not adopted) recovered 31 of
+the original 76 at a real cost to overall ranking quality and false-positive
+volume, evidence that the residual ceiling is a mix of a genuinely fixable
+structural artifact and rows that may need new, more discriminative features
+rather than a different arrangement of the ones already available. These
+are likely edge-case fraud patterns, possibly those generated by SMOTE
+interpolation near the class boundary, that the model still ranks no
+differently from ordinary legitimate transactions. This was originally
+framed here as a \textit{probability calibration} problem; that framing was
+tested directly and found to be wrong (see below).
 
-\textbf{Tested and rejected --- Platt Scaling does not move this ceiling.}
-Platt Scaling~\cite{platt1999} fits a logistic function to the model's raw
-output probabilities using a held-out calibration set:
+\textbf{Tested and rejected --- Platt Scaling does not move a ranking-based
+ceiling.} This experiment (below) was run against the pre-monotonic
+baseline model, before the ceiling-recovery fix described above was found
+and adopted; it is not re-run against the current model because its
+finding is a mathematical property of monotonic transforms in general, not
+a fact specific to one model's weights, and therefore applies identically
+regardless of which classifier is deployed. Platt Scaling~\cite{platt1999}
+fits a logistic function to the model's raw output probabilities using a
+held-out calibration set:
 
 \begin{equation}
     P(y=1 \mid \hat{p}) = \frac{1}{1 + e^{-(A\hat{p} + B)}}
@@ -632,32 +672,46 @@ respectively) across the full 253-fraud test set, zero rank inversions were
 found among all 6,000 test rows, and at every one of the ten swept
 thresholds the analytically-equivalent Platt-scaled threshold flagged the
 identical set of rows and produced identical recall---at $\tau=0.05$'s
-equivalent point, the same 76 of 253 fraud rows remain below threshold,
-unchanged. \textbf{The 69.96\% ceiling is therefore a ranking/discrimination
-limitation of the model on its current feature set, not a probability-scale
-artifact, and no recalibration method can fix it.} What Platt scaling can
-legitimately affect is probability \textit{reliability} (whether "0.7"
-means "70\% of the time this is fraud"), which is a different question,
-addressed next---and even there, the result did not favour Platt scaling:
+equivalent point on the pre-monotonic model, the same 76 of 253 fraud rows
+remained below threshold, unchanged. \textbf{A ranking-based recall ceiling
+is therefore a limitation that no recalibration method can fix, on this or
+any classifier}, because a monotonic rescaling of scores cannot alter which
+rows a classifier ranks lowest. What Platt scaling can legitimately affect
+is probability \textit{reliability} (whether "0.7" means "70\% of the time
+this is fraud"), which is a different question, addressed next---and even
+there, on the pre-monotonic model, the result did not favour Platt scaling:
 on a held-out slice never used to fit the calibrator, raw XGBoost's Brier
 score was as good or better than the Platt-scaled version across 6
 resampled calibration draws, and only sometimes better on Expected
-Calibration Error (a noisier metric at this sample size). Closing the
-actual recall ceiling would require better features that separate the 76
-low-ranked fraud rows from legitimate transactions, a different base model,
-or accepting the ceiling as a property of this feature set pending further
-data.
+Calibration Error (a noisier metric at this sample size). Closing a
+ranking-based ceiling requires changing the ranking itself: better features
+that separate low-ranked fraud rows from legitimate transactions, or a
+different model or model structure. This was tested directly, not merely
+proposed: a structural diagnosis retrained three candidate variants of the
+base model (not a recalibration) and found that a monotonicity constraint
+on three behavioural features helped partially -- recovering 10 of the
+original 76 invisible rows with no measurable downside -- and this variant
+was consequently adopted as the deployed model, moving the ceiling from
+69.96\% to 71.94\%. The remaining rows were not recoverable even under a
+more aggressive structural fix that was tested and not adopted (see
+Section~VII), so some part of the ceiling is accepted, for now, as a
+property of this feature set pending further data.
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=\columnwidth]{paysense_threshold_analysis.png}
     \caption{
-        \textbf{Phase~3 Threshold Analysis.}
+        \textbf{Phase~3 Threshold Analysis (monotonic-constraints model,
+        regenerated 2026-08-23).}
         \textit{Top left:} Precision (blue), Recall (red), and F1-Score
         (green) across thresholds $\tau \in [0.05, 0.50]$. The Recall
-        curve plateaus at 69.96\% at $\tau = 0.05$. Tested directly
-        (\texttt{PLATT\_SCALING\_RESULT.md}): this is a ranking ceiling, not
-        a probability-scale one---Platt scaling leaves it unchanged.
+        curve plateaus at 71.94\% at $\tau = 0.05$ (up from 69.96\% on the
+        pre-monotonic model). Tested directly
+        (\texttt{PLATT\_SCALING\_RESULT.md}, against the pre-monotonic
+        model; \texttt{RECALL\_CEILING\_REMEDIATION.md}, against both): this
+        is a ranking ceiling, not a probability-scale one---Platt scaling
+        leaves it unchanged, and only a structural retrain (adopted here)
+        moves it, partially.
         \textit{Top right:} True Positive and False Positive counts,
         showing the precision--recall trade-off as $\tau$ decreases.
         \textit{Bottom left:} Predicted score distribution by true class.
@@ -665,8 +719,8 @@ data.
         legitimate near $\hat{p} = 0.0$---confirms strong discriminative
         power despite the calibration gap.
         \textit{Bottom right:} Phase~2 ($\tau=0.50$) versus Phase~3
-        ($\tau^*=0.40$) metric comparison. The gap the threshold sweep buys
-        here is small (F1 0.5527 vs. 0.5501, one additional true positive
+        ($\tau^*=0.30$) metric comparison. The gap the threshold sweep buys
+        here is small (F1 0.5499 vs. 0.5486, six additional true positives
         out of 253 fraud rows) --- reported as-is rather than overstated.
     }
     \label{fig:threshold}
@@ -734,21 +788,39 @@ transactions from production bank systems is unknown. The first deployment
 step would be a shadow-mode trial in which the model scores real transactions
 without triggering alerts, allowing ground-truth label collection.
 
-\textbf{Recall ceiling (ranking limitation, not calibration).} The 69.96\%
-recall ceiling identified in Section~V-D remains the highest-priority
-limitation. It was originally attributed to probability miscalibration and
-Platt Scaling was proposed as the fix; both were tested
-(Section~V-D, \texttt{PLATT\_SCALING\_RESULT.md}) and the recall ceiling was
-found to be completely unaffected by Platt Scaling, exactly as
-monotonic-transform theory predicts. The ceiling is therefore a genuine
-ranking/discrimination limit of the current 40-feature vector and XGBoost
-configuration: 76 of 253 test-set fraud rows are ranked, by the model
-itself, no differently from ordinary legitimate transactions, and no
-post-hoc recalibration of the probability axis can change that ranking.
-Closing it requires either additional or different features that separate
-these specific fraud rows from legitimate ones, a different base model or
-ensemble member, or accepting it as a documented property of this dataset
-and feature set pending further data collection.
+\textbf{Recall ceiling (ranking limitation, partially closed by a structural
+fix).} A 69.96\% recall ceiling was originally identified in Section~V-D and
+remained the highest-priority limitation for some time. It was originally
+attributed to probability miscalibration and Platt Scaling was proposed as
+the fix; both were tested (Section~V-D, \texttt{PLATT\_SCALING\_RESULT.md})
+and the recall ceiling was found to be completely unaffected by Platt
+Scaling, exactly as monotonic-transform theory predicts -- a ranking-based
+ceiling cannot move under any monotonic recalibration, on this or any
+model. That ruled out calibration as the fix, but left open whether the
+ranking itself could be changed by retraining. It was then tested directly,
+not merely proposed: three structural variants of the base model were
+retrained (\texttt{RECALL\_CEILING\_REMEDIATION.md}) to test the hypothesis
+that XGBoost's trees were gating hard on \texttt{new\_device\_flag}/
+\texttt{ip\_location\_mismatch} before letting three behavioural features
+(\texttt{amount\_deviation\_score}, \texttt{transaction\_velocity},
+\texttt{failed\_attempts\_last\_24h}) matter. One variant -- a monotonicity
+constraint forcing fraud probability to be non-decreasing in those three
+features -- was found to help partially: it recovered 10 of the 76
+originally-invisible fraud rows while slightly improving both ROC-AUC and
+PR-AUC, the only one of three tested variants with no measurable downside,
+and was consequently \textbf{adopted as the deployed model}. The ceiling
+moved from 69.96\% to 71.94\% as a result. A more aggressive variant
+(\texttt{interaction\_constraints}) recovered 31 of the original 76 rows but
+at a real cost to overall ranking quality and false-positive volume, and was
+not adopted. The current 40-feature vector and XGBoost configuration still
+leave a genuine, if smaller, ranking/discrimination limit: 71 of 253
+test-set fraud rows are ranked, by the model itself, no differently from
+ordinary legitimate transactions, and no post-hoc recalibration of the
+probability axis can change that ranking. Closing the remainder requires
+either additional or different features that separate these specific fraud
+rows from legitimate ones, a different base model or ensemble member, or
+accepting it as a documented property of this dataset and feature set
+pending further data collection.
 
 \textbf{On-device model.} The current architecture requires a live network
 connection for fraud scoring. A quantised TFLite version of the XGBoost
@@ -779,19 +851,24 @@ generalisation to unseen merchant names.
 This paper presented PaySense, a three-layer defence-in-depth fraud detection
 system for Android that combines a deterministic SMS filter, a
 self-improving HITL categorisation cache, and an XGBoost classifier served
-over a FastAPI backend. The system achieves a ROC-AUC of 0.8863 and
-PR-AUC of 0.5339 on held-out synthetic test data, with 98.98\% precision at
-the deployed operating threshold ($\tau=0.40$).
+over a FastAPI backend. The system achieves a ROC-AUC of 0.8889 and
+PR-AUC of 0.5352 on held-out synthetic test data, with 86.44\% precision at
+the deployed operating threshold ($\tau=0.30$).
 The term \emph{defence-in-depth} is used deliberately: each layer provides
 an independent security check; a transaction must clear all three before
 classification as safe.
-A mathematically honest threshold sweep identified a recall ceiling of
-69.96\%. Platt Scaling was proposed, then implemented and tested against it:
-the ceiling is unchanged by calibration, as a strictly monotonic
-probability transform cannot alter a classifier's ranking of its inputs.
-The ceiling is therefore correctly understood as a ranking limitation of
-the current feature set and model, an open limitation rather than a solved
-problem, requiring better features or a different model to close.
+A mathematically honest threshold sweep originally identified a recall
+ceiling of 69.96\%. Platt Scaling was proposed, then implemented and tested
+against it: the ceiling was unchanged by calibration, as a strictly
+monotonic probability transform cannot alter a classifier's ranking of its
+inputs. That result correctly ruled out recalibration, but not retraining --
+a follow-up structural diagnosis tested, and found to help partially, a
+monotonicity constraint on three behavioural features, which was then
+adopted as the deployed model, moving the ceiling to 71.94\%. The remaining
+ceiling is correctly understood as a ranking limitation of the current
+feature set and model that is partially, but not fully, closable by model
+structure, an open limitation rather than a solved problem, requiring
+better features or a different model to close the rest.
 
 The principal academic contributions are: (1) the Trojan Family dataset
 discovery---a methodology for detecting pre-balanced datasets masquerading

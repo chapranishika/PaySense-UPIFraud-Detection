@@ -1,5 +1,26 @@
 # PaySense — Recall Ceiling Remediation: Is Feature Dominance Fixable?
 
+> **UPDATE (2026-08-23, later the same day):** the `monotonic` variant
+> described in this document was **adopted as the new deployed model**
+> immediately after this experiment concluded — `paysense_phase3.py` now
+> trains with `monotone_constraints` on the three behavioral features (see
+> that file's inline comment, which cites this document by name) and the
+> retrained model was frozen to `artefacts/paysense_model.pkl`,
+> `paysense_preprocessor.pkl`, and `paysense_threshold.pkl`, overwriting the
+> prior (unconstrained) frozen artifacts. Concretely: **the model this
+> document calls "monotonic" is, as of this update, what
+> `artefacts/paysense_model.pkl` actually is**; the model this document
+> calls "baseline"/"vanilla_replica" is preserved unchanged at
+> `artefacts/paysense_model_vanilla_replica.pkl` as a fixed historical
+> reference point, not deleted or overwritten. Everything below this line
+> describes the state of the world *as it was when this experiment ran* —
+> the original baseline vs. three untried candidates — and is left as the
+> historical record that justified the decision (see §6's verdict for the
+> reasoning). It is intentionally **not** rewritten to describe today's
+> deployed artifact in the present tense; README.md's Key Results section
+> and `tests/test_frozen_model_metrics.py` carry the current, live,
+> re-verified numbers for whatever is actually on disk today.
+
 **Date:** 2026-08-23
 **Author's intent:** PLATT_SCALING_RESULT.md already showed, correctly, that
 Platt scaling cannot move the frozen model's recall ceiling (76 of 253 fraud
@@ -332,7 +353,18 @@ story in either direction:
 
 None of the three is a wholesale replacement for the frozen model, and none
 is recommended for silent deployment. `artefacts/paysense_model.pkl`,
-`paysense_preprocessor.pkl`, and `paysense_threshold.pkl` are unchanged.
+`paysense_preprocessor.pkl`, and `paysense_threshold.pkl` are unchanged
+**as of when this experiment ran.**
+
+> **Post-hoc verdict, added the same day:** the "not as a blanket yes"
+> framing above was the honest read *before* a deployment decision was
+> made. It was subsequently decided that `monotone_constraints`'s
+> small-upside/small-cost profile — the one candidate with no measurable
+> downside anywhere in §4 — was worth taking, and it was adopted as the new
+> deployed model (see the update note at the top of this document).
+> `interaction_constraints` and the composite feature were not adopted, for
+> the reasons already stated above (expensive/weak, respectively); nothing
+> about those two verdicts changed.
 
 ---
 
