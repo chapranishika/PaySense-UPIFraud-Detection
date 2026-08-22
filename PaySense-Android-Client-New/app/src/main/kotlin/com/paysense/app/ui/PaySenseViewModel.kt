@@ -177,6 +177,20 @@ class PaySenseViewModel(application: Application) : AndroidViewModel(application
             val dateFormat = java.text.SimpleDateFormat("dd-MMM-yy", java.util.Locale.getDefault())
             val dateStr = dateFormat.format(java.util.Date())
 
+            // BUG FIX: the "Hour of Day" field the user types into the manual-entry
+            // dialog used to be validated and then silently discarded — the timestamp
+            // below always used System.currentTimeMillis() as-is, so scoreTransaction()
+            // (which derives hour from txn.timestamp) always scored against the real
+            // wall-clock hour regardless of what was entered. Override just the
+            // hour-of-day component of "now" so the entered hour actually reaches both
+            // the fraud model and the persisted isNightTransaction flag.
+            val timestampWithChosenHour = java.util.Calendar.getInstance().apply {
+                set(java.util.Calendar.HOUR_OF_DAY, hour)
+                set(java.util.Calendar.MINUTE, 0)
+                set(java.util.Calendar.SECOND, 0)
+                set(java.util.Calendar.MILLISECOND, 0)
+            }.timeInMillis
+
             val parsed = com.paysense.app.layer1.ParsedTransaction(
                 senderId  = "AD-${app.uppercase()}",
                 rawBody   = "Manually entered transaction of ₹$amount to $payee via $app",
@@ -184,7 +198,7 @@ class PaySenseViewModel(application: Application) : AndroidViewModel(application
                 payee     = payee,
                 txnId     = txnId,
                 date      = dateStr,
-                timestamp = System.currentTimeMillis()
+                timestamp = timestampWithChosenHour
             )
 
             try {
