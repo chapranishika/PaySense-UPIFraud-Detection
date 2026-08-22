@@ -174,6 +174,59 @@ data class TransactionResponse(
     val modelVersion: String
 )
 
+// ──────────────────────────────────────────────────────────────────────────────
+//  /classify — Layer 2 Tier-2 NLP category classifier
+//
+//  CategoryRequest  → the raw SMS narration (txn.rawBody), sent to the
+//                      server-side TF-IDF + LinearSVC model trained on
+//                      FinText-6K (see PaySense-ML-Backend/train_category_classifier.py).
+//  CategoryResponse → category is always one of exactly five trained
+//                      classes: Food, Travel, EMI, Investment, Shopping.
+//                      It does NOT cover the app's full HITL vocabulary
+//                      (Bills, Grocery, Entertainment, Healthcare, Misc) —
+//                      that's an intentional, honest limitation of the
+//                      training data, not a bug. Confidence is gated by
+//                      PayeeCacheRepository.NLP_CONFIDENCE_THRESHOLD before
+//                      the result is trusted and cached.
+// ──────────────────────────────────────────────────────────────────────────────
+data class CategoryRequest(
+    @SerializedName("text")
+    val text: String
+)
+
+data class CategoryResponse(
+    @SerializedName("category")
+    val category: String,
+    @SerializedName("confidence")
+    val confidence: Float
+)
+
+// ──────────────────────────────────────────────────────────────────────────────
+//  /auth/token — matches TokenRequest / TokenResponse in FastAPI main.py
+//
+//  TokenRequest  → demo username/password, sent to POST /auth/token.
+//  TokenResponse → a genuine JWT (access_token), valid for expires_in seconds
+//                   (60 minutes server-side). Stored in SharedPreferences and
+//                   attached as "Authorization: Bearer <token>" on every
+//                   subsequent request by AuthInterceptor — see
+//                   FraudApiService.kt.
+// ──────────────────────────────────────────────────────────────────────────────
+data class TokenRequest(
+    @SerializedName("username")
+    val username: String,
+    @SerializedName("password")
+    val password: String
+)
+
+data class TokenResponse(
+    @SerializedName("access_token")
+    val accessToken: String,
+    @SerializedName("token_type")
+    val tokenType: String,
+    @SerializedName("expires_in")
+    val expiresIn: Int
+)
+
 data class WeeklyInsight(
     @SerializedName("period")
     val period: String,

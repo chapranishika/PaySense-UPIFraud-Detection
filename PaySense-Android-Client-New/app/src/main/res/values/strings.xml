@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">PaySense</string>
+    <string name="login_error_invalid_credentials">Invalid username or password</string>
 </resources>

@@ -20,6 +20,38 @@ import kotlin.math.sqrt
 
 private const val TAG = "PaySense_Layer3"
 
+// SharedPreferences file + keys shared with the login flow in MainActivity.kt.
+// Keep these string literals in sync with MainActivity's own "paysense_prefs" /
+// "is_authenticated" usage — they must refer to the same prefs file.
+private const val PREFS_NAME        = "paysense_prefs"
+private const val KEY_AUTH_TOKEN    = "auth_token"
+private const val KEY_IS_AUTHENTICATED = "is_authenticated"
+
+// ──────────────────────────────────────────────────────────────────────────────
+//  AuthInterceptor
+//  Reads the JWT stored by login() out of SharedPreferences and attaches it
+//  as "Authorization: Bearer <token>" to every outgoing request. This is the
+//  single place that adds the header — individual Retrofit methods (predict,
+//  classify, insights, health, login) never need to know about auth.
+//  /auth/token and /health don't require auth server-side, so attaching a
+//  (possibly absent) header to those calls is harmless.
+// ──────────────────────────────────────────────────────────────────────────────
+private class AuthInterceptor(private val context: Context) : okhttp3.Interceptor {
+    override fun intercept(chain: okhttp3.Interceptor.Chain): okhttp3.Response {
+        val token = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .getString(KEY_AUTH_TOKEN, null)
+        val original = chain.request()
+        val request = if (token.isNullOrBlank()) {
+            original
+        } else {
+            original.newBuilder()
+                .header("Authorization", "Bearer $token")
+                .build()
+        }
+        return chain.proceed(request)
+    }
+}
+
 // ============================================================================
 //  FraudApiService.kt  (v4 — all three bugs fixed)
 //
@@ -49,17 +81,6 @@ class FraudApiService private constructor(private val context: Context) {
     companion object {
         private const val BASE_URL        = "https://paysense-api.onrender.com/"
         private const val STATS_WINDOW_MS = 90L * 24 * 60 * 60 * 1000
-        private const val MIN_SAMPLES     = 5
-
-        // Neutral sentinel for cold-start users — both deviation scores = 0.0
-        private val COLD_START_STATS = DeviationStats(
-            mean        = 0.0,
-            stdDev      = 1.0,
-            meanHour    = 12.0,  // neutral midday anchor
-            stdDevHour  = 6.0,   // wide spread → any hour looks roughly normal
-            sampleCount = 0,
-            isColdStart = true
-        )
 
         @Volatile private var INSTANCE: FraudApiService? = null
         fun getInstance(context: Context): FraudApiService =
@@ -76,6 +97,7 @@ class FraudApiService private constructor(private val context: Context) {
             .apply { level = HttpLoggingInterceptor.Level.BODY }
 
         val client = OkHttpClient.Builder()
+            .addInterceptor(AuthInterceptor(context))
             .addInterceptor(logging)
             .connectTimeout(10, TimeUnit.SECONDS)
             .readTimeout(15,    TimeUnit.SECONDS)
@@ -90,6 +112,58 @@ class FraudApiService private constructor(private val context: Context) {
             ))
             .build()
             .create(PaySenseApi::class.java)
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    //  LOGIN
+    //  Calls the real POST /auth/token endpoint. On a genuine 200 response,
+    //  persists the JWT + is_authenticated flag to SharedPreferences (the
+    //  same "paysense_prefs" file MainActivity's login overlay already
+    //  reads). On a 401 (wrong credentials) or any network failure, leaves
+    //  prefs untouched and returns false — MainActivity shows tvLoginError.
+    //  No credential comparison happens on the client; the server is the
+    //  only source of truth for "paysense" / "guardian2025".
+    // ──────────────────────────────────────────────────────────────────────────
+    suspend fun login(username: String, password: String): Boolean {
+        return withContext(Dispatchers.IO) {
+            try {
+                val response = api.login(TokenRequest(username = username, password = password))
+                if (!response.isSuccessful) {
+                    Log.w(TAG, "⚠️  /auth/token HTTP ${response.code()} | ${response.errorBody()?.string()}")
+                    return@withContext false
+                }
+                val body = response.body() ?: run {
+                    Log.w(TAG, "⚠️  /auth/token empty response body")
+                    return@withContext false
+                }
+                context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                    .edit()
+                    .putString(KEY_AUTH_TOKEN, body.accessToken)
+                    .putBoolean(KEY_IS_AUTHENTICATED, true)
+                    .apply()
+                Log.d(TAG, "🔑  /auth/token | login OK, token expires_in=${body.expiresIn}s")
+                true
+            } catch (e: Exception) {
+                Log.e(TAG, "❌  /auth/token network error | ${e.message}")
+                false
+            }
+        }
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    //  CLEAR AUTH
+    //  Called whenever an authenticated call comes back 401 (expired/invalid
+    //  token — this app has no refresh-token flow, so the fix is simply to
+    //  force a fresh login on next launch). Wipes the stored token and the
+    //  is_authenticated flag MainActivity checks on onCreate().
+    // ──────────────────────────────────────────────────────────────────────────
+    private fun clearAuth() {
+        Log.w(TAG, "🔒  401 received — clearing stored token, user must log in again")
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .remove(KEY_AUTH_TOKEN)
+            .putBoolean(KEY_IS_AUTHENTICATED, false)
+            .apply()
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -120,13 +194,24 @@ class FraudApiService private constructor(private val context: Context) {
                 Log.d(TAG, "📐  Hour   | μ=${stats.meanHour.fmt()} σ=${stats.stdDevHour.fmt()}")
             }
 
-            // Step 2: save to Room — storing local hourOfDay (Fix 2)
-            // Entity field is Int? (nullable). New rows always supply a real
-            // local hour (not null). Pre-migration existing rows have null,
-            // which getHoursSince() filters with WHERE hourOfDay IS NOT NULL,
-            // preventing the DEFAULT 12 bias that would corrupt z-score stats.
-            val cal = java.util.Calendar.getInstance().apply { timeInMillis = txn.timestamp }
-            val hour = cal.get(java.util.Calendar.HOUR_OF_DAY)
+            // Step 2: build 43-field request with computed stats — this is where
+            // amountDeviationScore (z-score) and isNightTransaction are computed.
+            // Built BEFORE the Room insert (moved up from v4/v5 ordering) so those
+            // already-computed values can be carried onto the TransactionHistory
+            // row instead of being discarded after the network call returns.
+            val request = buildTransactionRequest(txn, category, stats, newDeviceFlag, ipLocationMismatch, deviceType)
+            Log.d(TAG, "🚀  Sending | amount=₹${txn.amount} " +
+                       "z_amount=${request.amountDeviationScore.fmt()} " +
+                       "z_hour=${request.transactionFrequencyScore.fmt()}")
+
+            // Step 3: save to Room — storing local hourOfDay (Fix 2) plus the
+            // real risk-factor values computed above (v6 — Risk Details UI).
+            // Entity field hourOfDay is Int? (nullable). New rows always supply
+            // a real local hour (not null). Pre-migration existing rows have
+            // null, which getHoursSince() filters with WHERE hourOfDay IS NOT
+            // NULL, preventing the DEFAULT 12 bias that would corrupt z-score
+            // stats. The four v6 factor fields are likewise always non-null for
+            // rows inserted from this point on.
             txnDao.insertTransaction(
                 TransactionHistory(
                     txnId     = txn.txnId,
@@ -136,15 +221,13 @@ class FraudApiService private constructor(private val context: Context) {
                     senderId  = txn.senderId,
                     date      = txn.date,
                     timestamp = txn.timestamp,
-                    hourOfDay = hour    // Int assigned to Int? — always non-null for new rows
+                    hourOfDay = request.hourOfDay,
+                    amountDeviationScore = request.amountDeviationScore,
+                    isNightTransaction   = request.isNightTransaction == 1,
+                    newDeviceFlag        = newDeviceFlag == 1,
+                    ipLocationMismatch   = ipLocationMismatch == 1
                 )
             )
-
-            // Step 3: build 43-field request with computed stats
-            val request = buildTransactionRequest(txn, category, stats, newDeviceFlag, ipLocationMismatch, deviceType)
-            Log.d(TAG, "🚀  Sending | amount=₹${txn.amount} " +
-                       "z_amount=${request.amountDeviationScore.fmt()} " +
-                       "z_hour=${request.transactionFrequencyScore.fmt()}")
 
             // Step 4: network call
             val response = try {
@@ -156,6 +239,7 @@ class FraudApiService private constructor(private val context: Context) {
 
             if (!response.isSuccessful) {
                 Log.e(TAG, "❌  HTTP ${response.code()} | ${response.errorBody()?.string()}")
+                if (response.code() == 401) clearAuth()
                 return@withContext
             }
 
@@ -193,44 +277,18 @@ class FraudApiService private constructor(private val context: Context) {
     private suspend fun computeDeviationStats(sinceMs: Long): DeviationStats {
         val amounts = txnDao.getAmountsSince(sinceMs)
 
-        if (amounts.size < MIN_SAMPLES) {
-            return COLD_START_STATS
+        if (amounts.size < DeviationStatsCalculator.MIN_SAMPLES) {
+            return DeviationStatsCalculator.COLD_START_STATS
         }
-
-        // Amount stats
-        val n            = amounts.size.toDouble()
-        val meanAmount   = amounts.sum() / n
-        val varAmount    = amounts.sumOf { (it - meanAmount) * (it - meanAmount) } / n
-        val stdDevAmount = sqrt(varAmount).coerceAtLeast(1.0)
 
         // Hour stats — getHoursSince filters WHERE hourOfDay IS NOT NULL,
         // so pre-migration rows (hourOfDay=null) are excluded automatically.
         // If fewer than MIN_SAMPLES non-null hour rows exist (e.g. user just
-        // updated the app), fall back to cold-start neutral for hour component.
+        // updated the app), DeviationStatsCalculator falls back to cold-start
+        // neutral values for the hour component only.
         val hours = txnDao.getHoursSince(sinceMs)
-        val meanHour: Double
-        val stdDevHour: Double
-        if (hours.size < MIN_SAMPLES) {
-            // Not enough non-null hour data — use neutral values so cold-start
-            // on hour dimension doesn't produce extreme z-scores
-            meanHour   = 12.0   // neutral midday (used only if isColdStart=false)
-            stdDevHour = 6.0    // wide spread — any hour looks roughly normal
-        } else {
-            val hn      = hours.size.toDouble()
-            val mh      = hours.map { it.toDouble() }.sum() / hn
-            val vh      = hours.sumOf { h -> val d = h.toDouble() - mh; d * d } / hn
-            meanHour    = mh
-            stdDevHour  = sqrt(vh).coerceAtLeast(0.5)
-        }
 
-        return DeviationStats(
-            mean        = meanAmount,
-            stdDev      = stdDevAmount,
-            meanHour    = meanHour,
-            stdDevHour  = stdDevHour,
-            sampleCount = amounts.size,
-            isColdStart = false
-        )
+        return DeviationStatsCalculator.compute(amounts, hours)
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -374,6 +432,45 @@ class FraudApiService private constructor(private val context: Context) {
         }
     }
 
+    // ──────────────────────────────────────────────────────────────────────────
+    //  CLASSIFY CATEGORY  (Layer 2, Tier 2 — NLP classifier over /classify)
+    //
+    //  Called by PayeeCacheRepository.runNlpClassifier() on a Tier-1 cache
+    //  miss, passing the raw SMS body. Returns Pair(category, confidence) on
+    //  success, or null on any failure (network error, non-2xx response,
+    //  empty body, 503 when the server-side artefact isn't loaded) — the
+    //  caller treats null exactly like a low-confidence result and falls
+    //  through to the Tier-3 human-in-the-loop prompt.
+    //
+    //  This endpoint is JWT-protected on the server the same way /predict is.
+    //  AuthInterceptor (see the OkHttpClient builder above) attaches
+    //  "Authorization: Bearer <token>" automatically using whatever token
+    //  login() last stored, so no header handling is needed here. A 401
+    //  (expired/invalid token) clears the stored auth state via clearAuth()
+    //  so the user is prompted to log in again on next launch.
+    // ──────────────────────────────────────────────────────────────────────────
+    suspend fun classifyCategory(rawBody: String): Pair<String, Float>? {
+        return withContext(Dispatchers.IO) {
+            try {
+                val response = api.classifyCategory(CategoryRequest(text = rawBody))
+                if (!response.isSuccessful) {
+                    Log.w(TAG, "⚠️  /classify HTTP ${response.code()} | ${response.errorBody()?.string()}")
+                    if (response.code() == 401) clearAuth()
+                    return@withContext null
+                }
+                val body = response.body() ?: run {
+                    Log.w(TAG, "⚠️  /classify empty response body")
+                    return@withContext null
+                }
+                Log.d(TAG, "🧠  /classify | category=${body.category} confidence=${body.confidence}")
+                Pair(body.category, body.confidence)
+            } catch (e: Exception) {
+                Log.e(TAG, "❌  /classify network error | ${e.message}")
+                null
+            }
+        }
+    }
+
     private fun Double.fmt() = "%.4f".format(this)
 }
 
@@ -386,3 +483,73 @@ data class DeviationStats(
     val sampleCount : Int,      // number of transactions in window
     val isColdStart : Boolean   // true when sampleCount < MIN_SAMPLES
 )
+
+// ──────────────────────────────────────────────────────────────────────────────
+//  DeviationStatsCalculator — pure z-score math extracted out of
+//  FraudApiService.computeDeviationStats() so it can be unit tested without
+//  needing a Context or a Room database. Takes the already-fetched amount
+//  and hour lists and returns the same DeviationStats the private method
+//  used to build inline. Behavior is unchanged from the original inline code.
+// ──────────────────────────────────────────────────────────────────────────────
+internal object DeviationStatsCalculator {
+
+    // Minimum number of historical transactions required before we trust
+    // computed statistics over the neutral cold-start sentinel.
+    const val MIN_SAMPLES = 5
+
+    // Neutral sentinel for cold-start users — both deviation scores = 0.0
+    val COLD_START_STATS = DeviationStats(
+        mean        = 0.0,
+        stdDev      = 1.0,
+        meanHour    = 12.0,  // neutral midday anchor
+        stdDevHour  = 6.0,   // wide spread → any hour looks roughly normal
+        sampleCount = 0,
+        isColdStart = true
+    )
+
+    /**
+     * Population mean/stddev (N, not N-1) of [amounts] and [hours].
+     * stdDev is clamped to >= 1.0 (amounts) / >= 0.5 (hours) to prevent
+     * divide-by-zero when a user's history has identical values.
+     * Returns [COLD_START_STATS] when [amounts] has fewer than [MIN_SAMPLES]
+     * entries. If [hours] alone is short on data, only the hour component
+     * falls back to neutral values (12.0 / 6.0) — the amount stats are
+     * still computed normally.
+     */
+    fun compute(amounts: List<Double>, hours: List<Int>): DeviationStats {
+        if (amounts.size < MIN_SAMPLES) {
+            return COLD_START_STATS
+        }
+
+        // Amount stats
+        val n            = amounts.size.toDouble()
+        val meanAmount   = amounts.sum() / n
+        val varAmount    = amounts.sumOf { (it - meanAmount) * (it - meanAmount) } / n
+        val stdDevAmount = sqrt(varAmount).coerceAtLeast(1.0)
+
+        // Hour stats
+        val meanHour: Double
+        val stdDevHour: Double
+        if (hours.size < MIN_SAMPLES) {
+            // Not enough non-null hour data — use neutral values so cold-start
+            // on hour dimension doesn't produce extreme z-scores
+            meanHour   = 12.0   // neutral midday (used only if isColdStart=false)
+            stdDevHour = 6.0    // wide spread — any hour looks roughly normal
+        } else {
+            val hn      = hours.size.toDouble()
+            val mh      = hours.map { it.toDouble() }.sum() / hn
+            val vh      = hours.sumOf { h -> val d = h.toDouble() - mh; d * d } / hn
+            meanHour    = mh
+            stdDevHour  = sqrt(vh).coerceAtLeast(0.5)
+        }
+
+        return DeviationStats(
+            mean        = meanAmount,
+            stdDev      = stdDevAmount,
+            meanHour    = meanHour,
+            stdDevHour  = stdDevHour,
+            sampleCount = amounts.size,
+            isColdStart = false
+        )
+    }
+}

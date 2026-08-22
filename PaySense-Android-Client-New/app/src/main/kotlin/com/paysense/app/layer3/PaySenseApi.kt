@@ -18,6 +18,18 @@ import retrofit2.http.POST
 interface PaySenseApi {
 
     /**
+     * POST /auth/token
+     * Exchanges the demo username/password for a genuine JWT access token —
+     * the credential check happens server-side (main.py's TokenRequest /
+     * get_token), not in this client. Public endpoint, no auth header
+     * required to call it. Returns 401 if credentials are wrong.
+     */
+    @POST("/auth/token")
+    suspend fun login(
+        @Body request: TokenRequest
+    ): Response<TokenResponse>
+
+    /**
      * POST /predict
      * Sends a [TransactionRequest] JSON body to the FastAPI backend and
      * returns a [TransactionResponse] containing the fraud verdict.
@@ -40,6 +52,25 @@ interface PaySenseApi {
      */
     @GET("/health")
     suspend fun healthCheck(): Response<Map<String, Any>>
+
+    /**
+     * POST /classify
+     * Layer 2, Tier 2 of the payee-category resolution pipeline: sends the
+     * raw SMS narration body to the server-side NLP classifier (TF-IDF +
+     * calibrated LinearSVC, trained on FinText-6K) and gets back a category
+     * + confidence. Only called by PayeeCacheRepository on a Tier-1 cache
+     * miss — see resolveCategory() in PayeeCacheRepository.kt.
+     *
+     * The model was trained on exactly five classes — Food, Travel, EMI,
+     * Investment, Shopping — and will never return anything outside that
+     * set. The caller applies NLP_CONFIDENCE_THRESHOLD (0.65) before
+     * trusting the result; below that (or on any failure/exception) it
+     * falls through to the Tier-3 human-in-the-loop prompt.
+     */
+    @POST("/classify")
+    suspend fun classifyCategory(
+        @Body request: CategoryRequest
+    ): Response<CategoryResponse>
 
     /**
      * GET /insights/weekly

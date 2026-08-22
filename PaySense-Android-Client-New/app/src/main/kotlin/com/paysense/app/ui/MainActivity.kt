@@ -22,6 +22,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.paysense.app.R
 import com.paysense.app.databinding.ActivityMainBinding
+import com.paysense.app.layer3.FraudApiService
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
 import java.util.Locale
@@ -126,14 +127,29 @@ class MainActivity : AppCompatActivity() {
         binding.btnLoginSubmit.setOnClickListener {
             val username = binding.etLoginUsername.text.toString().trim()
             val password = binding.etLoginPassword.text.toString().trim()
-            if (username == "paysense" && password == "guardian2025") {
-                binding.tvLoginError.visibility = View.GONE
-                prefs.edit().putBoolean("is_authenticated", true).apply()
-                hideLoginOverlay()
-                binding.etLoginUsername.text?.clear()
-                binding.etLoginPassword.text?.clear()
-            } else {
-                binding.tvLoginError.visibility = View.VISIBLE
+            binding.tvLoginError.visibility = View.GONE
+            binding.btnLoginSubmit.isEnabled = false
+            lifecycleScope.launch {
+                // Real network round-trip to POST /auth/token — the server
+                // (main.py) is the only place the demo credentials are
+                // checked. On success FraudApiService.login() persists the
+                // returned JWT + is_authenticated flag into "paysense_prefs"
+                // itself; on a 401 or network failure it returns false and
+                // leaves prefs untouched.
+                val success = FraudApiService.getInstance(this@MainActivity)
+                    .login(username, password)
+                binding.btnLoginSubmit.isEnabled = true
+                if (success) {
+                    hideLoginOverlay()
+                    binding.etLoginUsername.text?.clear()
+                    binding.etLoginPassword.text?.clear()
+                } else {
+                    // tvLoginError has no runtime text in the layout (only a
+                    // tools:text preview hint), so it must be set here or the
+                    // "error state" would just be a blank visible line.
+                    binding.tvLoginError.text = getString(R.string.login_error_invalid_credentials)
+                    binding.tvLoginError.visibility = View.VISIBLE
+                }
             }
         }
 
