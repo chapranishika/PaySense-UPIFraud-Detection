@@ -124,6 +124,25 @@ feature_names = CAT_COLS + NUM_COLS
 smote = SMOTE(sampling_strategy="auto", k_neighbors=5, random_state=RANDOM_STATE)
 X_train_bal, y_train_bal = smote.fit_resample(X_train_proc, y_train)
 
+# ── Monotonic constraints on the "behavioral" features ───────────────────────
+# RECALL_CEILING_REMEDIATION.md (2026-08-23) diagnosed why 76/253 fraud rows
+# in the test set were invisible even at the most aggressive swept threshold:
+# they almost never trip new_device_flag/ip_location_mismatch (the two
+# hardest, most dominant SHAP signals), but score MORE anomalous than caught
+# fraud on amount_deviation_score/transaction_velocity/failed_attempts_last_24h
+# -- signal the unconstrained tree structure wasn't using once those two hard
+# flags read 0. Forcing fraud probability to be non-decreasing in those three
+# behavioral features recovered 10/76 of those rows while *improving* both
+# ROC-AUC (+0.0025) and PR-AUC (+0.0013) against the unconstrained baseline in
+# that experiment -- the one variant tested (of three) with no measurable
+# downside, adopted here after that comparison, not by default.
+BEHAVIORAL_FEATURES = [
+    "amount_deviation_score", "transaction_velocity", "failed_attempts_last_24h",
+]
+monotone_constraints = tuple(
+    1 if f in BEHAVIORAL_FEATURES else 0 for f in feature_names
+)
+
 # Train XGBoost
 model = XGBClassifier(
     n_estimators     = 400,
@@ -138,6 +157,7 @@ model = XGBClassifier(
     reg_lambda       = 1.50,
     eval_metric      = "aucpr",
     tree_method      = "hist",
+    monotone_constraints = monotone_constraints,
     random_state     = RANDOM_STATE,
     n_jobs           = -1,
     verbosity        = 0,

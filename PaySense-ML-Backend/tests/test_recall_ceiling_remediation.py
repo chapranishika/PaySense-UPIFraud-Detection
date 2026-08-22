@@ -15,19 +15,31 @@
   regression guard so it isn't silently invalidated by a future retrain of
   the frozen model or a future edit to the candidate artifacts.
 
+  UPDATE (2026-08-23): the monotonic-constraints candidate was subsequently
+  adopted as the new deployed model (see paysense_phase3.py and README.md's
+  Key Results note) — artefacts/paysense_model.pkl is now the monotonic
+  variant, not the original unconstrained baseline this experiment
+  diagnosed. This test file therefore pins against
+  paysense_model_vanilla_replica.pkl (the frozen, unchanging copy of the
+  *original* baseline the experiment saved on disk) rather than the live
+  paysense_model.pkl, so the historical diagnostic stays a fixed reference
+  point independent of whatever gets deployed later. Anyone re-reading this
+  file cold: "the frozen model" below means that historical baseline, not
+  today's deployed artifact.
+
   This test guards two things:
-    1. The diagnostic itself — the frozen model's 76/177 split at tau=0.05
-       and the feature-dominance pattern (invisible rows score LOWER on the
-       two hard-signal flags and HIGHER on the three behavioral features
-       than caught rows) — against silent drift in the frozen artifacts or
-       the master dataset.
+    1. The diagnostic itself — the original baseline's 76/177 split at
+       tau=0.05 and the feature-dominance pattern (invisible rows score
+       LOWER on the two hard-signal flags and HIGHER on the three
+       behavioral features than caught rows) — against silent drift in
+       that historical artifact or the master dataset.
     2. The three saved candidate artifacts (if present) still reproduce the
        documented ROC-AUC and recovered-of-76 numbers within tolerance — a
        drift guard for the experiment's own outputs, mirroring how
        test_platt_scaling_invariance.py guards platt_scaling_experiment.py.
 
-  NO RETRAINING happens in this test file. The frozen artifacts and the
-  three candidate model artifacts (if present) are loaded read-only.
+  NO RETRAINING happens in this test file. All artifacts (the historical
+  baseline and the three candidates) are loaded read-only.
 ================================================================================
 """
 
@@ -75,15 +87,18 @@ CANDIDATE_MODELS = {
 }
 
 
+BASELINE_MODEL_PATH = ARTEFACTS_DIR / "paysense_model_vanilla_replica.pkl"
+
+
 def _skip_if_frozen_artefacts_missing():
     required = [
-        ARTEFACTS_DIR / "paysense_model.pkl",
+        BASELINE_MODEL_PATH,
         ARTEFACTS_DIR / "paysense_preprocessor.pkl",
         MASTER_CSV,
     ]
     missing = [str(p) for p in required if not p.exists()]
     if missing:
-        pytest.skip(f"Frozen artefacts not present in this environment: {missing}")
+        pytest.skip(f"Historical baseline artefacts not present in this environment: {missing}")
 
 
 @pytest.fixture(scope="module")
@@ -99,8 +114,11 @@ def split_and_frozen_scores():
         X, y, test_size=0.20, random_state=RANDOM_STATE, stratify=y
     )
 
+    # The preprocessor is unaffected by which XGBoost variant is deployed
+    # (it was fit once, before any of the candidate models existed), so the
+    # live artifact is still the right one to use here.
     preprocessor = joblib.load(ARTEFACTS_DIR / "paysense_preprocessor.pkl")
-    model = joblib.load(ARTEFACTS_DIR / "paysense_model.pkl")
+    model = joblib.load(BASELINE_MODEL_PATH)
 
     X_test_proc = preprocessor.transform(X_test_raw)
     y_proba = model.predict_proba(X_test_proc)[:, 1]

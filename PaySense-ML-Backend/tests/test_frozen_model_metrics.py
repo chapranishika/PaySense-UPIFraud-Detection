@@ -4,14 +4,22 @@
   ────────────────────────────────────────────────────────────────────────────
   Guards against exactly the drift found on 2026-08-22: paysense_report.tex,
   README.md, GENERALIZATION_CHECK.md, and SYNTHETIC_GROUNDING.md all cited a
-  threshold-sweep table (ROC-AUC 0.8851, 66.14%/52.17% precision/recall @
-  t=0.40, 161 fraud rows in the test set) that did not match what the
-  currently-frozen artifacts (paysense_model.pkl, paysense_preprocessor.pkl,
-  paysense_threshold.pkl) actually produce when scored against
-  paysense_master_dataset.csv (ROC-AUC 0.8863, 98.98%/38.34%, 253 fraud rows).
-  The stale numbers were internally consistent with each other, which is
-  exactly why nobody noticed until someone recomputed precision/recall
-  directly from the artifacts instead of trusting a table.
+  threshold-sweep table that did not match what the frozen artifacts actually
+  produced. The stale numbers were internally consistent with each other,
+  which is exactly why nobody noticed until someone recomputed precision/
+  recall directly from the artifacts instead of trusting a table.
+
+  UPDATE (2026-08-23): RECALL_CEILING_REMEDIATION.md diagnosed and tested a
+  fix for the model's recall ceiling; the monotone_constraints variant was
+  adopted as the new deployed model (paysense_phase3.py retrained with
+  monotonic constraints on amount_deviation_score/transaction_velocity/
+  failed_attempts_last_24h — see that file's comment for why). Re-running
+  Phase 3's own threshold-selection logic against the new model picked a
+  DIFFERENT optimal threshold (0.30, not 0.40) — the threshold is a function
+  of the model, not a fixed constant, so promoting a new model correctly
+  re-derived it rather than carrying the old value forward. The constants
+  below were re-pinned to this new frozen model's real, independently
+  recomputed numbers.
 
   This test recomputes the same metrics the same way and fails loudly if the
   on-disk artifacts (or the master dataset) ever change without every
@@ -41,13 +49,15 @@ DROP_COLS = [
 ]
 
 # Values currently published in README.md's Key Results table and
-# paysense_report.tex's Table~\ref{tab:results} / abstract / conclusion.
+# paysense_report.tex's Table~\ref{tab:results} / abstract / conclusion,
+# for the monotonic-constraints model deployed 2026-08-23.
 # Tight tolerance: these should match what the frozen artifacts produce
 # almost exactly, not just "in the right ballpark".
-PUBLISHED_ROC_AUC = 0.8863
-PUBLISHED_PR_AUC = 0.5339
-PUBLISHED_PRECISION_AT_040 = 0.9898
-PUBLISHED_RECALL_AT_040 = 0.3834
+PUBLISHED_THRESHOLD = 0.30
+PUBLISHED_ROC_AUC = 0.8889
+PUBLISHED_PR_AUC = 0.5352
+PUBLISHED_PRECISION_AT_THRESHOLD = 0.8644
+PUBLISHED_RECALL_AT_THRESHOLD = 0.4032
 PUBLISHED_TEST_FRAUD_COUNT = 253
 
 
@@ -91,8 +101,14 @@ def frozen_eval():
     }
 
 
-def test_frozen_threshold_is_0_40(frozen_eval):
-    assert frozen_eval["threshold"] == pytest.approx(0.40)
+def test_frozen_threshold_matches_published(frozen_eval):
+    assert frozen_eval["threshold"] == pytest.approx(PUBLISHED_THRESHOLD), (
+        f"Frozen threshold is {frozen_eval['threshold']}, not the published "
+        f"{PUBLISHED_THRESHOLD} — if the model was retrained, Phase 3's own "
+        f"threshold-selection logic must be re-run (it can pick a different "
+        f"optimal threshold for a different model, as it did on 2026-08-23), "
+        f"and every doc's numbers recomputed and updated together."
+    )
 
 
 def test_test_set_fraud_count_matches_published(frozen_eval):
@@ -122,14 +138,15 @@ def test_roc_auc_pr_auc_match_published(frozen_eval):
 def test_precision_recall_at_frozen_threshold_match_published(frozen_eval):
     precision = precision_score(frozen_eval["y_test"], frozen_eval["y_pred"], zero_division=0)
     recall = recall_score(frozen_eval["y_test"], frozen_eval["y_pred"], zero_division=0)
-    assert precision == pytest.approx(PUBLISHED_PRECISION_AT_040, abs=0.01), (
-        f"Recomputed precision @ t=0.40 ({precision:.4f}) has drifted from the "
-        f"published {PUBLISHED_PRECISION_AT_040} — this is exactly the class of "
-        f"drift that made every doc's threshold-sweep table stale on 2026-08-22. "
-        f"Recompute and update README.md and paysense_report.tex together."
-    )
-    assert recall == pytest.approx(PUBLISHED_RECALL_AT_040, abs=0.01), (
-        f"Recomputed recall @ t=0.40 ({recall:.4f}) has drifted from the "
-        f"published {PUBLISHED_RECALL_AT_040} — update README.md and "
+    assert precision == pytest.approx(PUBLISHED_PRECISION_AT_THRESHOLD, abs=0.01), (
+        f"Recomputed precision @ the frozen threshold ({precision:.4f}) has "
+        f"drifted from the published {PUBLISHED_PRECISION_AT_THRESHOLD} — this "
+        f"is exactly the class of drift that made every doc's threshold-sweep "
+        f"table stale on 2026-08-22. Recompute and update README.md and "
         f"paysense_report.tex together."
+    )
+    assert recall == pytest.approx(PUBLISHED_RECALL_AT_THRESHOLD, abs=0.01), (
+        f"Recomputed recall @ the frozen threshold ({recall:.4f}) has drifted "
+        f"from the published {PUBLISHED_RECALL_AT_THRESHOLD} — update README.md "
+        f"and paysense_report.tex together."
     )
