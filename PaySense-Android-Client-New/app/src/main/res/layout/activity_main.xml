@@ -22,8 +22,8 @@
             android:layout_height="?attr/actionBarSize"
             android:paddingHorizontal="8dp"
             app:title="PaySense"
-            app:titleTextColor="@color/text_primary"
-            app:titleTextAppearance="@style/TextAppearance.Material3.HeadlineSmall" />
+            app:titleTextColor="@color/brand_primary"
+            app:titleTextAppearance="@style/TextAppearance.PaySense.HeadlineSmall" />
 
     </com.google.android.material.appbar.AppBarLayout>
 
@@ -55,7 +55,7 @@
         android:layout_marginHorizontal="16dp"
         android:layout_marginBottom="72dp"
         android:visibility="gone"
-        app:cardCornerRadius="16dp"
+        app:cardCornerRadius="22dp"
         app:cardElevation="8dp"
         app:strokeWidth="0dp"
         android:backgroundTint="@color/brand_secondary"
@@ -125,10 +125,9 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_margin="24dp"
-            app:cardCornerRadius="28dp"
+            app:cardCornerRadius="32dp"
             app:cardElevation="12dp"
-            app:strokeWidth="1.5dp"
-            app:strokeColor="@color/card_stroke_normal">
+            app:strokeWidth="0dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -136,21 +135,30 @@
                 android:orientation="vertical"
                 android:padding="28dp">
 
-                <!-- Cyber App Logo -->
-                <ImageView
-                    android:layout_width="72dp"
-                    android:layout_height="72dp"
-                    android:src="@drawable/ic_launcher_foreground"
+                <!-- Logo badge on a vivid gradient chip -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="84dp"
+                    android:layout_height="84dp"
                     android:layout_gravity="center_horizontal"
-                    android:layout_marginBottom="16dp" />
+                    android:layout_marginBottom="20dp"
+                    app:cardCornerRadius="26dp"
+                    app:strokeWidth="0dp">
+
+                    <ImageView
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:padding="16dp"
+                        android:background="@drawable/bg_dashboard_card"
+                        android:src="@drawable/ic_launcher_foreground" />
+                </com.google.android.material.card.MaterialCardView>
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="PaySense Finlatics"
                     android:textColor="@color/brand_primary"
-                    android:textSize="24sp"
-                    android:fontFamily="sans-serif-medium"
+                    android:textSize="26sp"
+                    style="@style/PaySenseHeadline"
                     android:layout_gravity="center_horizontal"
                     android:layout_marginBottom="8dp" />
 
@@ -209,8 +217,9 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="Authenticate"
-                    android:paddingVertical="12dp"
-                    app:cornerRadius="12dp" />
+                    android:paddingVertical="14dp"
+                    android:textSize="15sp"
+                    app:cornerRadius="18dp" />
 
                 <TextView
                     android:layout_width="wrap_content"

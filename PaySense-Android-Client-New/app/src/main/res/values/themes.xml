@@ -1,5 +1,105 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.PaySense" parent="Theme.Material3.Light.NoActionBar" />
+    <!--
+        Shape system — bigger, friendlier rounded-corner language across every
+        default Material3 component (buttons, chips, text fields, dialogs)
+        that doesn't already set its own explicit corner radius.
+    -->
+    <style name="ShapeAppearance.PaySense.Small" parent="ShapeAppearance.Material3.Corner.Small">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">16dp</item>
+    </style>
+
+    <style name="ShapeAppearance.PaySense.Medium" parent="ShapeAppearance.Material3.Corner.Medium">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">20dp</item>
+    </style>
+
+    <style name="ShapeAppearance.PaySense.Large" parent="ShapeAppearance.Material3.Corner.Large">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">28dp</item>
+    </style>
+
+    <!--
+        Typography — Poppins for headings/titles/labels (expressive, geometric,
+        confident), system default stays on body copy for maximum legibility.
+    -->
+    <style name="TextAppearance.PaySense.HeadlineSmall" parent="TextAppearance.Material3.HeadlineSmall">
+        <item name="fontFamily">@font/poppins_extrabold</item>
+        <item name="android:fontFamily">@font/poppins_extrabold</item>
+    </style>
+
+    <style name="TextAppearance.PaySense.TitleLarge" parent="TextAppearance.Material3.TitleLarge">
+        <item name="fontFamily">@font/poppins_bold</item>
+        <item name="android:fontFamily">@font/poppins_bold</item>
+    </style>
+
+    <style name="TextAppearance.PaySense.TitleMedium" parent="TextAppearance.Material3.TitleMedium">
+        <item name="fontFamily">@font/poppins_semibold</item>
+        <item name="android:fontFamily">@font/poppins_semibold</item>
+    </style>
+
+    <style name="TextAppearance.PaySense.LabelLarge" parent="TextAppearance.Material3.LabelLarge">
+        <item name="fontFamily">@font/poppins_semibold</item>
+        <item name="android:fontFamily">@font/poppins_semibold</item>
+        <item name="android:letterSpacing">0.01</item>
+    </style>
+
+    <style name="Theme.PaySense" parent="Theme.Material3.Light.NoActionBar">
+
+        <!-- Brand — Electric Indigo primary -->
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorOnPrimary">@android:color/white</item>
+        <item name="colorPrimaryContainer">@color/brand_secondary</item>
+        <item name="colorOnPrimaryContainer">@color/colorPrimaryDark</item>
+
+        <!-- Signature accent — Electric Mint -->
+        <item name="colorSecondary">@color/colorAccent</item>
+        <item name="colorOnSecondary">@color/colorTextPrimary</item>
+        <item name="colorSecondaryContainer">@color/colorAccentBg</item>
+        <item name="colorOnSecondaryContainer">@color/colorAccentDark</item>
+
+        <!-- Pop accent — Warm Amber -->
+        <item name="colorTertiary">@color/colorGold</item>
+        <item name="colorOnTertiary">@color/colorTextPrimary</item>
+        <item name="colorTertiaryContainer">@color/colorGoldBg</item>
+        <item name="colorOnTertiaryContainer">@color/colorTextPrimary</item>
+
+        <!-- Fraud / danger stays unambiguous red -->
+        <item name="colorError">@color/colorDanger</item>
+        <item name="colorOnError">@android:color/white</item>
+        <item name="colorErrorContainer">@color/fraud_red_bg</item>
+        <item name="colorOnErrorContainer">@color/colorDanger</item>
+
+        <!-- Surfaces -->
+        <item name="android:colorBackground">@color/surface_background</item>
+        <item name="colorOnBackground">@color/text_primary</item>
+        <item name="colorSurface">@color/surface_card</item>
+        <item name="colorOnSurface">@color/text_primary</item>
+        <item name="colorSurfaceVariant">@color/brand_secondary</item>
+        <item name="colorOnSurfaceVariant">@color/text_secondary</item>
+        <item name="colorOutline">@color/card_stroke_normal</item>
+        <item name="colorOutlineVariant">@color/divider_color</item>
+
+        <!-- Ripple / control states tuned to the mint accent -->
+        <item name="colorControlHighlight">@color/colorRippleAccent</item>
+        <item name="colorControlActivated">@color/colorPrimary</item>
+
+        <!-- Shape system -->
+        <item name="shapeAppearanceSmallComponent">@style/ShapeAppearance.PaySense.Small</item>
+        <item name="shapeAppearanceMediumComponent">@style/ShapeAppearance.PaySense.Medium</item>
+        <item name="shapeAppearanceLargeComponent">@style/ShapeAppearance.PaySense.Large</item>
+
+        <!-- Typography — confident Poppins headings, legible system body -->
+        <item name="textAppearanceHeadlineSmall">@style/TextAppearance.PaySense.HeadlineSmall</item>
+        <item name="textAppearanceTitleLarge">@style/TextAppearance.PaySense.TitleLarge</item>
+        <item name="textAppearanceTitleMedium">@style/TextAppearance.PaySense.TitleMedium</item>
+        <item name="textAppearanceLabelLarge">@style/TextAppearance.PaySense.LabelLarge</item>
+
+        <!-- System bars — deep indigo status bar with light icons/text -->
+        <item name="android:statusBarColor">@color/colorPrimaryDark</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:navigationBarColor">@color/surface_card</item>
+    </style>
 </resources>

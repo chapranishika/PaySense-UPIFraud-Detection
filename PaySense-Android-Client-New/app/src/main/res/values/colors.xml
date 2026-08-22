@@ -1,59 +1,99 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    colors.xml — PaySense Finlatics premium light-theme palette
-    Vibrant purple primary, neon turquoise accents, and soft yellow highlights
+    colors.xml — PaySense "Finlatics" palette (2026 refresh)
+    Vibe: crazy-aesthetic Gen-Z energy, professional fintech trust.
+    Signature pairing: Electric Indigo (brand) x Electric Mint (accent),
+    with a warm Amber pop color for highlights and a strict, high-contrast
+    red/orange/amber/green ramp reserved for fraud severity so alerts never
+    get lost in the vibrancy.
 -->
 <resources>
-    <!-- Primary — Premium Purple/Violet -->
-    <color name="colorPrimary">#6A0DAD</color>
-    <color name="colorPrimaryDark">#4C0B80</color>
-    <color name="colorPrimaryLight">#B388FF</color>
-    <color name="colorPurple3">#7F00FF</color>
-    <color name="colorPurpleStat">#6A0DAD</color>
+    <!-- Primary — Electric Indigo/Violet -->
+    <color name="colorPrimary">#5B21F0</color>
+    <color name="colorPrimaryDark">#37129C</color>
+    <color name="colorPrimaryLight">#C9B8FF</color>
+    <color name="colorPurple3">#8B3DFF</color>
+    <color name="colorPurpleStat">#5B21F0</color>
 
-    <!-- Accent — Vibrant Turquoise -->
-    <color name="colorAccent">#00D2C4</color>
-    <color name="colorAccentLight">#00E5FF</color>
-    <color name="colorAccentLighter">#E0F7FA</color>
-    <color name="colorAccentBg">#E0F7FA</color>
+    <!-- Accent — Electric Mint (signature pairing with the indigo primary) -->
+    <color name="colorAccent">#00E6B8</color>
+    <color name="colorAccentLight">#5CFFDD</color>
+    <color name="colorAccentLighter">#D8FBF3</color>
+    <color name="colorAccentBg">#D8FBF3</color>
+    <color name="colorAccentDark">#00B894</color>
 
-    <!-- Highlight — Yellow/Gold -->
-    <color name="colorGold">#FFD700</color>
-    <color name="colorGoldLight">#FFF59D</color>
-    <color name="colorGoldBg">#FFFDE7</color>
+    <!-- Highlight — Warm Amber/Gold (third "pop" color for badges/streaks) -->
+    <color name="colorGold">#FFB020</color>
+    <color name="colorGoldLight">#FFE3A3</color>
+    <color name="colorGoldBg">#FFF7E8</color>
+
+    <!-- Extra energy accent — Coral (used sparingly for playful pops) -->
+    <color name="colorCoral">#FF6B4A</color>
+    <color name="colorCoralBg">#FFE9E2</color>
+
+    <!-- Gradient stops used by drawables (violet -> mint hero gradient) -->
+    <color name="colorGradientStart">#6425FF</color>
+    <color name="colorGradientMid">#7B3AFB</color>
+    <color name="colorGradientEnd">#00E6B8</color>
+
+    <!-- Translucent ripple tuned to the mint accent -->
+    <color name="colorRippleAccent">#3300E6B8</color>
 
     <!-- Semantic -->
-    <color name="colorDanger">#FF3366</color>
-    <color name="colorSuccess">#00C853</color>
-    <color name="colorWarning">#FFB300</color>
-    <color name="colorMuted">#8E8E93</color>
-    <color name="colorSurface">#F7F5FC</color>
+    <color name="colorDanger">#FF3B5C</color>
+    <color name="colorSuccess">#14C784</color>
+    <color name="colorWarning">#FF8A00</color>
+    <color name="colorMuted">#8B8698</color>
+    <color name="colorSurface">#F6F3FF</color>
     <color name="colorCardBg">#FFFFFF</color>
-    <color name="colorDivider">#E5E0F2</color>
-    <color name="colorTextPrimary">#2C1A4D</color>
-    <color name="colorTextSecondary">#655480</color>
-    <color name="colorTextHint">#9C8FB3</color>
-    <color name="colorStatPillBg">#F1EDFA</color>
+    <color name="colorDivider">#ECE6FA</color>
+    <color name="colorTextPrimary">#180B33</color>
+    <color name="colorTextSecondary">#5B5470</color>
+    <color name="colorTextHint">#9C93B0</color>
+    <color name="colorStatPillBg">#EFE9FF</color>
 
     <!-- Budget status -->
-    <color name="colorBudgetOk">#00C853</color>
-    <color name="colorBudgetWarning">#FFB300</color>
-    <color name="colorBudgetOver">#FF3366</color>
-    <color name="colorBudgetNone">#8E8E93</color>
+    <color name="colorBudgetOk">#14C784</color>
+    <color name="colorBudgetWarning">#FF8A00</color>
+    <color name="colorBudgetOver">#FF3B5C</color>
+    <color name="colorBudgetNone">#8B8698</color>
+
+    <!--
+        Fraud-alert severity ramp — strictly ordered none -> low -> medium -> high.
+        Each step is both a distinct hue AND rises in saturation/warmth, so the
+        ramp still reads correctly at a glance for anyone with color-vision
+        deficiency. High-risk always resolves to the same red as colorDanger.
+    -->
+    <color name="colorAlertNone">#14C784</color>
+    <color name="colorAlertLow">#FFD23F</color>
+    <color name="colorAlertMedium">#FF8A00</color>
+    <color name="colorAlertHigh">#FF3B5C</color>
 
     <!-- Modern UI Design System Colors -->
-    <color name="brand_primary">#6A0DAD</color>
-    <color name="brand_secondary">#E8E2F7</color>
-    <color name="surface_background">#F7F5FC</color>
+    <color name="brand_primary">#5B21F0</color>
+    <color name="brand_secondary">#EDE5FF</color>
+    <color name="surface_background">#F6F3FF</color>
     <color name="surface_card">#FFFFFF</color>
-    <color name="fraud_red_bg">#FFF0F3</color>
-    <color name="fraud_red_stroke">#FF3366</color>
-    <color name="fraud_amber">#FFD700</color>
-    <color name="text_primary">#2C1A4D</color>
-    <color name="text_secondary">#655480</color>
-    <color name="text_tertiary">#9C8FB3</color>
-    <color name="card_stroke_normal">#E5E0F2</color>
-    <color name="card_stroke_fraud">#FF3366</color>
-    <color name="divider_color">#E5E0F2</color>
-    <color name="fraud_text">#FF3366</color>
+    <color name="fraud_red_bg">#FFEBEF</color>
+    <color name="fraud_red_stroke">#FF3B5C</color>
+    <color name="fraud_amber">#FFB020</color>
+    <color name="text_primary">#180B33</color>
+    <color name="text_secondary">#5B5470</color>
+    <color name="text_tertiary">#9C93B0</color>
+    <color name="card_stroke_normal">#ECE6FA</color>
+    <color name="card_stroke_fraud">#FF3B5C</color>
+    <color name="divider_color">#ECE6FA</color>
+    <color name="fraud_text">#FF3B5C</color>
+
+    <!--
+        Wireframe-pass additions — pastel icon-chip backdrops and the
+        "AI ..." callout box pattern. Extends (does not replace) the
+        existing indigo/mint/amber/coral palette above.
+    -->
+    <color name="colorPurpleBg">#EDE5FF</color>
+    <color name="colorPillSafeBg">#D8FBF3</color>
+    <color name="colorPillReviewBg">#FFF7E8</color>
+    <color name="colorPillDangerBg">#FFEBEF</color>
+    <color name="colorCalloutBg">#F3EEFF</color>
+    <color name="colorCalloutBorder">#DCCFFF</color>
 </resources>

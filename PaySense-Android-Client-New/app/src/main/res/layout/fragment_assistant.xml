@@ -44,7 +44,7 @@
                     android:text="PaySense AI Assistant"
                     android:textColor="@color/text_primary"
                     android:textSize="16sp"
-                    android:fontFamily="sans-serif-medium" />
+                    android:fontFamily="@font/poppins_bold" />
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -81,7 +81,8 @@
                 android:text="📊 Summary"
                 android:layout_marginEnd="8dp"
                 android:textSize="12sp"
-                app:cornerRadius="16dp" />
+                android:fontFamily="@font/poppins_semibold"
+                app:cornerRadius="20dp" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnQuickTip"
@@ -91,7 +92,8 @@
                 android:text="💡 Savings Tip"
                 android:layout_marginEnd="8dp"
                 android:textSize="12sp"
-                app:cornerRadius="16dp" />
+                android:fontFamily="@font/poppins_semibold"
+                app:cornerRadius="20dp" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnQuickSecurity"
@@ -100,7 +102,8 @@
                 android:layout_height="wrap_content"
                 android:text="🛡️ Fraud Status"
                 android:textSize="12sp"
-                app:cornerRadius="16dp" />
+                android:fontFamily="@font/poppins_semibold"
+                app:cornerRadius="20dp" />
 
         </LinearLayout>
     </HorizontalScrollView>
