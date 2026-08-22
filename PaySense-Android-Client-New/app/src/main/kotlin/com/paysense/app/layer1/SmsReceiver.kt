@@ -150,7 +150,7 @@ class SmsReceiver : BroadcastReceiver() {
     // ──────────────────────────────────────────────────────────────────────────
     //  GATE 1 — TRAI Sender ID format check
     // ──────────────────────────────────────────────────────────────────────────
-    private fun passesGate1(sender: String): Boolean {
+    internal fun passesGate1(sender: String): Boolean {
         val passes = GATE1_SENDER_REGEX.matches(sender.trim())
         return if (passes) {
             Log.d(TAG, "🟢  Gate 1 PASS | $sender")
@@ -164,7 +164,7 @@ class SmsReceiver : BroadcastReceiver() {
     // ──────────────────────────────────────────────────────────────────────────
     //  GATE 2 — Transaction keyword check
     // ──────────────────────────────────────────────────────────────────────────
-    private fun passesGate2(body: String): Boolean {
+    internal fun passesGate2(body: String): Boolean {
         val match = GATE2_KEYWORD_REGEX.containsMatchIn(body)
         return if (match) {
             val kw = GATE2_KEYWORD_REGEX.find(body)?.value
@@ -181,7 +181,7 @@ class SmsReceiver : BroadcastReceiver() {
     //  Returns null if the mandatory 'amount' field cannot be extracted.
     //  Null → quarantine log (not silent discard).
     // ──────────────────────────────────────────────────────────────────────────
-    private fun applyGate3(sender: String, body: String, timestamp: Long): ParsedTransaction? {
+    internal fun applyGate3(sender: String, body: String, timestamp: Long): ParsedTransaction? {
         var amount: String? = null
         var payee : String? = null
         var txnId : String? = null

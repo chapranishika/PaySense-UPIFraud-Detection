@@ -31,6 +31,18 @@ android {
         viewBinding = true
         buildConfig = true
     }
+
+    testOptions {
+        unitTests {
+            // SmsReceiver extends android.content.BroadcastReceiver and its
+            // gate functions call android.util.Log. Under the local JVM unit
+            // test runner, android.jar methods normally throw ("Stub!")
+            // instead of doing anything. This makes them return safe default
+            // values (0 / null / false) instead, so pure-logic methods on
+            // Android framework classes can be unit tested without Robolectric.
+            isReturnDefaultValues = true
+        }
+    }
 }
 
 dependencies {
@@ -63,4 +75,9 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.2")
     implementation("androidx.activity:activity-ktx:1.9.0")
     implementation("androidx.fragment:fragment-ktx:1.8.0")
+
+    // Unit tests (local JVM — app/src/test). All new tests exercise pure,
+    // non-suspend logic (regex gates + keyword table + z-score math), so
+    // JUnit4 alone is sufficient — no Robolectric/mockk/coroutines-test needed.
+    testImplementation("junit:junit:4.13.2")
 }
