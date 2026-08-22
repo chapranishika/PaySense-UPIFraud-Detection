@@ -142,7 +142,7 @@ paysense/
 
 ![Threshold Analysis](PaySense-ML-Backend/plots/paysense_threshold_analysis.png)
 
-Recall ceiling: **69.96%** at threshold=0.05 — a probability calibration issue (not a threshold issue). **Platt Scaling** is proposed as the remediation in future work.
+Recall ceiling: **69.96%** at threshold=0.05. `PaySense-ML-Backend/PLATT_SCALING_RESULT.md` implements and tests the fix this project used to propose — Platt Scaling — and finds it does **not** move the ceiling: ROC-AUC, PR-AUC, and recall at every swept threshold are identical before and after calibration (to floating-point precision), because a monotonic 1-D rescaling of scores cannot change which rows a classifier ranks lowest. The ceiling is a **ranking/discrimination** limit of the frozen model on this feature set (76 of 253 fraud rows are ranked below the bottom decile of all other fraud, likely SMOTE-interpolated edge cases near the class boundary), not a probability-scale artifact — fixing it needs better features or a different model, not recalibration. Platt scaling's actual, separate benefit — probability *reliability* — is also mixed here: on a held-out slice, raw XGBoost's Brier score was consistently as good or better than the Platt-scaled version across 6 resampled calibration draws.
 
 ---
 
@@ -384,7 +384,7 @@ On the one dataset that passed vetting (74,917 real rows, 0.94% fraud, only 6 of
 ## Honest Limitations
 
 - All training data is **synthetic**, and the generalization check above confirms the gap directly: **0/701** frauds caught on real out-of-distribution data at the production threshold — a live shadow-mode trial (or a dataset that can supply the full 40-feature vector) is required before this could be trusted on real traffic
-- **69.96% recall ceiling** at any threshold — Platt Scaling is proposed as Phase 4 fix
+- **69.96% recall ceiling** at any threshold — tested and confirmed to be a ranking limitation, not a calibration one (`PLATT_SCALING_RESULT.md`): Platt Scaling was implemented and leaves ROC-AUC/PR-AUC/recall completely unchanged, so fixing this needs better features or a different model, not recalibration
 - `new_device_flag` uses a placeholder default in the demo — production needs device fingerprinting APIs
 
 ---
