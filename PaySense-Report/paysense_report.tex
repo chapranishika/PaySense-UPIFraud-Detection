@@ -89,11 +89,12 @@ learns from a single user correction. Layer~3 serves an XGBoost classifier
 via a FastAPI REST endpoint, trained on a 30{,}000-row master dataset
 constructed from 18 evaluated source datasets, with class imbalance addressed
 by SMOTE applied strictly post-split on the training partition only. The model
-achieves a ROC-AUC of \textbf{0.8851} and a PR-AUC of \textbf{0.5303}---12.6
-times above the random-classifier baseline---with 100\% precision at the
-default operating threshold. An honest calibration analysis identifies a recall
-ceiling of 67.98\% and proposes Platt Scaling as the principal future
-improvement. The complete system is released as open-source code.
+achieves a ROC-AUC of \textbf{0.8863} and a PR-AUC of \textbf{0.5339}---12.7
+times above the random-classifier baseline---with 98.98\% precision at the
+deployed operating threshold ($\tau=0.40$). An honest calibration analysis
+identifies a recall ceiling of 69.96\% and proposes Platt Scaling as the
+principal future improvement. The complete system is released as
+open-source code.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -444,7 +445,7 @@ encoding an out-of-vocabulary category as the integer $-1$ without notification.
     class-probability vector.
 
     \item \textbf{Threshold application:}
-    $\hat{y} = \mathbf{1}[\hat{p} \geq \tau^*]$, where $\tau^* = 0.50$
+    $\hat{y} = \mathbf{1}[\hat{p} \geq \tau^*]$, where $\tau^* = 0.40$
     is the frozen optimal threshold.
 
     \item \textbf{Alert level assignment:}
@@ -502,24 +503,35 @@ hyperparameter tuning decision.
 
 \begin{table}[H]
 \centering
-\caption{Model Performance at Default Threshold $\tau^* = 0.50$}
+\caption{Model Performance at Deployed Threshold $\tau^* = 0.40$}
 \label{tab:results}
 \begin{tabular}{@{}lr@{}}
 \toprule
 Metric & Value \\
 \midrule
-ROC-AUC                  & 0.8851 \\
-PR-AUC (primary)         & 0.5303 \\
-Precision (Fraud class)  & 100.00\% \\
-Recall (Fraud class)     & 37.94\% \\
-F1-Score (Fraud class)   & 0.5501 \\
-True Positives           & 61 \\
-False Positives          & 0 \\
-False Negatives          & 100 \\
-True Negatives           & 5{,}839 \\
+ROC-AUC                  & 0.8863 \\
+PR-AUC (primary)         & 0.5339 \\
+Precision (Fraud class)  & 98.98\% \\
+Recall (Fraud class)     & 38.34\% \\
+F1-Score (Fraud class)   & 0.5527 \\
+True Positives           & 97 \\
+False Positives          & 1 \\
+False Negatives          & 156 \\
+True Negatives           & 5{,}746 \\
 \bottomrule
 \end{tabular}
 \end{table}
+
+\textit{Note: metrics above were recomputed 2026-08-22 directly against the
+artifacts on disk (\texttt{paysense\_model.pkl}, \texttt{paysense\_}
+\texttt{preprocessor.pkl}, \texttt{paysense\_master\_dataset.csv}). An
+earlier draft of this table (ROC-AUC 0.8851, 66.14\%/52.17\% at $\tau=0.40$,
+161 fraud rows in the test set) had drifted from what those artifacts
+actually produce, most likely dating to a run of \texttt{paysense\_phase3.py}
+before the artifacts were last retrained or the master dataset last
+regenerated -- the mismatch went unnoticed because the stale numbers were
+internally consistent with each other, not because anything was verified
+against the frozen model directly.}
 
 \subsection{The Accuracy Paradox}
 
@@ -539,10 +551,10 @@ computed but not used.
 
 \subsection{PR-AUC Interpretation}
 
-The PR-AUC of 0.5303 should be contextualised against the baseline of a
+The PR-AUC of 0.5339 should be contextualised against the baseline of a
 random classifier, which achieves a PR-AUC equal to the positive class
 prevalence: $0.0421$ (the fraud rate of the master dataset). The PaySense
-model achieves a PR-AUC that is \textbf{12.6 times} above this random
+model achieves a PR-AUC that is \textbf{12.7 times} above this random
 baseline, across all possible decision thresholds. This is the primary
 evidence that the model has learned genuinely discriminative fraud patterns
 rather than memorising the training distribution.
@@ -560,23 +572,30 @@ was conducted post-training (Table~\ref{tab:threshold_sweep}).
 \toprule
 $\tau$ & Precision & Recall & F1 & TP / FP \\
 \midrule
-0.05 & 17.44\% & 67.98\% & 0.278 & 109 / 515 \\
-0.10 & 39.49\% & 65.84\% & 0.495 & 106 / 163 \\
-0.15 & 50.72\% & 60.25\% & 0.551 & 97  / 94  \\
-0.20 & 56.86\% & 57.76\% & 0.573 & 93  / 71  \\
-0.25 & 58.62\% & 52.80\% & 0.556 & 85  / 60  \\
-0.30 & 62.63\% & 52.17\% & 0.569 & 84  / 50  \\
-0.35 & 64.12\% & 52.17\% & 0.576 & 84  / 47  \\
-0.40 & 66.14\% & 52.17\% & 0.584 & 84  / 43  \\
-0.45 & 67.74\% & 52.17\% & 0.589 & 84  / 40  \\
-0.50 & \textbf{100.0\%} & \textbf{37.94\%} & \textbf{0.550} & 61  / 0   \\
+0.05 & 17.15\% & 69.96\% & 0.275 & 177 / 855 \\
+0.10 & 30.36\% & 49.80\% & 0.377 & 126 / 289 \\
+0.15 & 51.34\% & 45.45\% & 0.482 & 115 / 109 \\
+0.20 & 68.15\% & 42.29\% & 0.522 & 107 / 50  \\
+0.25 & 83.47\% & 39.92\% & 0.540 & 101 / 20  \\
+0.30 & 89.09\% & 38.74\% & 0.540 & 98  / 12  \\
+0.35 & 96.04\% & 38.34\% & 0.548 & 97  / 4   \\
+0.40 & \textbf{98.98\%} & \textbf{38.34\%} & \textbf{0.553} & 97  / 1   \\
+0.45 & 100.0\% & 37.94\% & 0.550 & 96  / 0   \\
+0.50 & 100.0\% & 37.94\% & 0.550 & 96  / 0   \\
 \bottomrule
 \end{tabular}
 \end{table}
 
+\textit{Note: recomputed 2026-08-22 directly against the on-disk artifacts
+(test set: 6{,}000 rows, 253 fraud). $\tau=0.40$ is the frozen, deployed
+threshold -- it is the max-F1 point among all ten swept values, since none
+meet the business constraint of Recall $\geq 75\%$, so selection falls back
+to unconditional max-F1, exactly as the frozen \texttt{paysense\_threshold.pkl}
+(0.40) reflects.}
+
 \textbf{Honest finding:} Even at the most aggressive threshold
-($\tau = 0.05$), the model's recall ceiling is \textbf{67.98\%}. Of the
-161 fraud cases in the test set, 52 produce a fraud probability below
+($\tau = 0.05$), the model's recall ceiling is \textbf{69.96\%}. Of the
+253 fraud cases in the test set, 76 produce a fraud probability below
 0.05---effectively invisible to the model regardless of threshold
 selection. This is not a threshold calibration problem; it is a
 \textit{probability calibration} problem. The model assigns
@@ -606,7 +625,7 @@ This is identified as the single highest-priority future improvement.
         \textbf{Phase~3 Threshold Analysis.}
         \textit{Top left:} Precision (blue), Recall (red), and F1-Score
         (green) across thresholds $\tau \in [0.05, 0.50]$. The Recall
-        curve plateaus at 67.98\% at $\tau = 0.05$, revealing the
+        curve plateaus at 69.96\% at $\tau = 0.05$, revealing the
         probability calibration ceiling.
         \textit{Top right:} True Positive and False Positive counts,
         showing the precision--recall trade-off as $\tau$ decreases.
@@ -614,9 +633,10 @@ This is identified as the single highest-priority future improvement.
         The bimodal separation---fraud concentrated near $\hat{p} = 1.0$,
         legitimate near $\hat{p} = 0.0$---confirms strong discriminative
         power despite the calibration gap.
-        \textit{Bottom right:} Phase~2 versus Phase~3 metric comparison
-        (both identical at $\tau^* = 0.50$, confirming the threshold
-        selection algorithm correctly identified the max-F1 threshold).
+        \textit{Bottom right:} Phase~2 ($\tau=0.50$) versus Phase~3
+        ($\tau^*=0.40$) metric comparison. The gap the threshold sweep buys
+        here is small (F1 0.5527 vs. 0.5501, one additional true positive
+        out of 253 fraud rows) --- reported as-is rather than overstated.
     }
     \label{fig:threshold}
 \end{figure}
@@ -683,7 +703,7 @@ transactions from production bank systems is unknown. The first deployment
 step would be a shadow-mode trial in which the model scores real transactions
 without triggering alerts, allowing ground-truth label collection.
 
-\textbf{Probability calibration.} The 67.98\% recall ceiling identified in
+\textbf{Probability calibration.} The 69.96\% recall ceiling identified in
 Section~V-D is the highest-priority limitation. Platt Scaling
 (Equation~\ref{eq:platt}) is the recommended first implementation.
 Isotonic Regression is an alternative that makes fewer distributional
@@ -701,10 +721,15 @@ retraining on a rolling 12-month window of labelled transactions is
 recommended, with automatic rollback if the new model's PR-AUC on a
 validation set falls below 0.45.
 
-\textbf{Layer~2 NLP completion.} The NLP classifier stub
-requires replacement with either a TFLite on-device DistilBERT model
-or an additional FastAPI endpoint to complete the Tier~2 classification
-path for previously unseen merchant names.
+\textbf{Layer~2 NLP completion.} A Tier~2 classifier has since been trained
+(TF-IDF + Logistic Regression over transaction reference text) and scores
+100\% accuracy on its held-out test set; that number is a property of the
+evaluation data, not a generalisation claim---the test split draws from the
+same fixed template pool as training, so the true test is whether it holds
+up on merchant names it has never seen a variant of, which has not yet been
+measured. Replacing the TF-IDF representation with a TFLite on-device
+DistilBERT model remains the recommended next step for genuine
+generalisation to unseen merchant names.
 
 % ─────────────────────────────────────────────────────────────────────────────
 \section{Conclusion}
@@ -713,14 +738,14 @@ path for previously unseen merchant names.
 This paper presented PaySense, a three-layer defence-in-depth fraud detection
 system for Android that combines a deterministic SMS filter, a
 self-improving HITL categorisation cache, and an XGBoost classifier served
-over a FastAPI backend. The system achieves a ROC-AUC of 0.8851 and
-PR-AUC of 0.5303 on held-out synthetic test data, with 100\% precision at
-the default operating threshold.
+over a FastAPI backend. The system achieves a ROC-AUC of 0.8863 and
+PR-AUC of 0.5339 on held-out synthetic test data, with 98.98\% precision at
+the deployed operating threshold ($\tau=0.40$).
 The term \emph{defence-in-depth} is used deliberately: each layer provides
 an independent security check; a transaction must clear all three before
 classification as safe.
 A mathematically honest threshold sweep identified a recall ceiling of
-67.98\% and diagnosed its root cause as probability miscalibration, with
+69.96\% and diagnosed its root cause as probability miscalibration, with
 Platt Scaling proposed as the remediation.
 
 The principal academic contributions are: (1) the Trojan Family dataset

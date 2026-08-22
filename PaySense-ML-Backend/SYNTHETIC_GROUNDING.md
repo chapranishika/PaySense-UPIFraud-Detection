@@ -349,7 +349,9 @@ fire on real positives.
 this dataset supplying 40/40 features against Dataset 1's 6/40.** ROC-AUC
 0.6947 vs. Dataset 1's 0.8107; PR-AUC 0.1017 vs. Dataset 1's 0.4136. Both are
 far below the model's own reported held-out training metrics (ROC-AUC
-0.8851, PR-AUC 0.5303). If missing features were the *only* thing limiting
+0.8863, PR-AUC 0.5339, recomputed directly against the on-disk artifacts —
+see README.md's Key Results note on a since-corrected stale figure). If
+missing features were the *only* thing limiting
 generalization, a full-feature dataset should have outperformed a
 15%-feature one by a wide margin — instead it is *ranking fraud above
 non-fraud worse*, not better, once every field is present.

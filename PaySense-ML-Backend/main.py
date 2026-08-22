@@ -70,13 +70,30 @@ from src.fraud_model import (
 
 load_dotenv()
 
+
+def _require_env(key: str) -> str:
+    # No fallback default on purpose: JWT_SECRET_KEY signs every auth token
+    # and API_DEMO_USER/PASS gate the only login path. A hardcoded default
+    # for either means anyone who reads this public repo can forge tokens
+    # or log in against any deployment that forgot to set its own .env —
+    # fail loudly at startup instead of silently running with a public secret.
+    value = os.environ.get(key)
+    if not value:
+        raise RuntimeError(
+            f"Required environment variable {key} is not set. Copy .env.example "
+            f"to .env and set a real value — PaySense will not start with a "
+            f"guessable default for an auth secret."
+        )
+    return value
+
+
 # ── Config from environment ───────────────────────────────────────────────────
-SECRET_KEY      = os.environ.get("JWT_SECRET_KEY", "paysense-dev-secret-change-in-prod")
+SECRET_KEY      = _require_env("JWT_SECRET_KEY")
 ALGORITHM       = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.environ.get("TOKEN_EXPIRE_MIN", "60"))
 APP_ENV         = os.environ.get("APP_ENV", "development")
-API_DEMO_USER   = os.environ.get("API_DEMO_USER", "paysense")
-API_DEMO_PASS   = os.environ.get("API_DEMO_PASS", "guardian2025")
+API_DEMO_USER   = _require_env("API_DEMO_USER")
+API_DEMO_PASS   = _require_env("API_DEMO_PASS")
 
 MODEL_PATH       = "paysense_model.pkl"
 PREPROCESSOR_PATH= "paysense_preprocessor.pkl"
@@ -163,7 +180,11 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins  = os.environ.get("ALLOWED_ORIGINS", "*").split(","),
+    # No "*" fallback: this API takes an Authorization Bearer header, and a
+    # wildcard origin on an authenticated endpoint is a real CSRF-adjacent
+    # risk, not just a lint warning. Default to nothing rather than
+    # everything — set ALLOWED_ORIGINS explicitly per deployment.
+    allow_origins  = [o for o in os.environ.get("ALLOWED_ORIGINS", "").split(",") if o],
     allow_methods  = ["GET", "POST"],
     allow_headers  = ["Authorization", "Content-Type"],
 )
@@ -682,16 +703,6 @@ async def health_check():
         "gemini_enabled"  : bool(os.environ.get("GEMINI_API_KEY")),
         "mode"            : "production" if state.ps_model else "demo",
     }
-
-
-@app.get("/", include_in_schema=False)
-async def root():
-    return {
-        "message": "PaySense Guardian API v2. Visit /docs for the interactive UI.",
-        "auth":    "POST /auth/token with username+password to get a Bearer token.",
-        "demo_credentials": {"username": API_DEMO_USER, "note": "set via env vars"},
-    }
-
 
 # ════════════════════════════════════════════════════════════════════════════
 #  ENTRYPOINT

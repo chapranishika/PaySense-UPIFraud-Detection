@@ -10,21 +10,33 @@
 
 | Metric | Value |
 |---|---|
-| ROC-AUC | **0.8851** |
-| PR-AUC *(primary)* | **0.5303** — 12.6× above random baseline |
-| Precision @ deployed threshold (t=0.40) | **66.14%** |
-| Recall @ deployed threshold (t=0.40) | **52.17%** |
+| ROC-AUC | **0.8863** |
+| PR-AUC *(primary)* | **0.5339** — 12.7× above random baseline |
+| Precision @ deployed threshold (t=0.40) | **98.98%** |
+| Recall @ deployed threshold (t=0.40) | **38.34%** |
 | Datasets evaluated | 18 |
 | Master dataset | 30,000 rows · 40 model-ready features · 4.21% fraud |
 | SMOTE applied | Training partition only (24K → 45,980 rows) |
-| Tests passing | **105** (28 Android unit tests · 77 backend pytest) |
+| Tests passing | **128** (28 Android unit tests · 100 backend pytest) |
 
 `artefacts/paysense_threshold.pkl` freezes **t=0.40** as the shipped decision
 threshold — it's the F1-optimal operating point from `paysense_phase3.py`'s
-threshold sweep (F1=0.584 vs. 0.550 at t=0.50), and it's what `/predict`
-actually runs in production. The t=0.50 checkpoint above (100% precision /
-37.94% recall) was Phase 2's pre-tuning default — kept here only as context
-for how much the threshold sweep improved recall, not as the deployed number.
+threshold sweep (F1=0.5527 vs. 0.5501 at t=0.50), and it's what `/predict`
+actually runs in production. The t=0.50 checkpoint (F1=0.5501, 100% precision
+/ 37.94% recall) was Phase 2's pre-tuning default — the gap that threshold
+tuning actually buys here is small (F1 +0.0026, one extra true positive out
+of 253 fraud rows in the test set), not the large swing earlier drafts of
+this README claimed. Every number above was independently recomputed
+against the *currently on-disk* `artefacts/paysense_model.pkl` +
+`paysense_preprocessor.pkl` + `paysense_master_dataset.csv` on 2026-08-22 —
+a prior version of this table (ROC-AUC 0.8851, 66.14%/52.17% @ t=0.40) had
+drifted from what those files actually produce, most likely dating to an
+earlier run of `paysense_phase3.py` before the artifacts were last
+retrained (2026-07-23) or the master dataset was last touched (2026-07-15).
+The stale numbers were internally consistent with each other and with
+`paysense_report.tex`, which is exactly why the drift went unnoticed until
+someone recomputed precision/recall from the artifacts directly instead of
+trusting a table.
 
 ---
 
@@ -130,7 +142,7 @@ paysense/
 
 ![Threshold Analysis](PaySense-ML-Backend/plots/paysense_threshold_analysis.png)
 
-Recall ceiling: **67.98%** at threshold=0.05 — a probability calibration issue (not a threshold issue). **Platt Scaling** is proposed as the remediation in future work.
+Recall ceiling: **69.96%** at threshold=0.05 — a probability calibration issue (not a threshold issue). **Platt Scaling** is proposed as the remediation in future work.
 
 ---
 
@@ -249,7 +261,7 @@ UI: Red card with ⚠ icon and "Score: 98%"
 
 ## Testing
 
-105 tests, all passing. Also wired into CI (`.github/workflows/ci.yml`) — runs both suites on every push/PR to `main`.
+128 tests, all passing. Also wired into CI (`.github/workflows/ci.yml`) — runs both suites on every push/PR to `main`.
 
 | Suite | Tests | What's covered |
 |---|---|---|
@@ -356,7 +368,7 @@ The architecture diagram above says "Tier 2: NLP classifier" — until now, that
 
 ## Generalization Check
 
-The 0.8851 ROC-AUC above is measured on a held-out split of the model's *own* training pipeline — it proves the model didn't memorize its own test rows, not that it works on data it's never seen. `PaySense-ML-Backend/GENERALIZATION_CHECK.md` closes that gap: the frozen model, unmodified, was scored against real UPI/fraud datasets it was never trained on, using the same dataset-vetting rigor as the Trojan Family discovery (one 100K-row candidate with a suspicious flat 20.00% fraud rate and near-deterministic feature→label correlations was rejected outright, the same way the pre-balanced Trojan file was).
+The 0.8863 ROC-AUC above is measured on a held-out split of the model's *own* training pipeline — it proves the model didn't memorize its own test rows, not that it works on data it's never seen. `PaySense-ML-Backend/GENERALIZATION_CHECK.md` closes that gap: the frozen model, unmodified, was scored against real UPI/fraud datasets it was never trained on, using the same dataset-vetting rigor as the Trojan Family discovery (one 100K-row candidate with a suspicious flat 20.00% fraud rate and near-deterministic feature→label correlations was rejected outright, the same way the pre-balanced Trojan file was).
 
 On the one dataset that passed vetting (74,917 real rows, 0.94% fraud, only 6 of 40 features honestly mappable to PaySense's schema — the rest imputed):
 
@@ -372,7 +384,7 @@ On the one dataset that passed vetting (74,917 real rows, 0.94% fraud, only 6 of
 ## Honest Limitations
 
 - All training data is **synthetic**, and the generalization check above confirms the gap directly: **0/701** frauds caught on real out-of-distribution data at the production threshold — a live shadow-mode trial (or a dataset that can supply the full 40-feature vector) is required before this could be trusted on real traffic
-- **67.98% recall ceiling** at any threshold — Platt Scaling is proposed as Phase 4 fix
+- **69.96% recall ceiling** at any threshold — Platt Scaling is proposed as Phase 4 fix
 - `new_device_flag` uses a placeholder default in the demo — production needs device fingerprinting APIs
 
 ---

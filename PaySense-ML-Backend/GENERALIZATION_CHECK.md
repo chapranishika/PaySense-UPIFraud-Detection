@@ -17,7 +17,10 @@ trusting anything enough to score against it.
 
 ## 1. Why this check exists
 
-The frozen model's only reported metrics (ROC-AUC 0.8851, PR-AUC 0.5303) come
+The frozen model's only reported metrics (ROC-AUC 0.8863, PR-AUC 0.5339 —
+recomputed 2026-08-22 directly against the on-disk artifacts; an earlier,
+stale 0.8851/0.5303 had drifted from what the artifacts actually produce,
+see README.md's Key Results note) come
 from a held-out split of `paysense_master_dataset.csv` — a dataset built from
 one 20,000-row anchor plus one 10,000-row synthetic supplement, joined and
 schema-bridged by the same author who trained the model. A held-out split of
