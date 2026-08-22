@@ -207,12 +207,21 @@ def _score_light_lr(txn_dict: dict) -> Optional[float]:
     if not _state.lr_model:
         return None
     try:
+        # BUG FIX: txn_dict.get(key, 0.0) only substitutes the default when
+        # the key is absent. A field that's present but explicitly null
+        # (e.g. an optional Pydantic field sent as `null`, which the
+        # synthetic grounding dataset intentionally does for ~2% of rows
+        # per data_dictionary.csv's documented "missing intentionally"
+        # columns) makes .get() return None, and float(None) raises —
+        # silently dropping LightLR out of the ensemble for that request.
+        # `or 0.0` coalesces both "absent" and "present but null" the same
+        # way, matching the treatment every other field already gets.
         values = [[
-            float(txn_dict.get("amount_deviation_score",    0.0)),
-            float(txn_dict.get("new_device_flag",           0.0)),
-            float(txn_dict.get("ip_location_mismatch",      0.0)),
-            float(txn_dict.get("transaction_velocity",      0.0)),
-            float(txn_dict.get("failed_attempts_last_24h",  0.0)),
+            float(txn_dict.get("amount_deviation_score")    or 0.0),
+            float(txn_dict.get("new_device_flag")            or 0.0),
+            float(txn_dict.get("ip_location_mismatch")       or 0.0),
+            float(txn_dict.get("transaction_velocity")       or 0.0),
+            float(txn_dict.get("failed_attempts_last_24h")   or 0.0),
         ]]
         return float(_state.lr_model.predict_proba(values)[0, 1])
     except Exception as e:
