@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generic rounded status pill background. Base white — tinted at runtime
+     per-status (Safe/Review/Low/Medium/High) via View.backgroundTintList. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <corners android:radius="20dp" />
+    <solid android:color="@android:color/white" />
+</shape>

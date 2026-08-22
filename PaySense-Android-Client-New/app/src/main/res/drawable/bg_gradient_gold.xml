@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Wireframe's recurring gradient CTA pattern (purple -> gold), used for the
+     Profile screen's primary action (Log Out). Distinct from
+     bg_dashboard_card.xml's indigo->mint hero gradient. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <gradient
+        android:angle="0"
+        android:startColor="@color/colorPrimary"
+        android:centerColor="@color/colorCoral"
+        android:endColor="@color/colorGold"
+        android:type="linear" />
+    <corners android:radius="18dp" />
+</shape>

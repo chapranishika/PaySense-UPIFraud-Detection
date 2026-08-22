@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    PaySense — item_risk_factor_row.xml
+    One "Why is this risky?" row: label + Low/Medium/High pill, a magnitude
+    bar (fraction set at runtime from RiskFactorAnalyzer.barFraction), and a
+    one-line detail sentence. Reused 4x (Amount/Time/Device/Location) inside
+    layout_bottom_sheet_transaction_detail.xml via <include>.
+-->
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:layout_marginBottom="16dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:id="@+id/tvFactorLabel"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textColor="@color/text_primary"
+            android:textSize="13sp"
+            android:fontFamily="@font/poppins_semibold"
+            tools:text="Unusual Amount" />
+
+        <TextView
+            android:id="@+id/tvFactorPill"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_pill_generic"
+            android:paddingHorizontal="10dp"
+            android:paddingVertical="3dp"
+            android:textSize="11sp"
+            android:fontFamily="@font/poppins_semibold"
+            tools:text="Low" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/barFactorTrack"
+        android:layout_width="match_parent"
+        android:layout_height="8dp"
+        android:layout_marginTop="7dp"
+        android:orientation="horizontal"
+        android:background="@drawable/bg_bar_track">
+
+        <View
+            android:id="@+id/barFactorFill"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="0"
+            android:background="@drawable/bg_bar_fill" />
+
+        <View
+            android:id="@+id/barFactorSpacer"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/tvFactorDetail"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:textColor="@color/text_tertiary"
+        android:textSize="11sp"
+        tools:text="0.42σ from your usual spend" />
+
+</LinearLayout>

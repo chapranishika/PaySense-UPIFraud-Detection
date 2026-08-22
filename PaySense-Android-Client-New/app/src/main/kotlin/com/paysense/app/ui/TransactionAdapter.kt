@@ -67,6 +67,7 @@ class TransactionAdapter(
         "Insurance"     to R.drawable.ic_payment,
         "P2P Transfer"  to R.drawable.ic_sms,
         "EMI"           to R.drawable.ic_payment,
+        "Investment"    to R.drawable.ic_payment,
         "Misc"          to R.drawable.ic_payment,
         "Uncategorized" to R.drawable.ic_warning,
     )
@@ -93,6 +94,19 @@ class TransactionAdapter(
             // ── Category icon ─────────────────────────────────────────────────
             val iconRes = categoryIconMap[txn.category] ?: R.drawable.ic_payment
             binding.ivCategoryIcon.setImageResource(iconRes)
+
+            // ── STATUS PILL — "Safe"/"Review" pill driven by the real,
+            //    model-produced alertLevel field (none/low/medium/high).
+            //    Wireframe screen 1 shows this status word under every row's
+            //    amount, not only flagged ones. ─────────────────────────────
+            val (pillText, pillColorRes) = when (txn.alertLevel) {
+                "high"   -> "Review" to R.color.colorAlertHigh
+                "medium" -> "Review" to R.color.colorAlertMedium
+                "low"    -> "Low Risk" to R.color.colorAlertLow
+                else     -> "Safe" to R.color.colorAlertNone
+            }
+            binding.tvStatusPill.text = pillText
+            binding.tvStatusPill.setTextColor(ContextCompat.getColor(binding.root.context, pillColorRes))
 
             // ── FRAUD TINTING ─────────────────────────────────────────────────
             if (txn.isFraud) {

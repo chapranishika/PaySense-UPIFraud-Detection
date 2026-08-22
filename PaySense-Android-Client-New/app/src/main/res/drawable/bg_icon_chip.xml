@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pastel rounded-square backdrop for a leading list-row icon (the
+     wireframe's recurring "icon in its own colour chip" pattern). Base
+     white — tinted at runtime via View.backgroundTintList so one drawable
+     serves every accent colour (orange/purple/pink/yellow/mint). -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <corners android:radius="14dp" />
+    <solid android:color="@android:color/white" />
+</shape>

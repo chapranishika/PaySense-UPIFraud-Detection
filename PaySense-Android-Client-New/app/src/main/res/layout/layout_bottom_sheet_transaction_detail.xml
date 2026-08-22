@@ -1,0 +1,275 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    PaySense — layout_bottom_sheet_transaction_detail.xml
+
+    Combines wireframe screens 3 ("Transaction Analysis") and 4
+    ("Risk Details (AI)") into one sheet reached by tapping a row in the
+    Recent Transactions list. Every number/label here is read from the real
+    per-transaction fields on TransactionHistory (fraudScore, alertLevel,
+    amountDeviationScore, isNightTransaction, newDeviceFlag,
+    ipLocationMismatch) via RiskFactorAnalyzer — see RiskAnalysis.kt.
+-->
+<androidx.core.widget.NestedScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_bottom_sheet"
+    android:maxHeight="640dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingBottom="28dp">
+
+        <!-- Drag handle -->
+        <View
+            android:layout_width="40dp"
+            android:layout_height="5dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_drag_handle" />
+
+        <!-- Header -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingHorizontal="24dp"
+            android:paddingTop="18dp"
+            android:paddingBottom="4dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Transaction Analysis"
+                android:textColor="@color/text_primary"
+                android:textSize="18sp"
+                android:fontFamily="@font/poppins_extrabold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="AI-powered risk insights"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <!-- Amount + gauge card -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_margin="20dp"
+            android:layout_marginTop="14dp"
+            app:cardCornerRadius="24dp"
+            app:cardElevation="0dp"
+            app:strokeWidth="1dp"
+            app:strokeColor="@color/card_stroke_normal"
+            android:backgroundTint="@color/surface_card">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:padding="22dp">
+
+                <TextView
+                    android:id="@+id/tvDetailPayee"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="13sp"
+                    android:fontFamily="sans-serif-medium"
+                    tools:text="Paytm" />
+
+                <TextView
+                    android:id="@+id/tvDetailAmount"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:textColor="@color/text_primary"
+                    android:textSize="32sp"
+                    android:fontFamily="@font/poppins_extrabold"
+                    tools:text="₹2,450" />
+
+                <!-- Ring gauge with centred score -->
+                <FrameLayout
+                    android:layout_width="150dp"
+                    android:layout_height="150dp"
+                    android:layout_marginTop="18dp">
+
+                    <com.paysense.app.ui.RiskGaugeView
+                        android:id="@+id/gaugeDetailRisk"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent" />
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:orientation="vertical"
+                        android:gravity="center">
+
+                        <TextView
+                            android:id="@+id/tvDetailScore"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="@color/text_primary"
+                            android:textSize="30sp"
+                            android:fontFamily="@font/poppins_extrabold"
+                            tools:text="78/100" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="risk score"
+                            android:textColor="@color/text_tertiary"
+                            android:textSize="10sp" />
+                    </LinearLayout>
+                </FrameLayout>
+
+                <TextView
+                    android:id="@+id/tvDetailRiskPill"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:background="@drawable/bg_pill_generic"
+                    android:paddingHorizontal="16dp"
+                    android:paddingVertical="6dp"
+                    android:textSize="13sp"
+                    android:fontFamily="@font/poppins_bold"
+                    tools:text="SAFE TRANSACTION" />
+
+                <TextView
+                    android:id="@+id/tvDetailRiskSummary"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:gravity="center"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="13sp"
+                    tools:text="This transaction is slightly unusual." />
+
+                <TextView
+                    android:id="@+id/tvDetailTimestamp"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:textColor="@color/text_tertiary"
+                    android:textSize="11sp"
+                    tools:text="12 May 2025, 11:42 AM" />
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Risk breakdown / "Why is this risky?" -->
+        <TextView
+            style="@style/PaySenseSectionTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="20dp"
+            android:layout_marginBottom="10dp"
+            android:textSize="15sp"
+            android:text="Why is this risky?" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginHorizontal="20dp"
+            android:layout_marginBottom="8dp">
+
+            <!-- Row: Unusual Amount -->
+            <include
+                android:id="@+id/rowAmount"
+                layout="@layout/item_risk_factor_row" />
+
+            <!-- Row: Unusual Time -->
+            <include
+                android:id="@+id/rowTime"
+                layout="@layout/item_risk_factor_row" />
+
+            <!-- Row: Device Change -->
+            <include
+                android:id="@+id/rowDevice"
+                layout="@layout/item_risk_factor_row" />
+
+            <!-- Row: Location Change -->
+            <include
+                android:id="@+id/rowLocation"
+                layout="@layout/item_risk_factor_row" />
+
+        </LinearLayout>
+
+        <!-- AI Suggestion callout -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="20dp"
+            android:layout_marginTop="6dp"
+            android:layout_marginBottom="16dp"
+            app:cardCornerRadius="18dp"
+            app:cardElevation="0dp"
+            app:strokeWidth="1dp"
+            app:strokeColor="@color/colorCalloutBorder"
+            android:backgroundTint="@color/colorCalloutBg">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="💡"
+                    android:textSize="20sp"
+                    android:layout_marginEnd="10dp" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="AI Suggestion"
+                        android:textColor="@color/text_primary"
+                        android:textSize="13sp"
+                        android:fontFamily="@font/poppins_semibold" />
+
+                    <TextView
+                        android:id="@+id/tvDetailSuggestion"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="3dp"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="12sp"
+                        android:lineSpacingExtra="2dp"
+                        tools:text="Your spending behavior is normal. No unusual patterns detected." />
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Close -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnDetailClose"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="20dp"
+            android:text="Got it"
+            android:textColor="@android:color/white"
+            android:fontFamily="@font/poppins_semibold"
+            app:backgroundTint="@color/brand_primary"
+            android:paddingVertical="14dp"
+            app:cornerRadius="18dp" />
+
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

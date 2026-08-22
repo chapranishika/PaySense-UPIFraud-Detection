@@ -9,11 +9,16 @@ import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.paysense.app.R
 import com.paysense.app.databinding.FragmentDashboardBinding
+import com.paysense.app.layer2.TransactionHistory
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
+import java.util.Calendar
 import java.util.Locale
+import kotlin.math.roundToInt
 
 /**
  * ============================================================================
@@ -50,6 +55,9 @@ class DashboardContentFragment : Fragment() {
 
     private lateinit var adapter: TransactionAdapter
     private val currencyFmt = NumberFormat.getCurrencyInstance(Locale("en", "IN"))
+    private val currencyFmtNoDecimals = NumberFormat.getCurrencyInstance(Locale("en", "IN")).apply {
+        maximumFractionDigits = 0
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -91,8 +99,67 @@ class DashboardContentFragment : Fragment() {
         _binding = null
     }
 
+    /**
+     * Drives the wireframe "Security Status" card + stat tiles row entirely
+     * from the real transaction list — no placeholder numbers:
+     *   - Safety % / ring fill = share of ALL-TIME transactions NOT flagged
+     *     as fraud (isFraud == false). 100% when there is no history yet.
+     *   - "Today" tile = count of transactions with a timestamp within the
+     *     current calendar day.
+     *   - Status label/colour flips from green "SAFE" to amber/red "REVIEW
+     *     NEEDED" the moment any transaction carries a non-"none" alertLevel
+     *     — "high" wins over "medium" for the headline colour/copy.
+     */
+    private fun updateSecurityStatus(txnList: List<TransactionHistory>) {
+        val total = txnList.size
+        val fraudCount = txnList.count { it.isFraud }
+        val safetyPct = if (total == 0) 100 else (100.0 * (total - fraudCount) / total).roundToInt()
+
+        val todayStart = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
+        val todayCount = txnList.count { it.timestamp >= todayStart }
+
+        binding.tvSecurityGaugeLabel.text = "$safetyPct%"
+        binding.tvStatSafety.text = "$safetyPct%"
+        binding.tvStatTxnToday.text = todayCount.toString()
+        binding.gaugeSecurityStatus.progress = safetyPct / 100f
+
+        val hasHighAlert = txnList.any { it.alertLevel == "high" }
+        val ctx = requireContext()
+        when {
+            fraudCount == 0 -> {
+                val color = ContextCompat.getColor(ctx, R.color.colorAlertNone)
+                binding.gaugeSecurityStatus.setProgressColor(color)
+                binding.tvSecurityStatusLabel.setTextColor(color)
+                binding.tvSecurityStatusLabel.text = "SAFE"
+                binding.tvSecurityStatusSubtext.text = "No suspicious activity"
+            }
+            hasHighAlert -> {
+                val color = ContextCompat.getColor(ctx, R.color.colorAlertHigh)
+                binding.gaugeSecurityStatus.setProgressColor(color)
+                binding.tvSecurityStatusLabel.setTextColor(color)
+                binding.tvSecurityStatusLabel.text = "AT RISK"
+                binding.tvSecurityStatusSubtext.text = "$fraudCount transaction(s) need review"
+            }
+            else -> {
+                val color = ContextCompat.getColor(ctx, R.color.colorAlertMedium)
+                binding.gaugeSecurityStatus.setProgressColor(color)
+                binding.tvSecurityStatusLabel.setTextColor(color)
+                binding.tvSecurityStatusLabel.text = "REVIEW"
+                binding.tvSecurityStatusSubtext.text = "$fraudCount transaction(s) flagged for review"
+            }
+        }
+    }
+
     private fun setupRecyclerView() {
-        adapter = TransactionAdapter()
+        adapter = TransactionAdapter(onItemClick = { txn ->
+            TransactionDetailBottomSheet.newInstance(txn.txnId)
+                .show(parentFragmentManager, TransactionDetailBottomSheet.TAG)
+        })
         binding.rvTransactions.apply {
             layoutManager = LinearLayoutManager(requireContext())
             adapter        = this@DashboardContentFragment.adapter
@@ -101,13 +168,15 @@ class DashboardContentFragment : Fragment() {
 
     private fun observeViewModel() {
 
-        // Transaction list → RecyclerView
+        // Transaction list → RecyclerView (+ Security Status card / stat tiles,
+        // which are derived from this same real list — see updateSecurityStatus)
         viewLifecycleOwner.lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.transactions.collect { txnList ->
                     adapter.submitList(txnList)
                     binding.layoutEmptyState.visibility =
                         if (txnList.isEmpty()) View.VISIBLE else View.GONE
+                    updateSecurityStatus(txnList)
                 }
             }
         }
@@ -117,6 +186,7 @@ class DashboardContentFragment : Fragment() {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.totalSpent.collect { total ->
                     binding.tvTotalSpent.text = currencyFmt.format(total)
+                    binding.tvStatSpentTile.text = currencyFmtNoDecimals.format(total)
                 }
             }
         }

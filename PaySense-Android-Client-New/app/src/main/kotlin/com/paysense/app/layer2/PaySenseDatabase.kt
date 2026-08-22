@@ -29,7 +29,7 @@ import java.util.Locale
 @Database(
     entities     = [PayeeCache::class, TransactionHistory::class,
                     Budget::class, SavingsGoal::class],
-    version      = 5,          // v4→v5: added savings_goals table (Phase 3)
+    version      = 6,          // v5→v6: persist real per-txn risk factors (Risk Details UI)
     exportSchema = true
 )
 abstract class PaySenseDatabase : RoomDatabase() {
@@ -100,6 +100,23 @@ abstract class PaySenseDatabase : RoomDatabase() {
             }
         }
 
+        // MIGRATION_5_6 — adds the real risk-factor columns that back the
+        // wireframe "Transaction Analysis" / "Risk Details" screens. These
+        // values were already computed by FraudApiService.buildTransactionRequest()
+        // for every /predict call but discarded after the network response;
+        // this migration gives them a home in Room so the detail UI can read
+        // real per-transaction signals instead of placeholder numbers.
+        // Nullable ADD COLUMNs — existing rows get NULL, not a fabricated
+        // default, so the UI can distinguish "not available" from "false/0".
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `transaction_history` ADD COLUMN `amountDeviationScore` REAL")
+                db.execSQL("ALTER TABLE `transaction_history` ADD COLUMN `isNightTransaction` INTEGER")
+                db.execSQL("ALTER TABLE `transaction_history` ADD COLUMN `newDeviceFlag` INTEGER")
+                db.execSQL("ALTER TABLE `transaction_history` ADD COLUMN `ipLocationMismatch` INTEGER")
+            }
+        }
+
         @Volatile private var INSTANCE: PaySenseDatabase? = null
 
         fun getInstance(context: Context): PaySenseDatabase =
@@ -110,7 +127,7 @@ abstract class PaySenseDatabase : RoomDatabase() {
                     "paysense_local.db"
                 )
                 .addMigrations(MIGRATION_1_2, MIGRATION_2_3,
-                               MIGRATION_3_4, MIGRATION_4_5)
+                               MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
                 .build()
                 .also { INSTANCE = it }
             }

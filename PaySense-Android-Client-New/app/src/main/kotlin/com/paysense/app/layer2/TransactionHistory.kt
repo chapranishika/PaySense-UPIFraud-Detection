@@ -44,7 +44,20 @@ data class TransactionHistory(
     // Fraud verdict fields — populated after Layer 3 returns
     val fraudScore    : Double  = 0.0,
     val isFraud       : Boolean = false,
-    val alertLevel    : String  = "none"    // "none"|"low"|"medium"|"high"
+    val alertLevel    : String  = "none",   // "none"|"low"|"medium"|"high"
+
+    // ── v6: real per-transaction risk factors (schema v6) ────────────────────
+    // These are the same signals FraudApiService.buildTransactionRequest()
+    // already computes and sends to /predict — previously discarded after the
+    // network call. Now persisted so the Risk Details UI can show the real
+    // factors that produced fraudScore/alertLevel instead of placeholder
+    // copy. All nullable: pre-migration rows (inserted before v6) have NULL
+    // here, and the detail UI must show an honest "not available" state for
+    // those rows rather than fabricating zeros.
+    val amountDeviationScore : Double?  = null,  // z-score of amount vs user's 90-day mean (see buildTransactionRequest)
+    val isNightTransaction   : Boolean? = null,  // true if local hour < 6 or >= 22
+    val newDeviceFlag        : Boolean? = null,  // true if sent from an unrecognised device
+    val ipLocationMismatch   : Boolean? = null   // true if IP-derived location doesn't match usual location
 )
 
 // ============================================================================
@@ -83,6 +96,10 @@ interface TransactionDao {
     /** All transactions ordered newest-first — feeds the RecyclerView. */
     @Query("SELECT * FROM transaction_history ORDER BY timestamp DESC")
     suspend fun getAllTransactions(): List<TransactionHistory>
+
+    /** Single row lookup — feeds the Transaction Detail / Risk Details bottom sheet. */
+    @Query("SELECT * FROM transaction_history WHERE txnId = :txnId LIMIT 1")
+    suspend fun getTransactionById(txnId: String): TransactionHistory?
 
     /** Total debited this calendar month — feeds the "Total Spent" card. */
     @Query("""

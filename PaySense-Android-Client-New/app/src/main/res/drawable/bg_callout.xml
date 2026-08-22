@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- "AI Insight / AI Suggestion" callout box — soft-tinted background pattern
+     used across the Transaction Detail sheet and (where time permits) the
+     dashboard, matching the wireframe's recurring "AI ... 💡" card. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <corners android:radius="18dp" />
+    <solid android:color="@color/colorCalloutBg" />
+    <stroke android:width="1dp" android:color="@color/colorCalloutBorder" />
+</shape>
