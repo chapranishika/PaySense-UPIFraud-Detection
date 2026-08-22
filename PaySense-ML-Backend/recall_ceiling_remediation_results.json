@@ -1,0 +1,561 @@
+{
+  "vanilla_replica": {
+    "name": "vanilla_replica (control \u2014 no constraints)",
+    "roc_auc": 0.8863493652986848,
+    "pr_auc": 0.5338588575064371,
+    "at_0.40": {
+      "threshold": 0.4,
+      "precision": 0.9897959183673469,
+      "recall": 0.383399209486166,
+      "f1": 0.5527065527065527,
+      "tp": 97,
+      "fp": 1,
+      "fn": 156,
+      "tn": 5746
+    },
+    "at_0.05": {
+      "threshold": 0.05,
+      "precision": 0.17151162790697674,
+      "recall": 0.6996047430830039,
+      "f1": 0.2754863813229572,
+      "tp": 177,
+      "fp": 855,
+      "fn": 76,
+      "tn": 4892
+    },
+    "sweep": [
+      {
+        "threshold": 0.05,
+        "precision": 0.17151162790697674,
+        "recall": 0.6996047430830039,
+        "f1": 0.2754863813229572,
+        "tp": 177,
+        "fp": 855,
+        "fn": 76,
+        "tn": 4892
+      },
+      {
+        "threshold": 0.1,
+        "precision": 0.3036144578313253,
+        "recall": 0.4980237154150198,
+        "f1": 0.3772455089820359,
+        "tp": 126,
+        "fp": 289,
+        "fn": 127,
+        "tn": 5458
+      },
+      {
+        "threshold": 0.15,
+        "precision": 0.5133928571428571,
+        "recall": 0.45454545454545453,
+        "f1": 0.48218029350104824,
+        "tp": 115,
+        "fp": 109,
+        "fn": 138,
+        "tn": 5638
+      },
+      {
+        "threshold": 0.2,
+        "precision": 0.6815286624203821,
+        "recall": 0.42292490118577075,
+        "f1": 0.5219512195121951,
+        "tp": 107,
+        "fp": 50,
+        "fn": 146,
+        "tn": 5697
+      },
+      {
+        "threshold": 0.25,
+        "precision": 0.8347107438016529,
+        "recall": 0.39920948616600793,
+        "f1": 0.5401069518716578,
+        "tp": 101,
+        "fp": 20,
+        "fn": 152,
+        "tn": 5727
+      },
+      {
+        "threshold": 0.3,
+        "precision": 0.8909090909090909,
+        "recall": 0.38735177865612647,
+        "f1": 0.5399449035812672,
+        "tp": 98,
+        "fp": 12,
+        "fn": 155,
+        "tn": 5735
+      },
+      {
+        "threshold": 0.35,
+        "precision": 0.9603960396039604,
+        "recall": 0.383399209486166,
+        "f1": 0.5480225988700564,
+        "tp": 97,
+        "fp": 4,
+        "fn": 156,
+        "tn": 5743
+      },
+      {
+        "threshold": 0.4,
+        "precision": 0.9897959183673469,
+        "recall": 0.383399209486166,
+        "f1": 0.5527065527065527,
+        "tp": 97,
+        "fp": 1,
+        "fn": 156,
+        "tn": 5746
+      },
+      {
+        "threshold": 0.45,
+        "precision": 1.0,
+        "recall": 0.3794466403162055,
+        "f1": 0.5501432664756447,
+        "tp": 96,
+        "fp": 0,
+        "fn": 157,
+        "tn": 5747
+      },
+      {
+        "threshold": 0.5,
+        "precision": 1.0,
+        "recall": 0.3794466403162055,
+        "f1": 0.5501432664756447,
+        "tp": 96,
+        "fp": 0,
+        "fn": 157,
+        "tn": 5747
+      }
+    ],
+    "recovered_of_original_76_at_tau_0.05": 0,
+    "saved_to": "E:\\Projects\\upi\\PaySense_Final_Submission\\PS\\PaySense-ML-Backend\\artefacts\\paysense_model_vanilla_replica.pkl"
+  },
+  "interaction_constrained": {
+    "name": "interaction_constrained (hard-signal group vs behavioral group isolated)",
+    "roc_auc": 0.8814222371390195,
+    "pr_auc": 0.534228769220905,
+    "at_0.40": {
+      "threshold": 0.4,
+      "precision": 0.9607843137254902,
+      "recall": 0.38735177865612647,
+      "f1": 0.5521126760563381,
+      "tp": 98,
+      "fp": 4,
+      "fn": 155,
+      "tn": 5743
+    },
+    "at_0.05": {
+      "threshold": 0.05,
+      "precision": 0.12755102040816327,
+      "recall": 0.7905138339920948,
+      "f1": 0.21965952773201539,
+      "tp": 200,
+      "fp": 1368,
+      "fn": 53,
+      "tn": 4379
+    },
+    "sweep": [
+      {
+        "threshold": 0.05,
+        "precision": 0.12755102040816327,
+        "recall": 0.7905138339920948,
+        "f1": 0.21965952773201539,
+        "tp": 200,
+        "fp": 1368,
+        "fn": 53,
+        "tn": 4379
+      },
+      {
+        "threshold": 0.1,
+        "precision": 0.32682926829268294,
+        "recall": 0.5296442687747036,
+        "f1": 0.4042232277526395,
+        "tp": 134,
+        "fp": 276,
+        "fn": 119,
+        "tn": 5471
+      },
+      {
+        "threshold": 0.15,
+        "precision": 0.5577889447236181,
+        "recall": 0.43873517786561267,
+        "f1": 0.4911504424778761,
+        "tp": 111,
+        "fp": 88,
+        "fn": 142,
+        "tn": 5659
+      },
+      {
+        "threshold": 0.2,
+        "precision": 0.7727272727272727,
+        "recall": 0.4031620553359684,
+        "f1": 0.5298701298701298,
+        "tp": 102,
+        "fp": 30,
+        "fn": 151,
+        "tn": 5717
+      },
+      {
+        "threshold": 0.25,
+        "precision": 0.8761061946902655,
+        "recall": 0.391304347826087,
+        "f1": 0.5409836065573771,
+        "tp": 99,
+        "fp": 14,
+        "fn": 154,
+        "tn": 5733
+      },
+      {
+        "threshold": 0.3,
+        "precision": 0.9333333333333333,
+        "recall": 0.38735177865612647,
+        "f1": 0.547486033519553,
+        "tp": 98,
+        "fp": 7,
+        "fn": 155,
+        "tn": 5740
+      },
+      {
+        "threshold": 0.35,
+        "precision": 0.9514563106796117,
+        "recall": 0.38735177865612647,
+        "f1": 0.550561797752809,
+        "tp": 98,
+        "fp": 5,
+        "fn": 155,
+        "tn": 5742
+      },
+      {
+        "threshold": 0.4,
+        "precision": 0.9607843137254902,
+        "recall": 0.38735177865612647,
+        "f1": 0.5521126760563381,
+        "tp": 98,
+        "fp": 4,
+        "fn": 155,
+        "tn": 5743
+      },
+      {
+        "threshold": 0.45,
+        "precision": 0.98,
+        "recall": 0.38735177865612647,
+        "f1": 0.5552407932011332,
+        "tp": 98,
+        "fp": 2,
+        "fn": 155,
+        "tn": 5745
+      },
+      {
+        "threshold": 0.5,
+        "precision": 0.98989898989899,
+        "recall": 0.38735177865612647,
+        "f1": 0.5568181818181818,
+        "tp": 98,
+        "fp": 1,
+        "fn": 155,
+        "tn": 5746
+      }
+    ],
+    "recovered_of_original_76_at_tau_0.05": 31,
+    "saved_to": "E:\\Projects\\upi\\PaySense_Final_Submission\\PS\\PaySense-ML-Backend\\artefacts\\paysense_model_interaction_constrained.pkl"
+  },
+  "monotonic": {
+    "name": "monotonic (non-decreasing fraud prob. in the 3 behavioral features)",
+    "roc_auc": 0.8888679503518248,
+    "pr_auc": 0.5351849525873964,
+    "at_0.40": {
+      "threshold": 0.4,
+      "precision": 0.941747572815534,
+      "recall": 0.383399209486166,
+      "f1": 0.5449438202247191,
+      "tp": 97,
+      "fp": 6,
+      "fn": 156,
+      "tn": 5741
+    },
+    "at_0.05": {
+      "threshold": 0.05,
+      "precision": 0.1686746987951807,
+      "recall": 0.7193675889328063,
+      "f1": 0.2732732732732733,
+      "tp": 182,
+      "fp": 897,
+      "fn": 71,
+      "tn": 4850
+    },
+    "sweep": [
+      {
+        "threshold": 0.05,
+        "precision": 0.1686746987951807,
+        "recall": 0.7193675889328063,
+        "f1": 0.2732732732732733,
+        "tp": 182,
+        "fp": 897,
+        "fn": 71,
+        "tn": 4850
+      },
+      {
+        "threshold": 0.1,
+        "precision": 0.2975929978118162,
+        "recall": 0.5375494071146245,
+        "f1": 0.38309859154929576,
+        "tp": 136,
+        "fp": 321,
+        "fn": 117,
+        "tn": 5426
+      },
+      {
+        "threshold": 0.15,
+        "precision": 0.4609375,
+        "recall": 0.466403162055336,
+        "f1": 0.4636542239685658,
+        "tp": 118,
+        "fp": 138,
+        "fn": 135,
+        "tn": 5609
+      },
+      {
+        "threshold": 0.2,
+        "precision": 0.625,
+        "recall": 0.4150197628458498,
+        "f1": 0.498812351543943,
+        "tp": 105,
+        "fp": 63,
+        "fn": 148,
+        "tn": 5684
+      },
+      {
+        "threshold": 0.25,
+        "precision": 0.7878787878787878,
+        "recall": 0.41106719367588934,
+        "f1": 0.5402597402597402,
+        "tp": 104,
+        "fp": 28,
+        "fn": 149,
+        "tn": 5719
+      },
+      {
+        "threshold": 0.3,
+        "precision": 0.864406779661017,
+        "recall": 0.4031620553359684,
+        "f1": 0.5498652291105122,
+        "tp": 102,
+        "fp": 16,
+        "fn": 151,
+        "tn": 5731
+      },
+      {
+        "threshold": 0.35,
+        "precision": 0.9074074074074074,
+        "recall": 0.38735177865612647,
+        "f1": 0.5429362880886427,
+        "tp": 98,
+        "fp": 10,
+        "fn": 155,
+        "tn": 5737
+      },
+      {
+        "threshold": 0.4,
+        "precision": 0.941747572815534,
+        "recall": 0.383399209486166,
+        "f1": 0.5449438202247191,
+        "tp": 97,
+        "fp": 6,
+        "fn": 156,
+        "tn": 5741
+      },
+      {
+        "threshold": 0.45,
+        "precision": 0.9696969696969697,
+        "recall": 0.3794466403162055,
+        "f1": 0.5454545454545454,
+        "tp": 96,
+        "fp": 3,
+        "fn": 157,
+        "tn": 5744
+      },
+      {
+        "threshold": 0.5,
+        "precision": 0.9896907216494846,
+        "recall": 0.3794466403162055,
+        "f1": 0.5485714285714286,
+        "tp": 96,
+        "fp": 1,
+        "fn": 157,
+        "tn": 5746
+      }
+    ],
+    "recovered_of_original_76_at_tau_0.05": 10,
+    "saved_to": "E:\\Projects\\upi\\PaySense_Final_Submission\\PS\\PaySense-ML-Backend\\artefacts\\paysense_model_monotonic.pkl"
+  },
+  "composite_feature": {
+    "name": "composite_feature (engineered behavioral_anomaly_score, unconstrained model)",
+    "roc_auc": 0.8868411152476184,
+    "pr_auc": 0.5291613307278116,
+    "at_0.40": {
+      "threshold": 0.4,
+      "precision": 0.9702970297029703,
+      "recall": 0.38735177865612647,
+      "f1": 0.5536723163841808,
+      "tp": 98,
+      "fp": 3,
+      "fn": 155,
+      "tn": 5744
+    },
+    "at_0.05": {
+      "threshold": 0.05,
+      "precision": 0.16494845360824742,
+      "recall": 0.6956521739130435,
+      "f1": 0.26666666666666666,
+      "tp": 176,
+      "fp": 891,
+      "fn": 77,
+      "tn": 4856
+    },
+    "sweep": [
+      {
+        "threshold": 0.05,
+        "precision": 0.16494845360824742,
+        "recall": 0.6956521739130435,
+        "f1": 0.26666666666666666,
+        "tp": 176,
+        "fp": 891,
+        "fn": 77,
+        "tn": 4856
+      },
+      {
+        "threshold": 0.1,
+        "precision": 0.3056872037914692,
+        "recall": 0.5098814229249012,
+        "f1": 0.38222222222222224,
+        "tp": 129,
+        "fp": 293,
+        "fn": 124,
+        "tn": 5454
+      },
+      {
+        "threshold": 0.15,
+        "precision": 0.4801762114537445,
+        "recall": 0.4308300395256917,
+        "f1": 0.45416666666666666,
+        "tp": 109,
+        "fp": 118,
+        "fn": 144,
+        "tn": 5629
+      },
+      {
+        "threshold": 0.2,
+        "precision": 0.7019867549668874,
+        "recall": 0.4189723320158103,
+        "f1": 0.5247524752475248,
+        "tp": 106,
+        "fp": 45,
+        "fn": 147,
+        "tn": 5702
+      },
+      {
+        "threshold": 0.25,
+        "precision": 0.8632478632478633,
+        "recall": 0.39920948616600793,
+        "f1": 0.5459459459459459,
+        "tp": 101,
+        "fp": 16,
+        "fn": 152,
+        "tn": 5731
+      },
+      {
+        "threshold": 0.3,
+        "precision": 0.908256880733945,
+        "recall": 0.391304347826087,
+        "f1": 0.5469613259668509,
+        "tp": 99,
+        "fp": 10,
+        "fn": 154,
+        "tn": 5737
+      },
+      {
+        "threshold": 0.35,
+        "precision": 0.9423076923076923,
+        "recall": 0.38735177865612647,
+        "f1": 0.5490196078431373,
+        "tp": 98,
+        "fp": 6,
+        "fn": 155,
+        "tn": 5741
+      },
+      {
+        "threshold": 0.4,
+        "precision": 0.9702970297029703,
+        "recall": 0.38735177865612647,
+        "f1": 0.5536723163841808,
+        "tp": 98,
+        "fp": 3,
+        "fn": 155,
+        "tn": 5744
+      },
+      {
+        "threshold": 0.45,
+        "precision": 0.98989898989899,
+        "recall": 0.38735177865612647,
+        "f1": 0.5568181818181818,
+        "tp": 98,
+        "fp": 1,
+        "fn": 155,
+        "tn": 5746
+      },
+      {
+        "threshold": 0.5,
+        "precision": 1.0,
+        "recall": 0.3794466403162055,
+        "f1": 0.5501432664756447,
+        "tp": 96,
+        "fp": 0,
+        "fn": 157,
+        "tn": 5747
+      }
+    ],
+    "recovered_of_original_76_at_tau_0.05": 8,
+    "saved_to": "E:\\Projects\\upi\\PaySense_Final_Submission\\PS\\PaySense-ML-Backend\\artefacts\\paysense_model_composite_feature.pkl"
+  },
+  "_interaction_constraint_verification": {
+    "paths_checked": 2525,
+    "paths_violating_isolation": 0
+  },
+  "_diagnostic": {
+    "n_caught_at_tau_0.05": 177,
+    "n_missed_at_tau_0.05": 76,
+    "recall_at_tau_0.05": 0.6996047430830039,
+    "feature_means": [
+      {
+        "feature": "new_device_flag",
+        "invisible_mean": 0.06578947368421052,
+        "caught_mean": 0.6892655367231638
+      },
+      {
+        "feature": "ip_location_mismatch",
+        "invisible_mean": 0.05263157894736842,
+        "caught_mean": 0.615819209039548
+      },
+      {
+        "feature": "amount_deviation_score",
+        "invisible_mean": 0.6487684210526318,
+        "caught_mean": 0.5556039548022599
+      },
+      {
+        "feature": "transaction_velocity",
+        "invisible_mean": 0.6973684210526315,
+        "caught_mean": 0.5819209039548022
+      },
+      {
+        "feature": "failed_attempts_last_24h",
+        "invisible_mean": 0.6973684210526315,
+        "caught_mean": 0.3389830508474576
+      },
+      {
+        "feature": "recurring_payment_flag",
+        "invisible_mean": 0.2894736842105263,
+        "caught_mean": 0.11299435028248588
+      }
+    ],
+    "frozen_roc_auc": 0.8863493652986848,
+    "frozen_pr_auc": 0.5338588575064371
+  }
+}
