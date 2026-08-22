@@ -64,7 +64,9 @@ from slowapi.util           import get_remote_address
 # ── Import ensemble scorer ──────────────────────────────────────────────────
 import sys, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
-from src.fraud_model import load_artefacts, score as ensemble_score, get_state
+from src.fraud_model import (
+    load_artefacts, score as ensemble_score, get_state, classify_category,
+)
 
 load_dotenv()
 
@@ -357,6 +359,26 @@ class PredictionResponse(BaseModel):
     active_scorers  : list[str]       = Field(default_factory=list)
 
 
+class CategoryRequest(BaseModel):
+    text: str = Field(
+        ..., min_length=1, max_length=1000,
+        example="Restaurant payment of Rs 48698 via UPI Ref 388389",
+        description="Raw SMS narration / transaction description text.",
+    )
+
+
+class CategoryResponse(BaseModel):
+    category  : str = Field(
+        ..., description="One of: Food, Travel, EMI, Investment, Shopping. "
+                          "This is the FinText-6K label set — it does NOT cover "
+                          "every category the app's HITL prompt offers (e.g. "
+                          "Bills, Grocery, Entertainment, Healthcare, Misc). "
+                          "Callers should treat a low-confidence result the "
+                          "same as a Tier-3 fallback."
+    )
+    confidence: float = Field(..., ge=0.0, le=1.0, description="Calibrated probability of the top class.")
+
+
 class WeeklyInsight(BaseModel):
     period          : str
     total_spent     : float
@@ -370,13 +392,6 @@ class WeeklyInsight(BaseModel):
 # ════════════════════════════════════════════════════════════════════════════
 #  HELPERS
 # ════════════════════════════════════════════════════════════════════════════
-def compute_alert_level(score: float) -> str:
-    if score >= 0.70: return "high"
-    if score >= 0.40: return "medium"
-    if score >= 0.20: return "low"
-    return "none"
-
-
 def _mock_score(txn: TransactionInput) -> float:
     """
     Deterministic mock scorer used when model artefacts are absent.
@@ -442,6 +457,58 @@ async def predict(
         rules_score     = result.rules_score,
         active_scorers  = result.active_scorers,
     )
+
+
+# ════════════════════════════════════════════════════════════════════════════
+#  /classify  — LAYER 2 TIER-2 NLP CATEGORY CLASSIFIER  (rate-limited, JWT-protected)
+# ════════════════════════════════════════════════════════════════════════════
+@app.post(
+    "/classify",
+    response_model = CategoryResponse,
+    summary        = "Classify a UPI/SMS transaction narration into a spending category",
+    tags           = ["Inference"],
+)
+@limiter.limit("60/minute")
+async def classify(
+    request : Request,
+    payload : CategoryRequest,
+    user    : Annotated[str, Depends(get_current_user)],
+) -> CategoryResponse:
+    """
+    **Requires:** `Authorization: Bearer <token>` (obtain from POST /auth/token).
+
+    **Rate limit:** 60 requests per minute per IP.
+
+    This is Tier 2 of the Android app's three-tier payee-category resolution
+    pipeline (Tier 1 = local keyword/cache lookup, Tier 2 = this endpoint,
+    Tier 3 = human-in-the-loop prompt). The Android client calls this only
+    on a Tier-1 cache miss, sending the raw SMS body as `text`.
+
+    The model is a TF-IDF + calibrated LinearSVC pipeline trained on the
+    FinText-6K dataset (see train_category_classifier.py). It was trained
+    on exactly five classes — **Food, Travel, EMI, Investment, Shopping** —
+    and will never return a category outside that set. The Android client
+    applies its own `NLP_CONFIDENCE_THRESHOLD = 0.65` gate: below that
+    confidence, or if this endpoint is unavailable, it falls through to the
+    Tier-3 human prompt instead of trusting a low-confidence guess.
+    """
+    rid = _request_id_ctx.get("-")
+    result = classify_category(payload.text)
+
+    if result is None:
+        log.warning(f"classify user={user} rid={rid} — category model unavailable")
+        raise HTTPException(
+            status_code = status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail      = "Category classifier artefact not loaded. "
+                          "Run train_category_classifier.py to generate it.",
+        )
+
+    log.info(
+        f"classify user={user} rid={rid} category={result.category} "
+        f"confidence={result.confidence:.4f}"
+    )
+
+    return CategoryResponse(category=result.category, confidence=result.confidence)
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -601,6 +668,7 @@ async def health_check():
         "active_scorers"  : state.active_scorers,
         "paysense_loaded" : state.ps_model is not None,
         "light_lr_loaded" : state.lr_model is not None,
+        "category_classifier_loaded" : state.category_model is not None,
         "rules_always_on" : True,
         "threshold"       : state.ps_threshold,
         "feature_count"   : len(state.ps_features) if state.ps_features else 0,

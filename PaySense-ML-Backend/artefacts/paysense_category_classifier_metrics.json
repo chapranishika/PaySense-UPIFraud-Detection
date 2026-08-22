@@ -1,0 +1,107 @@
+{
+  "accuracy": 1.0,
+  "macro_f1": 1.0,
+  "weighted_f1": 1.0,
+  "classification_report": {
+    "EMI": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 201.0
+    },
+    "Food": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 205.0
+    },
+    "Investment": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 172.0
+    },
+    "Shopping": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 230.0
+    },
+    "Travel": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 192.0
+    },
+    "accuracy": 1.0,
+    "macro avg": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 1000.0
+    },
+    "weighted avg": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 1000.0
+    }
+  },
+  "confusion_matrix": [
+    [
+      201,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      205,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      172,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      230,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      192
+    ]
+  ],
+  "confusion_matrix_labels": [
+    "EMI",
+    "Food",
+    "Investment",
+    "Shopping",
+    "Travel"
+  ],
+  "mean_top_confidence": 0.9938808048077262,
+  "fraction_above_0.65_confidence": 1.0,
+  "accuracy_among_above_0.65_confidence": 1.0,
+  "train_rows": 5000,
+  "test_rows": 1000,
+  "classes": [
+    "EMI",
+    "Food",
+    "Investment",
+    "Shopping",
+    "Travel"
+  ],
+  "trained_at_unix": 1787351828.5944839
+}

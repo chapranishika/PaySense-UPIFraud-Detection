@@ -3,6 +3,7 @@ package com.paysense.app.layer2
 import android.content.Context
 import android.util.Log
 import com.paysense.app.layer1.ParsedTransaction
+import com.paysense.app.layer3.FraudApiService
 
 private const val TAG = "PaySense_Layer2"
 
@@ -169,55 +170,99 @@ class PayeeCacheRepository private constructor(private val context: Context) {
     // ── PRIVATE HELPERS ─────────────────────────────────────────────────────
 
     /**
-     * Stub for the NLP classifier call.
+     * NLP classifier call — Option B (HTTP call to /classify on the FastAPI
+     * server), chosen over on-device TFLite because it lets the server-side
+     * model (retrained on fresh data) improve without an app update, and
+     * because PaySense already has a live backend + Retrofit client for
+     * /predict that this reuses.
      *
-     * In production, replace this with one of:
-     *   Option A: TFLite on-device inference using your FinText-6K model
-     *             (zero latency, works offline, ~15MB model file)
-     *   Option B: HTTP call to a /classify endpoint on your FastAPI server
-     *             (always up-to-date model, requires internet)
+     * Order of operations:
+     *   1. Keyword shortcut rules (NlpKeywordRules) — high-confidence,
+     *      zero-latency, zero-network-cost for the most common merchants.
+     *   2. POST /classify with the raw SMS body — the FinText-6K-trained
+     *      TF-IDF + LinearSVC classifier on the backend. Only ever returns
+     *      one of five classes: Food, Travel, EMI, Investment, Shopping.
+     *      That's a real, honest limitation versus the app's full HITL
+     *      category set (Bills, Grocery, Entertainment, Healthcare, Misc) —
+     *      this is not silently mapped or faked; a category outside those
+     *      five simply won't come from this tier and falls through to
+     *      Tier 3 where the user can pick from the full set (which now
+     *      also includes EMI and Investment as chips).
      *
-     * @return Pair<category, confidence> or null if classification fails entirely.
+     * @return Pair<category, confidence> or null if classification fails
+     *         entirely (network error, no keyword match and server
+     *         unavailable) — the caller then falls to Tier 3 HITL.
      */
     private suspend fun runNlpClassifier(rawBody: String, payee: String): Pair<String, Float>? {
         // ── Keyword shortcut rules (high-confidence, zero-latency) ────────────
         // Common merchant names that are globally unambiguous. This replaces
         // an NLP call for the most frequent payees and reduces API usage.
-        val keywordRules = mapOf(
-            "zomato"     to ("Food"     to 0.99f),
-            "swiggy"     to ("Food"     to 0.99f),
-            "dominos"    to ("Food"     to 0.99f),
-            "irctc"      to ("Travel"   to 0.99f),
-            "ola"        to ("Travel"   to 0.97f),
-            "uber"       to ("Travel"   to 0.97f),
-            "amazon"     to ("Shopping" to 0.98f),
-            "flipkart"   to ("Shopping" to 0.98f),
-            "netflix"    to ("Entertainment" to 0.98f),
-            "hotstar"    to ("Entertainment" to 0.98f),
-            "electricity" to ("Utilities" to 0.96f),
-            "bsnl"       to ("Recharge" to 0.95f),
-            "airtel"     to ("Recharge" to 0.95f),
-            "jio"        to ("Recharge" to 0.95f),
-        )
-
-        val payeeLower = payee.lowercase()
-        for ((keyword, result) in keywordRules) {
-            if (payeeLower.contains(keyword)) {
-                Log.d(TAG, "⚡  Keyword rule matched: '$payee' contains '$keyword'")
-                return result
-            }
+        // The rule table + matching logic live in NlpKeywordRules (a pure,
+        // Context/Room-free object) so they can be unit tested directly.
+        val match = NlpKeywordRules.classify(payee)
+        if (match != null) {
+            Log.d(TAG, "⚡  Keyword rule matched: '$payee'")
+            return match
         }
 
-        // ── TODO: Replace with actual TFLite / API NLP call here ─────────────
-        // val response = nlpApiService.classify(rawBody)
-        // return Pair(response.category, response.confidence)
+        // ── Tier 2 proper: POST /classify with the raw SMS narration ─────────
+        // FraudApiService owns the Retrofit client/PaySenseApi instance
+        // (same pattern as predictFraud() / getWeeklyInsights()), so we
+        // reuse its singleton instead of building a second Retrofit client.
+        val nlpResult = FraudApiService.getInstance(context).classifyCategory(rawBody)
+        if (nlpResult != null) {
+            Log.d(TAG, "🧠  NLP API responded for '$payee' → '${nlpResult.first}' (conf=${nlpResult.second})")
+            return nlpResult
+        }
 
         // Returning null signals to the caller that NLP is not available
-        // and Tier 3 HITL must be triggered.
-        Log.d(TAG, "⚙️  NLP stub: no keyword rule matched for '${payee}' → falling to HITL")
+        // (keyword miss AND API call failed/returned nothing) and Tier 3
+        // HITL must be triggered.
+        Log.d(TAG, "⚙️  NLP unavailable: no keyword rule and no API result for '${payee}' → falling to HITL")
         return null
     }
 
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+//  NlpKeywordRules — pure keyword-matching logic extracted out of
+//  PayeeCacheRepository so it can be unit tested without needing a Context
+//  or a Room database. Behavior is identical to the inline table this
+//  replaced; only the visibility/location changed.
+// ──────────────────────────────────────────────────────────────────────────────
+internal object NlpKeywordRules {
+
+    val rules: Map<String, Pair<String, Float>> = mapOf(
+        "zomato"      to ("Food"          to 0.99f),
+        "swiggy"      to ("Food"          to 0.99f),
+        "dominos"     to ("Food"          to 0.99f),
+        "irctc"       to ("Travel"        to 0.99f),
+        "ola"         to ("Travel"        to 0.97f),
+        "uber"        to ("Travel"        to 0.97f),
+        "amazon"      to ("Shopping"      to 0.98f),
+        "flipkart"    to ("Shopping"      to 0.98f),
+        "netflix"     to ("Entertainment" to 0.98f),
+        "hotstar"     to ("Entertainment" to 0.98f),
+        "electricity" to ("Utilities"     to 0.96f),
+        "bsnl"        to ("Recharge"      to 0.95f),
+        "airtel"      to ("Recharge"      to 0.95f),
+        "jio"         to ("Recharge"      to 0.95f),
+    )
+
+    /**
+     * Returns (category, confidence) for the first keyword the payee name
+     * contains (case-insensitive), or null if no keyword rule matches —
+     * the caller should then fall back to HITL.
+     */
+    fun classify(payee: String): Pair<String, Float>? {
+        val payeeLower = payee.lowercase()
+        for ((keyword, result) in rules) {
+            if (payeeLower.contains(keyword)) {
+                return result
+            }
+        }
+        return null
+    }
 }
 
 // ──────────────────────────────────────────────────────────────────────────────

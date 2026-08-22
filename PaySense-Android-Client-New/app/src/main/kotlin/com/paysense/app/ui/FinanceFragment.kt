@@ -58,6 +58,7 @@ class FinanceFragment : Fragment() {
         "Healthcare" to "#00ACC1", "Education" to "#3949AB",
         "Recharge" to "#039BE5", "EMI" to "#6D4C41",
         "Insurance" to "#546E7A", "P2P Transfer" to "#5E35B1",
+        "Investment" to "#00897B",
         "Misc" to "#757575", "Uncategorized" to "#9E9E9E",
     )
 

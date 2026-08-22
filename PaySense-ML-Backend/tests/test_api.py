@@ -268,6 +268,89 @@ class TestPredict:
 
 
 # ════════════════════════════════════════════════════════════════════════════
+#  /classify TESTS  (Layer 2 Tier-2 NLP category classifier)
+# ════════════════════════════════════════════════════════════════════════════
+class TestClassify:
+
+    def test_requires_auth(self):
+        resp = client.post("/classify", json={"text": "Restaurant payment of Rs 500 via UPI Ref 123456"})
+        assert resp.status_code in (401, 403)
+
+    def test_food_narration_classified_as_food(self, auth_headers):
+        resp = client.post(
+            "/classify",
+            json={"text": "Restaurant payment of Rs 48698 via UPI Ref 388389"},
+            headers=auth_headers,
+        )
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["category"] == "Food"
+        assert 0.0 <= body["confidence"] <= 1.0
+
+    def test_travel_narration_classified_as_travel(self, auth_headers):
+        resp = client.post(
+            "/classify",
+            json={"text": "Train ticket purchase of Rs 9244 via UPI Ref 872246"},
+            headers=auth_headers,
+        )
+        assert resp.status_code == 200
+        assert resp.json()["category"] == "Travel"
+
+    def test_shopping_narration_classified_as_shopping(self, auth_headers):
+        resp = client.post(
+            "/classify",
+            json={"text": "Electronics store purchase of Rs 7693 via UPI Ref 996777"},
+            headers=auth_headers,
+        )
+        assert resp.status_code == 200
+        assert resp.json()["category"] == "Shopping"
+
+    def test_emi_narration_classified_as_emi(self, auth_headers):
+        resp = client.post(
+            "/classify",
+            json={"text": "Credit card EMI payment of Rs 35821 via UPI Ref 787973"},
+            headers=auth_headers,
+        )
+        assert resp.status_code == 200
+        assert resp.json()["category"] == "EMI"
+
+    def test_investment_narration_classified_as_investment(self, auth_headers):
+        resp = client.post(
+            "/classify",
+            json={"text": "Mutual fund SIP of Rs 6618 via UPI Ref 236186"},
+            headers=auth_headers,
+        )
+        assert resp.status_code == 200
+        assert resp.json()["category"] == "Investment"
+
+    def test_category_is_one_of_five_trained_classes(self, auth_headers):
+        resp = client.post(
+            "/classify",
+            json={"text": "Uber ride payment of Rs 44997 via UPI Ref 550363"},
+            headers=auth_headers,
+        )
+        assert resp.status_code == 200
+        assert resp.json()["category"] in {"Food", "Travel", "EMI", "Investment", "Shopping"}
+
+    def test_response_schema_complete(self, auth_headers):
+        resp = client.post(
+            "/classify",
+            json={"text": "Dinner at hotel of Rs 38122 via UPI Ref 323781"},
+            headers=auth_headers,
+        )
+        assert resp.status_code == 200
+        assert {"category", "confidence"}.issubset(resp.json().keys())
+
+    def test_empty_text_returns_422(self, auth_headers):
+        resp = client.post("/classify", json={"text": ""}, headers=auth_headers)
+        assert resp.status_code == 422
+
+    def test_missing_text_returns_422(self, auth_headers):
+        resp = client.post("/classify", json={}, headers=auth_headers)
+        assert resp.status_code == 422
+
+
+# ════════════════════════════════════════════════════════════════════════════
 #  /insights/weekly TESTS
 # ════════════════════════════════════════════════════════════════════════════
 class TestInsights:

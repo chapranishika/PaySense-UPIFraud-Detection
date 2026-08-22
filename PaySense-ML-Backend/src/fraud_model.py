@@ -55,6 +55,7 @@ PS_PREP_PATH  = os.path.join(_ARTEFACTS, "paysense_preprocessor.pkl")
 PS_THRESH_PATH= os.path.join(_ARTEFACTS, "paysense_threshold.pkl")
 PS_FEAT_PATH  = os.path.join(_ARTEFACTS, "paysense_feature_names.pkl")
 LR_MODEL_PATH = os.path.join(_ARTEFACTS, "light_lr.pkl")
+CATEGORY_MODEL_PATH = os.path.join(_ARTEFACTS, "paysense_category_classifier.pkl")
 
 # ── Ensemble weights (must sum to 1.0) ────────────────────────────────────
 W_PAYSENSE = 0.60
@@ -84,6 +85,7 @@ class EnsembleState:
     ps_threshold : float            = 0.50
     ps_features  : Optional[list]   = None
     lr_model     : Optional[object] = None
+    category_model: Optional[object] = None
     ready        : bool             = False
 
     @property
@@ -132,6 +134,24 @@ def load_artefacts() -> EnsembleState:
         _state.lr_model = _build_default_light_lr()
     except Exception as e:
         log.error(f"LightLR load error: {e}")
+
+    # ── Category classifier (Layer 2 Tier-2 NLP model) ────────────────────
+    # Independent of the fraud ensemble — used by POST /classify, not /predict.
+    # Trained by train_category_classifier.py on the FinText-6K dataset
+    # (5 classes: Food, Travel, EMI, Investment, Shopping).
+    try:
+        _state.category_model = joblib.load(CATEGORY_MODEL_PATH)
+        log.info(
+            f"Category classifier loaded — classes: "
+            f"{list(_state.category_model.named_steps['clf'].classes_)}"
+        )
+    except FileNotFoundError:
+        log.warning(
+            "Category classifier artefact not found — POST /classify will return 503. "
+            "Run train_category_classifier.py to generate it."
+        )
+    except Exception as e:
+        log.error(f"Category classifier load error: {e}")
 
     _state.ready = True
     log.info(f"Ensemble ready — active scorers: {_state.active_scorers}")
@@ -319,3 +339,51 @@ def score(txn_dict: dict) -> EnsembleResult:
 def get_state() -> EnsembleState:
     """Returns the current ensemble state (for health checks)."""
     return _state
+
+
+# ════════════════════════════════════════════════════════════════════════════
+#  CATEGORY CLASSIFIER  (Layer 2 Tier-2 NLP — backs POST /classify)
+# ════════════════════════════════════════════════════════════════════════════
+@dataclass
+class CategoryResult:
+    category  : str
+    confidence: float
+
+
+def classify_category(text: str) -> Optional[CategoryResult]:
+    """
+    Runs the TF-IDF + calibrated LinearSVC pipeline trained by
+    train_category_classifier.py on FinText-6K. Returns None if the
+    artefact was not loaded (e.g. training hasn't been run yet) so the
+    caller can respond with 503 rather than crash.
+
+    The returned category is one of exactly five classes the model was
+    trained on: Food, Travel, EMI, Investment, Shopping. This model never
+    invents categories outside that set — callers (Android's Tier-3 HITL
+    flow) handle any category the model does not cover.
+    """
+    if _state.category_model is None:
+        # Lazy-load fallback: normally load_artefacts() populates this during
+        # the FastAPI lifespan startup event, but that event doesn't fire for
+        # every test-client / embedding context (e.g. a bare TestClient(app)
+        # used without the `with` context manager never runs startup). Try
+        # once here so /classify still works correctly in those cases, and
+        # so a classifier trained/saved after the process started can be
+        # picked up without a restart.
+        try:
+            _state.category_model = joblib.load(CATEGORY_MODEL_PATH)
+            log.info("Category classifier lazy-loaded on first /classify call")
+        except Exception as e:
+            log.warning(f"Category classifier lazy-load failed: {e}")
+            return None
+    try:
+        proba = _state.category_model.predict_proba([text])[0]
+        classes = _state.category_model.named_steps["clf"].classes_
+        best_idx = int(np.argmax(proba))
+        return CategoryResult(
+            category=str(classes[best_idx]),
+            confidence=float(proba[best_idx]),
+        )
+    except Exception as e:
+        log.warning(f"Category classifier inference failed: {e}")
+        return None

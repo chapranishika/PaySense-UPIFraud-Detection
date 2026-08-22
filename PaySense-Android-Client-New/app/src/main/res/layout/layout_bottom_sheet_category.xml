@@ -17,10 +17,10 @@
 
     <!-- Drag handle -->
     <View
-        android:layout_width="32dp"
-        android:layout_height="4dp"
+        android:layout_width="40dp"
+        android:layout_height="5dp"
         android:layout_gravity="center_horizontal"
-        android:layout_marginTop="10dp"
+        android:layout_marginTop="12dp"
         android:background="@drawable/bg_drag_handle" />
 
     <!-- Header: transaction summary -->
@@ -37,8 +37,8 @@
             android:layout_height="wrap_content"
             android:text="What was this payment for?"
             android:textColor="@color/text_primary"
-            android:textSize="17sp"
-            android:fontFamily="sans-serif-medium" />
+            android:textSize="18sp"
+            android:fontFamily="@font/poppins_extrabold" />
 
         <!-- Dynamic prompt: "₹150.00 to Ramesh Auto" -->
         <TextView
@@ -140,6 +140,31 @@
             android:layout_height="wrap_content"
             android:text="•••  Misc"
             android:tag="Misc" />
+
+        <!--
+            EMI / Investment — added when the Tier-2 NLP classifier
+            (FinText-6K trained: Food/Travel/EMI/Investment/Shopping) went
+            live. EMI already existed downstream (FinanceFragment's
+            categoryColors, TransactionAdapter's categoryIconMap) but had no
+            HITL chip; Investment was entirely new. Both are added here so a
+            user can manually confirm these categories too, not just
+            receive them silently from the classifier.
+        -->
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipEmi"
+            style="@style/PaySenseChip"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="💳  EMI"
+            android:tag="EMI" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipInvestment"
+            style="@style/PaySenseChip"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="📈  Investment"
+            android:tag="Investment" />
 
     </com.google.android.material.chip.ChipGroup>
 
