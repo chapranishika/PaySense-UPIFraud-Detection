@@ -1,0 +1,219 @@
+{
+  "roc_auc": 0.8968717825626156,
+  "pr_auc": 0.549786128234063,
+  "optimal_threshold": 0.5,
+  "selection_reason": "No row met both constraints -- fallback to max-F1",
+  "sweep": [
+    {
+      "threshold": 0.05,
+      "precision": 0.06540847983453982,
+      "recall": 1.0,
+      "f1": 0.12278573161853919,
+      "tp": 253,
+      "fp": 3615,
+      "fn": 0,
+      "tn": 2132,
+      "meets_constraint": false
+    },
+    {
+      "threshold": 0.1,
+      "precision": 0.11795137092602173,
+      "recall": 0.9011857707509882,
+      "f1": 0.20860018298261665,
+      "tp": 228,
+      "fp": 1705,
+      "fn": 25,
+      "tn": 4042,
+      "meets_constraint": false
+    },
+    {
+      "threshold": 0.15,
+      "precision": 0.15986677768526228,
+      "recall": 0.758893280632411,
+      "f1": 0.2640990371389271,
+      "tp": 192,
+      "fp": 1009,
+      "fn": 61,
+      "tn": 4738,
+      "meets_constraint": false
+    },
+    {
+      "threshold": 0.2,
+      "precision": 0.2049079754601227,
+      "recall": 0.6600790513833992,
+      "f1": 0.31273408239700373,
+      "tp": 167,
+      "fp": 648,
+      "fn": 86,
+      "tn": 5099,
+      "meets_constraint": false
+    },
+    {
+      "threshold": 0.25,
+      "precision": 0.2615658362989324,
+      "recall": 0.5810276679841897,
+      "f1": 0.36073619631901843,
+      "tp": 147,
+      "fp": 415,
+      "fn": 106,
+      "tn": 5332,
+      "meets_constraint": false
+    },
+    {
+      "threshold": 0.3,
+      "precision": 0.40809968847352024,
+      "recall": 0.5177865612648221,
+      "f1": 0.4564459930313589,
+      "tp": 131,
+      "fp": 190,
+      "fn": 122,
+      "tn": 5557,
+      "meets_constraint": false
+    },
+    {
+      "threshold": 0.35,
+      "precision": 0.5227272727272727,
+      "recall": 0.45454545454545453,
+      "f1": 0.48625792811839325,
+      "tp": 115,
+      "fp": 105,
+      "fn": 138,
+      "tn": 5642,
+      "meets_constraint": false
+    },
+    {
+      "threshold": 0.4,
+      "precision": 0.6967741935483871,
+      "recall": 0.4268774703557312,
+      "f1": 0.5294117647058824,
+      "tp": 108,
+      "fp": 47,
+      "fn": 145,
+      "tn": 5700,
+      "meets_constraint": false
+    },
+    {
+      "threshold": 0.45,
+      "precision": 0.864406779661017,
+      "recall": 0.4031620553359684,
+      "f1": 0.5498652291105122,
+      "tp": 102,
+      "fp": 16,
+      "fn": 151,
+      "tn": 5731,
+      "meets_constraint": false
+    },
+    {
+      "threshold": 0.5,
+      "precision": 0.9174311926605505,
+      "recall": 0.3952569169960474,
+      "f1": 0.5524861878453039,
+      "tp": 100,
+      "fp": 9,
+      "fn": 153,
+      "tn": 5738,
+      "meets_constraint": false
+    },
+    {
+      "threshold": 0.55,
+      "precision": 0.9696969696969697,
+      "recall": 0.3794466403162055,
+      "f1": 0.5454545454545454,
+      "tp": 96,
+      "fp": 3,
+      "fn": 157,
+      "tn": 5744,
+      "meets_constraint": false
+    },
+    {
+      "threshold": 0.6,
+      "precision": 0.9896907216494846,
+      "recall": 0.3794466403162055,
+      "f1": 0.5485714285714286,
+      "tp": 96,
+      "fp": 1,
+      "fn": 157,
+      "tn": 5746,
+      "meets_constraint": false
+    },
+    {
+      "threshold": 0.65,
+      "precision": 1.0,
+      "recall": 0.3794466403162055,
+      "f1": 0.5501432664756447,
+      "tp": 96,
+      "fp": 0,
+      "fn": 157,
+      "tn": 5747,
+      "meets_constraint": false
+    },
+    {
+      "threshold": 0.7,
+      "precision": 1.0,
+      "recall": 0.3794466403162055,
+      "f1": 0.5501432664756447,
+      "tp": 96,
+      "fp": 0,
+      "fn": 157,
+      "tn": 5747,
+      "meets_constraint": false
+    },
+    {
+      "threshold": 0.75,
+      "precision": 1.0,
+      "recall": 0.3794466403162055,
+      "f1": 0.5501432664756447,
+      "tp": 96,
+      "fp": 0,
+      "fn": 157,
+      "tn": 5747,
+      "meets_constraint": false
+    },
+    {
+      "threshold": 0.8,
+      "precision": 1.0,
+      "recall": 0.3794466403162055,
+      "f1": 0.5501432664756447,
+      "tp": 96,
+      "fp": 0,
+      "fn": 157,
+      "tn": 5747,
+      "meets_constraint": false
+    },
+    {
+      "threshold": 0.85,
+      "precision": 1.0,
+      "recall": 0.3794466403162055,
+      "f1": 0.5501432664756447,
+      "tp": 96,
+      "fp": 0,
+      "fn": 157,
+      "tn": 5747,
+      "meets_constraint": false
+    },
+    {
+      "threshold": 0.9,
+      "precision": 1.0,
+      "recall": 0.3794466403162055,
+      "f1": 0.5501432664756447,
+      "tp": 96,
+      "fp": 0,
+      "fn": 157,
+      "tn": 5747,
+      "meets_constraint": false
+    },
+    {
+      "threshold": 0.95,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "tp": 0,
+      "fp": 0,
+      "fn": 253,
+      "tn": 5747,
+      "meets_constraint": false
+    }
+  ],
+  "test_set_size": 6000,
+  "test_set_fraud": 253
+}

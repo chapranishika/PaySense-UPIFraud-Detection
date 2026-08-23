@@ -308,26 +308,39 @@ regex check above.
 
 Full script output reproducible via `python generalization_check_synthetic.py`.
 
-### 5.1 Metrics (25,000 rows, 985 fraud = 3.94%) — recomputed 2026-08-23 against the monotonic-constraints model
+### 5.1 Metrics (25,000 rows, 985 fraud = 3.94%) — recomputed 2026-08-24 at the corrected deployed threshold
 
-| Metric | Raw XGBoost only | Full ensemble (XGBoost + rules + LightLR) | Was (2026-08-22, pre-monotonic, @ τ=0.40) |
+| Metric | Raw XGBoost only | Full ensemble (XGBoost + rules + LightLR) | Was (2026-08-23, @ τ=0.30) |
 |---|---:|---:|---:|
-| ROC-AUC | 0.6768 | **0.7000** | 0.6811 raw / 0.6947 ensemble |
-| PR-AUC (average precision) | 0.0953 | **0.1015** | 0.0945 raw / 0.1017 ensemble |
-| Confusion matrix @ threshold 0.30 | TN=22,181 FP=1,834 / FN=742 TP=243 | TN=21,136 FP=2,879 / FN=626 TP=**359** | raw TN=22,816 FP=1,199 FN=804 TP=181 / ensemble TN=22,258 FP=1,757 FN=735 TP=250 |
-| Precision / Recall / F1 (fraud class, ensemble) | — | 0.1109 / 0.3645 / 0.1700 | 0.1246 / 0.2538 / 0.1671 |
-| Max predicted score | 0.9961 | 0.9677 | 0.9961 raw / 0.9660 ensemble |
+| ROC-AUC | 0.6768 | **0.6924** | 0.7000 |
+| PR-AUC (average precision) | 0.0953 | **0.1012** | 0.1015 |
+| Confusion matrix @ threshold 0.50 (deployed) | — | TN=22,818 FP=1,197 / FN=802 TP=**183** | @ τ=0.30 that day: TP=359 |
+| Confusion matrix @ threshold 0.30 (superseded) | — | TN=21,375 FP=2,640 / FN=647 TP=338 | — |
+| Precision / Recall / F1 (fraud class, ensemble, @ 0.50) | — | 0.1326 / 0.1858 / 0.1548 | 0.1109 / 0.3645 / 0.1700 |
+| Max predicted score | 0.9961 | 0.9677 | 0.9677 |
 
-The deployed threshold moved from 0.40 to 0.30 (see the update note above),
-so more of the model's output range clears the bar — recall on this dataset
-rises to 36.4% (359/985) at the new threshold, up from 25.4% (250/985) at
-the old one. This is a threshold-movement effect layered on top of the
-model-retrain effect, and both contribute to the recall change; ROC-AUC and
-PR-AUC (threshold-independent) show the retrain's effect on its own — a
-small mix of movement in both directions, not a one-sided improvement or
-regression.
+**Two things changed since 2026-08-23, and they pull in opposite
+directions — both reported plainly.** First, the small ROC-AUC/PR-AUC dip
+(0.7000→0.6924, 0.1015→0.1012) is a real effect of an intervening bugfix,
+not noise or drift: `_score_rules()`'s `failed_attempts_last_24h`
+None-handling bug (see below) was fixed in a later commit than the one
+that produced 0.7000, and re-scoring today with that fix in place
+naturally gives a slightly different number — the fix changed how ~2% of
+rows with a null value in that field are scored, in both directions
+depending on the row. Second, and larger: the deployed threshold moved
+from 0.30 to 0.50 (README.md's Key Results note,
+`EDA_FEATURE_ENGINEERING.md` §4.5 — a methodology correction, not a model
+change), and recall on this dataset **drops substantially** at the new
+threshold: 183/985 (18.6%) at τ=0.50, versus 338/985 (34.3%) at τ=0.30
+with the same current model. This is the honest, less flattering half of
+the 2026-08-24 correction: the "36.4% recall, the model does fire on real
+positives" finding from 2026-08-23 was real at the threshold deployed
+*that day*, but that threshold was itself wrong (chosen by sweeping raw
+XGBoost, not the ensemble) — at the threshold that's actually correct for
+the deployed ensemble, recall on this dataset is roughly half of what was
+previously reported.
 
-A side-effect from the earlier version of this check no longer reproduces:
+A side-effect from an earlier version of this check no longer reproduces:
 **1,035 of 25,000 rows (4.14%)** used to trigger a `LightLR scorer failed`
 warning inside `fraud_model.score()`, because `_score_light_lr()` read its 5
 features via `txn_dict.get(key, 0.0)`, whose default only applied when a
@@ -347,36 +360,38 @@ than silently updating the number.
 
 | Metric | Dataset 1 (6/40 features, real UPI data) | Dataset 3 (2/40 features, real data) | **This dataset (40/40 features, synthetic)** |
 |---|---:|---:|---:|
-| ROC-AUC (full ensemble) | *(recomputed alongside this update — see below)* | n/a (raw XGBoost only, 0.6048) | **0.7000** |
-| PR-AUC (full ensemble) | *(recomputed alongside this update — see below)* | n/a | **0.1015** |
-| Recall @ 0.30 threshold | 0/701 = **0.0%** | 0/64 = **0.0%** | **359/985 = 36.4%** |
+| ROC-AUC (full ensemble) | 0.7919 | 0.6046 (raw XGBoost only) | **0.6924** |
+| PR-AUC (full ensemble) | 0.3767 | 0.1157 | **0.1012** |
+| Recall @ 0.50 threshold (deployed) | 0/701 = **0.0%** | 0/64 = **0.0%** | **183/985 = 18.6%** |
 
 ### 5.3 What this actually means — the honest verdict
 
 This is the finding the task brief explicitly asked not to be softened, and
-it is not flattering, in a specific and interesting way:
+it is not flattering, in a specific and interesting way — made more so by
+the 2026-08-24 threshold correction:
 
 **Recall genuinely improves — from 0% on both real external datasets to
-36.4% here (was 25.4% on the pre-monotonic model at its own threshold) —
-confirming that missing features really were part of the problem in
-`GENERALIZATION_CHECK.md`.** With the full 40-feature vector present, the
-frozen threshold (0.30 as of 2026-08-23, was 0.40) is no longer permanently
-out of reach: 359 of 985 real fraud rows in this dataset score above it,
-something that never happened even once across 74,917 + 1,000 real external
-rows. That is a genuine, positive, and previously-unmeasurable data point —
-the earlier checks literally could not distinguish "the model doesn't work"
-from "the model never got enough information to work," and this result
-resolves that ambiguity partially in the model's favor: given full
-information, it does fire on real positives.
+18.6% here at the correct deployed threshold — confirming that missing
+features really were part of the problem in `GENERALIZATION_CHECK.md`.**
+With the full 40-feature vector present, the frozen threshold (0.50 as of
+2026-08-24) is no longer permanently out of reach: 183 of 985 real fraud
+rows in this dataset score above it, something that never happened even
+once across 74,917 + 1,000 real external rows. That is still a genuine,
+positive, previously-unmeasurable data point — but it is a meaningfully
+smaller one than the 36.4% first reported, because that number was
+measured at a threshold (0.30) that was itself later found to be wrong
+for the deployed ensemble. The direction of the finding survives (missing
+features were part of the problem); the magnitude does not, and reporting
+the smaller, corrected number here rather than quietly keeping the more
+flattering one is the point of this update.
 
-**But ROC-AUC and PR-AUC are both *worse* here than on Dataset 1 — despite
+**ROC-AUC and PR-AUC are both *worse* here than on Dataset 1 — despite
 this dataset supplying 40/40 features against Dataset 1's 6/40.** ROC-AUC
-0.7000 vs. Dataset 1's [see `GENERALIZATION_CHECK.md` §4.4 for the current
-full-ensemble figure]; PR-AUC 0.1015 vs. Dataset 1's [same]. Both are far
-below the model's own reported held-out training metrics (ROC-AUC 0.8889,
-PR-AUC 0.5352 as of the 2026-08-23 monotonic-constraints retrain,
-recomputed directly against the on-disk artifacts — see README.md's Key
-Results note). If missing features were the *only* thing limiting
+0.6924 vs. Dataset 1's 0.7919; PR-AUC 0.1012 vs. Dataset 1's 0.3767. Both are
+far below the model's own reported held-out training metrics (ROC-AUC
+0.8969, PR-AUC 0.5498 — the real-ensemble figures per README.md's Key
+Results note, not the raw-XGBoost figures reported before 2026-08-24). If
+missing features were the *only* thing limiting
 generalization, a full-feature dataset should have outperformed a
 15%-feature one by a wide margin — instead it is *ranking fraud above
 non-fraud worse*, not better, once every field is present. This pattern
@@ -402,8 +417,10 @@ degrades ranking quality even as it (correctly) lets the model act on
 signals it couldn't see at all before.
 
 **What this proves:** feature completeness measurably helps the model act
-(0% → 36.4% recall at the current threshold, was 0% → 25.4% at the prior
-one) — the missing-feature confound in
+(0% → 18.6% recall at the correct deployed threshold of 0.50; the figure
+was reported as 36.4% at the since-superseded τ=0.30 before the
+2026-08-24 threshold correction, and was 0% → 25.4% before that, on the
+pre-monotonic model) — the missing-feature confound in
 `GENERALIZATION_CHECK.md` was real and is now partially disentangled from
 the deeper question. **What this does not prove, and what this document
 will not soften:** the frozen model still ranks and calibrates worse on a

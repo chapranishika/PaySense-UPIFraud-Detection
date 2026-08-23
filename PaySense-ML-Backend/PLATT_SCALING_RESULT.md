@@ -23,6 +23,21 @@
 > original 76 rows) is reported in `RECALL_CEILING_REMEDIATION.md`'s update
 > note and in README.md/`paysense_report.tex`.
 
+> **UPDATE (2026-08-24) — scope clarification:** this entire experiment,
+> like `RECALL_CEILING_REMEDIATION.md`, scored raw XGBoost directly
+> (`model.predict_proba()`) — the correct scope for testing whether a
+> monotonic transform can change a classifier's own ranking, but not a
+> description of the full deployed ensemble (`src.fraud_model.score()`),
+> which blends in LightLR and a rules scorer. See README.md's Key Results
+> note and `EDA_FEATURE_ENGINEERING.md` §4.5 for the 2026-08-24 correction:
+> the real ensemble behaves substantially differently from raw XGBoost,
+> and the deployed threshold moved from 0.30 to 0.50 as a result. The
+> mathematical finding here (a monotonic transform cannot change ranking)
+> is unaffected by this — it's a property of monotonic transforms, not of
+> which component is deployed — but "the frozen model's recall ceiling"
+> in this document has always meant XGBoost's own ranking, not the
+> ensemble's.
+
 **Date:** 2026-08-23
 **Author's intent:** README.md and `PaySense-Report/paysense_report.tex` have
 long stated that the frozen model's 69.96% recall ceiling (at the most

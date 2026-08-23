@@ -10,46 +10,54 @@
 
 | Metric | Value |
 |---|---|
-| ROC-AUC | **0.8889** |
-| PR-AUC *(primary)* | **0.5352** — 12.71× above random baseline |
-| Precision @ deployed threshold (t=0.30) | **86.44%** |
-| Recall @ deployed threshold (t=0.30) | **40.32%** |
+| ROC-AUC *(real 3-scorer ensemble — see note)* | **0.8969** |
+| PR-AUC *(primary, real ensemble)* | **0.5498** — 13.05× above random baseline |
+| Precision @ deployed threshold (t=0.50) | **91.74%** |
+| Recall @ deployed threshold (t=0.50) | **39.53%** |
 | Datasets evaluated | 18 |
 | Master dataset | 30,000 rows · 40 model-ready features · 4.21% fraud |
 | SMOTE applied | Training partition only (24K → 45,980 rows) |
-| Tests passing | **137** (28 Android unit tests · 109 backend pytest) |
+| Tests passing | **165** (28 Android unit tests · 137 backend pytest) |
 
-**Model update, 2026-08-23:** the deployed model now trains with
-`monotone_constraints` on the three behavioral features
+**Correction, 2026-08-24 — the most important one yet, because it's a
+methodology error, not a stale number.** Every metric ever reported in this
+table, tonight and before, was computed by calling
+`model.predict_proba()` directly on the frozen XGBoost artifact. But
+`/predict` never does that — it calls `src.fraud_model.score()`, which
+blends XGBoost with two more scorers (LightLR, weight 0.25; a hand-tuned
+rules scorer, weight 0.15) that raw `predict_proba()` completely bypasses.
+Scored through the real ensemble, the canonical held-out test set behaves
+substantially differently: at the threshold that was deployed until today
+(t=0.30), the real ensemble's precision was **40.81%**, not the 86.44%
+this table claimed — the rules scorer's always-on additive score was
+never jointly calibrated against that threshold the way XGBoost's own
+sweep was, so plenty of rows XGBoost alone would score below 0.30 still
+crossed it once blended in. `resweep_threshold_against_ensemble.py`
+re-ran the exact same threshold-selection logic
+(`paysense_phase3.py`'s Recall≥75%/Precision≥50% business constraint,
+fallback to max-F1) against the real ensemble instead, swept 0.05-0.95 to
+confirm the optimum wasn't sitting at a range boundary (it isn't: F1
+peaks exactly at t=0.50, dips at 0.55, then plateaus lower from
+0.65-0.90 as precision saturates at 100%). **New deployed threshold:
+t=0.50** (was 0.30) — `artefacts/paysense_threshold.pkl` updated
+accordingly, verified live against a restarted server. Every number in
+the table above is now the real ensemble's, not raw XGBoost's, and
+`tests/test_frozen_model_metrics.py` now pins (and guards) the ensemble
+figures, plus a new regression test asserting raw XGBoost and the real
+ensemble stay materially different — so this exact class of "silently
+measuring the wrong component" mistake can't recur unnoticed.
+
+**Prior update, 2026-08-23 (still accurate, superseded only in threshold
+value by the correction above):** the deployed model trains with
+`monotone_constraints` on three behavioral features
 (`amount_deviation_score`, `transaction_velocity`,
 `failed_attempts_last_24h`) — see `RECALL_CEILING_REMEDIATION.md` for the
 diagnosis (XGBoost's trees were gating hard on `new_device_flag`/
-`ip_location_mismatch` first, starving the behavioral features of influence
-once those two flags read 0) and the comparison against two other candidate
-fixes that justified adopting this one specifically: it recovered 10 of 76
-previously-invisible fraud rows at the most aggressive tested threshold
-while *improving* both ROC-AUC and PR-AUC, the only one of three tested
-variants with no measurable downside. `paysense_phase3.py`'s own
-threshold-selection logic was re-run against the retrained model and picked
-a genuinely different optimal threshold, **t=0.30** (not 0.40) — the
-business constraint (Recall ≥ 75%, Precision ≥ 50%) is still unmet by any
-swept threshold, so selection still falls back to unconditional max-F1, and
-max-F1 now lands at a different point because the underlying score
-distribution changed. At t=0.30, F1=0.5499 (102 of 253 fraud rows caught,
-16 false positives) versus F1=0.5486 at Phase 2's original t=0.50 default
-(96 caught, 1 false positive) — a small gap (F1 +0.0013, six extra true
-positives out of 253 fraud rows), reported as-is rather than overstated, the
-same as the prior (t=0.40) threshold note this replaces. Every number above
-was independently recomputed against the *currently on-disk*
-`artefacts/paysense_model.pkl` + `paysense_preprocessor.pkl` +
-`paysense_master_dataset.csv` on 2026-08-23 — this is the second time this
-table has needed a from-scratch recompute rather than a hand-edit: a prior
-version (ROC-AUC 0.8851, 66.14%/52.17% @ t=0.40) had drifted from what the
-artifacts actually produced before that, most likely dating to an earlier
-run of `paysense_phase3.py` before the artifacts were last retrained
-(2026-07-23) or the master dataset was last touched (2026-07-15); that drift
-is unrelated to today's update, which reflects a deliberate, verified model
-change, not drift.
+`ip_location_mismatch` first) and the comparison that justified adopting
+this specific fix over two other candidates: it recovered 10 of 76
+previously-invisible fraud rows while *improving* both raw-XGBoost
+ROC-AUC and PR-AUC, the only one of three tested variants with no
+measurable downside.
 
 ---
 
@@ -155,7 +163,7 @@ paysense/
 
 ![Threshold Analysis](PaySense-ML-Backend/plots/paysense_threshold_analysis.png)
 
-Recall ceiling: **71.94%** at threshold=0.05 (182 of 253 fraud rows caught, 71 missed) — independently recomputed 2026-08-23 against the current on-disk model. This is an improvement over the **69.96%** ceiling of the prior (pre-monotonic) frozen model: the `monotone_constraints` update described in the Key Results note above recovers 10 of the 76 fraud rows that model could never reach at any threshold, while the remaining 45 (59% of the original 76) are still unreachable even under this fix — see `RECALL_CEILING_REMEDIATION.md` §6 for the full honest breakdown of which part of the ceiling is a fixable structural artifact versus a harder data limitation. `PaySense-ML-Backend/PLATT_SCALING_RESULT.md` implements and tests the fix this project used to propose — Platt Scaling — against the pre-monotonic baseline model, and finds it does **not** move that model's ceiling: ROC-AUC, PR-AUC, and recall at every swept threshold are identical before and after calibration (to floating-point precision), because a monotonic 1-D rescaling of scores cannot change which rows a classifier ranks lowest. That finding is a mathematical property of monotonic transforms, not specific to the model tested, so it applies identically to today's monotonic-constraints model — the residual ceiling above is a **ranking/discrimination** limit, not a probability-scale artifact, and closing the rest of it needs better features or a different model, not recalibration. Platt scaling's actual, separate benefit — probability *reliability* — was also mixed on the prior model: on a held-out slice, raw XGBoost's Brier score was consistently as good or better than the Platt-scaled version across 6 resampled calibration draws; that experiment was not repeated against the new model (see `PLATT_SCALING_RESULT.md`'s own update note).
+Recall ceiling: **71.94%** at threshold=0.05 (182 of 253 fraud rows caught, 71 missed) — independently recomputed 2026-08-23 against the current on-disk model. (This specific figure describes raw XGBoost's own ranking behavior in isolation, the same scope `RECALL_CEILING_REMEDIATION.md` and `PLATT_SCALING_RESULT.md` used — not the full 3-scorer ensemble `/predict` actually runs; see the Key Results note above on the 2026-08-24 ensemble-vs-raw correction for that distinction.) This is an improvement over the **69.96%** ceiling of the prior (pre-monotonic) frozen model: the `monotone_constraints` update described in the Key Results note above recovers 10 of the 76 fraud rows that model could never reach at any threshold, while the remaining 45 (59% of the original 76) are still unreachable even under this fix — see `RECALL_CEILING_REMEDIATION.md` §6 for the full honest breakdown of which part of the ceiling is a fixable structural artifact versus a harder data limitation. `PaySense-ML-Backend/PLATT_SCALING_RESULT.md` implements and tests the fix this project used to propose — Platt Scaling — against the pre-monotonic baseline model, and finds it does **not** move that model's ceiling: ROC-AUC, PR-AUC, and recall at every swept threshold are identical before and after calibration (to floating-point precision), because a monotonic 1-D rescaling of scores cannot change which rows a classifier ranks lowest. That finding is a mathematical property of monotonic transforms, not specific to the model tested, so it applies identically to today's monotonic-constraints model — the residual ceiling above is a **ranking/discrimination** limit, not a probability-scale artifact, and closing the rest of it needs better features or a different model, not recalibration. Platt scaling's actual, separate benefit — probability *reliability* — was also mixed on the prior model: on a held-out slice, raw XGBoost's Brier score was consistently as good or better than the Platt-scaled version across 6 resampled calibration draws; that experiment was not repeated against the new model (see `PLATT_SCALING_RESULT.md`'s own update note).
 
 ---
 
@@ -274,7 +282,7 @@ UI: Red card with ⚠ icon and "Score: 98%"
 
 ## Testing
 
-128 tests, all passing. Also wired into CI (`.github/workflows/ci.yml`) — runs both suites on every push/PR to `main`.
+165 tests, all passing. Also wired into CI (`.github/workflows/ci.yml`) — runs both suites on every push/PR to `main`.
 
 | Suite | Tests | What's covered |
 |---|---|---|
@@ -397,7 +405,7 @@ On the one dataset that passed vetting (74,917 real rows, 0.94% fraud, only 6 of
 ## Honest Limitations
 
 - All training data is **synthetic**, and the generalization check above confirms the gap directly: **0/701** frauds caught on real out-of-distribution data at the production threshold — a live shadow-mode trial (or a dataset that can supply the full 40-feature vector) is required before this could be trusted on real traffic
-- **71.94% recall ceiling** at any threshold (recomputed 2026-08-23 against the current monotonic-constraints model; was 69.96% before that update) — tested and confirmed to be mostly a ranking limitation, not a calibration one (`PLATT_SCALING_RESULT.md`, run against the prior model, but the ranking-invariance finding is model-independent): Platt Scaling leaves ROC-AUC/PR-AUC/recall completely unchanged under any monotonic transform. `RECALL_CEILING_REMEDIATION.md` went further and found the ceiling is partially — not fully — a fixable structural artifact: forcing the model's trees to give the three behavioral features (`amount_deviation_score`, `transaction_velocity`, `failed_attempts_last_24h`) independent weight recovered 10 of the original 76 invisible fraud rows with no measurable cost (now adopted), and a more aggressive variant recovered 31 of 76 but at a real cost to overall ranking quality and false-positive volume (not adopted). The remaining ~45 rows may need genuinely new, more discriminative features rather than a different arrangement of the ones already available
+- **71.94% recall ceiling** for raw XGBoost at any threshold (recomputed 2026-08-23 against the current monotonic-constraints model; was 69.96% before that update; scoped to the raw model, not the full deployed ensemble — see the Key Results note on the 2026-08-24 ensemble-vs-raw correction) — tested and confirmed to be mostly a ranking limitation, not a calibration one (`PLATT_SCALING_RESULT.md`, run against the prior model, but the ranking-invariance finding is model-independent): Platt Scaling leaves ROC-AUC/PR-AUC/recall completely unchanged under any monotonic transform. `RECALL_CEILING_REMEDIATION.md` went further and found the ceiling is partially — not fully — a fixable structural artifact: forcing the model's trees to give the three behavioral features (`amount_deviation_score`, `transaction_velocity`, `failed_attempts_last_24h`) independent weight recovered 10 of the original 76 invisible fraud rows with no measurable cost (now adopted), and a more aggressive variant recovered 31 of 76 but at a real cost to overall ranking quality and false-positive volume (not adopted). The remaining ~45 rows may need genuinely new, more discriminative features rather than a different arrangement of the ones already available
 - `new_device_flag` uses a placeholder default in the demo — production needs device fingerprinting APIs
 
 ---

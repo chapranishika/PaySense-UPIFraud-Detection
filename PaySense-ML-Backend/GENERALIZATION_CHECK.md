@@ -11,6 +11,19 @@
 > specific ROC-AUC/PR-AUC/max-probability numbers moved slightly, in both
 > directions, and are updated below to the freshly recomputed values.
 
+> **UPDATE (2026-08-24):** the deployed threshold moved again, from 0.30 to
+> 0.50 — not a model change this time, but a methodology correction: every
+> "deployed threshold" figure in this project had been chosen by sweeping
+> raw XGBoost's own score, never the real 3-scorer ensemble `/predict`
+> actually uses (see README.md's Key Results note,
+> `EDA_FEATURE_ENGINEERING.md` §4.5). Re-verified directly rather than
+> assumed: the max ensemble score observed anywhere in this document's
+> two datasets is 0.0847 (Dataset 1) — already far below both the old
+> (0.30) and new (0.50) threshold, so every confusion matrix below is
+> **unchanged**, confirmed by an actual re-run at both thresholds, not by
+> inference. Only the threshold *value* referenced in the prose below is
+> updated, from 0.30 to 0.50.
+
 **Date:** 2026-08-22
 **Author's intent:** Answer one question honestly — does the frozen PaySense
 XGBoost model (`artefacts/paysense_model.pkl`) generalize to real UPI/financial
@@ -207,8 +220,8 @@ same logic the frozen preprocessor already uses for missing production data.
 ## 4. Results
 
 Metrics use the frozen model, the frozen preprocessor, and the frozen
-decision threshold (**0.30** as of 2026-08-23 — see the update note above;
-was 0.40 before the monotonic-constraints retrain, from
+decision threshold (**0.50** as of 2026-08-24 — see the update notes above;
+was 0.30, then 0.40 before that, from
 `artefacts/paysense_threshold.pkl`) with no adjustment. Full script output
 is reproducible via `python generalization_check.py`.
 
@@ -249,9 +262,11 @@ would be misleading:
   hidden here.
 - **The confusion matrix says the model catches zero of the 701 frauds in
   Dataset 1 at its own frozen threshold.** The maximum predicted probability
-  across all 74,917 rows — fraud or not — is 0.0112, roughly 27× below the
-  0.30 decision threshold used in production (was 0.0095, ~42× below the
-  prior 0.40 threshold). This is not a close miss; the model's entire output
+  across all 74,917 rows — fraud or not — is 0.0112, roughly 45× below the
+  0.50 decision threshold used in production (was 0.30 before the
+  2026-08-24 ensemble-vs-raw correction, and 0.40 before the
+  monotonic-constraints retrain — the ratio only gets larger at each step,
+  never closer). This is not a close miss; the model's entire output
   range on this dataset is compressed into a band where the frozen threshold
   can never fire.
 
@@ -287,7 +302,10 @@ retraining or fine-tuning on this data anywhere.
 **Recomputed 2026-08-23 against the monotonic-constraints model** (see the
 update note at the top of this document) via a real re-run of
 `generalization_check_ensemble.py` — not a text edit. The deployed
-threshold is now 0.30 (was 0.40).
+threshold is now 0.50 (was 0.30, then 0.40 before that) — re-verified
+directly at 0.50 via `rescore_real_datasets_new_threshold.py`: the
+confusion matrix is identical (0/701), since the max ensemble score here
+(0.0847, see the table below) sits below every threshold tried.
 
 | Metric | Raw XGBoost only (§4.1) | Full ensemble (XGBoost + rules + LightLR) | Was (2026-08-22, pre-monotonic, @ τ=0.40) |
 |---|---:|---:|---:|
@@ -304,7 +322,7 @@ model than it was on the old one (ROC-AUC +0.0232 vs. the prior +0.0043;
 PR-AUC +0.1074 vs. the prior +0.0084). This is a real, reproducible effect
 of the monotonic retrain, not noise: the new model's raw `paysense_score`
 values on this dataset are compressed into an even narrower band (0.0006 to
-0.0112, all still far below the 0.30 threshold) than before, so the small
+0.0112, all still far below the 0.50 threshold) than before, so the small
 but real organic signal `is_night_transaction` contributes through the
 rules scorer's fixed 0.17/0.22 split — unchanged, since neither the rules
 scorer nor LightLR were touched by the XGBoost retrain — now moves relative
@@ -338,8 +356,8 @@ was designed around.
 
 **Honest verdict: the full ensemble does not meaningfully outperform raw
 XGBoost in any operationally useful sense on this dataset, and it fails in
-the identical operational way.** At the frozen threshold (0.30 as of
-2026-08-23, was 0.40) it still catches **0 of 701** real frauds — same
+the identical operational way.** At the frozen threshold (0.50 as of
+2026-08-24, was 0.30, then 0.40 before that) it still catches **0 of 701** real frauds — same
 confusion matrix, same zero recall, as the raw-model-only check. The
 ROC-AUC/PR-AUC nudge upward is real, and larger on the current model
 (+0.0232 / +0.1074) than it was on the pre-monotonic one (+0.0043 /

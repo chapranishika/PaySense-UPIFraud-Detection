@@ -89,9 +89,12 @@ learns from a single user correction. Layer~3 serves an XGBoost classifier
 via a FastAPI REST endpoint, trained on a 30{,}000-row master dataset
 constructed from 18 evaluated source datasets, with class imbalance addressed
 by SMOTE applied strictly post-split on the training partition only. The model
-achieves a ROC-AUC of \textbf{0.8889} and a PR-AUC of \textbf{0.5352}---12.71
-times above the random-classifier baseline---with 86.44\% precision at the
-deployed operating threshold ($\tau=0.30$). An honest threshold sweep
+achieves a ROC-AUC of \textbf{0.8969} and a PR-AUC of \textbf{0.5498}---13.05
+times above the random-classifier baseline---with 91.74\% precision at the
+deployed operating threshold ($\tau=0.50$), scored through the real
+three-scorer production ensemble rather than the XGBoost component alone
+(Section~V-A discusses why this distinction matters and corrects an
+earlier methodology error). An honest threshold sweep
 originally identified a recall ceiling of 69.96\%; Platt Scaling was
 implemented and tested against this ceiling and found, as monotonic-transform
 theory predicts, to leave ROC-AUC, PR-AUC, and recall at every threshold
@@ -506,50 +509,82 @@ positive prediction, eliminating precision entirely.
 \section{Results and Evaluation}
 % ─────────────────────────────────────────────────────────────────────────────
 
+\subsection{A Methodology Correction: Ensemble vs. Component Metrics}
+\label{sec:ensemble-correction}
+
+Every metric in this report, until 2026-08-24, was computed by calling
+\texttt{model.predict\_proba()} directly on the frozen XGBoost artifact.
+But the deployed \texttt{/predict} endpoint never does this: it calls
+\texttt{src.fraud\_model.score()}, a three-scorer ensemble that blends
+XGBoost (weight 0.60) with a LightLR logistic-regression scorer (weight
+0.25) and a hand-tuned deterministic rules scorer (weight 0.15). Scored
+through the real ensemble, the canonical held-out test set behaves
+substantially differently from what raw XGBoost alone reports: at the
+threshold deployed until this correction ($\tau=0.30$), the real
+ensemble's precision was \textbf{40.81\%}, not the 86.44\% every earlier
+version of this report claimed. The cause is structural, not a bug in
+either scorer: the rules scorer's always-on additive score (base 0.02,
+plus fixed bonuses for flags such as \texttt{new\_device\_flag} or a large
+\texttt{amount\_deviation\_score}) was never jointly calibrated against
+the 0.30 threshold the way XGBoost's own sweep was, so many rows XGBoost
+alone would correctly score below 0.30 still cross it once the ensemble's
+contributions are blended in.
+
+This was corrected properly rather than patched: the same threshold-
+selection methodology used throughout this project (business constraint
+Recall~$\geq$~75\% and Precision~$\geq$~50\%, falling back to
+unconditional max-F1 when unmet) was re-applied to the real ensemble's
+scores instead of raw XGBoost's, swept across $\tau \in [0.05, 0.95]$ to
+confirm the optimum was not merely sitting at a narrower range's boundary
+-- it is not: F1 peaks exactly at $\tau=0.50$ (0.5525), dips slightly at
+0.55, then plateaus lower from 0.65--0.90 as precision saturates at
+100\%. The deployed threshold was updated to $\tau=0.50$ accordingly, and
+every metric in this report from this point on reflects the real ensemble
+at that threshold, not raw XGBoost at the old one.
+
 \subsection{Primary Metrics}
 
 All metrics are computed on the held-out test set ($n = 6{,}000$),
 which was never exposed to SMOTE, the preprocessing fit, or any
-hyperparameter tuning decision.
+hyperparameter tuning decision, scored through the real ensemble
+(Section~\ref{sec:ensemble-correction}).
 
 \begin{table}[H]
 \centering
-\caption{Model Performance at Deployed Threshold $\tau^* = 0.30$}
+\caption{Model Performance at Deployed Threshold $\tau^* = 0.50$ (Real Ensemble)}
 \label{tab:results}
 \begin{tabular}{@{}lr@{}}
 \toprule
 Metric & Value \\
 \midrule
-ROC-AUC                  & 0.8889 \\
-PR-AUC (primary)         & 0.5352 \\
-Precision (Fraud class)  & 86.44\% \\
-Recall (Fraud class)     & 40.32\% \\
-F1-Score (Fraud class)   & 0.5499 \\
-True Positives           & 102 \\
-False Positives          & 16 \\
-False Negatives          & 151 \\
-True Negatives           & 5{,}731 \\
+ROC-AUC                  & 0.8969 \\
+PR-AUC (primary)         & 0.5498 \\
+Precision (Fraud class)  & 91.74\% \\
+Recall (Fraud class)     & 39.53\% \\
+F1-Score (Fraud class)   & 0.5525 \\
+True Positives           & 100 \\
+False Positives          & 9 \\
+False Negatives          & 153 \\
+True Negatives           & 5{,}738 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\textit{Note: metrics above were recomputed 2026-08-23 directly against the
-artifacts on disk (\texttt{paysense\_model.pkl}, \texttt{paysense\_}
-\texttt{preprocessor.pkl}, \texttt{paysense\_master\_dataset.csv}), which
-were retrained the same day with \texttt{monotone\_constraints} on three
-behavioural features after \texttt{RECALL\_CEILING\_REMEDIATION.md}
-diagnosed and tested the fix (Section~V-D discusses this in full).
-Re-running Phase~3's own threshold-selection logic against
-the new model picked a genuinely different optimal threshold, $\tau=0.30$
-rather than $0.40$, because the underlying score distribution changed --
-the threshold is a function of the model, not a fixed constant. An earlier
-draft of this table (ROC-AUC 0.8851, 66.14\%/52.17\% at $\tau=0.40$,
-161 fraud rows in the test set) had drifted from what the artifacts of that
-time actually produced, most likely dating to a run of
-\texttt{paysense\_phase3.py} before the artifacts were last retrained or the
-master dataset last regenerated -- that earlier mismatch is unrelated to
-today's threshold change, which reflects a deliberate, verified model
-update rather than drift.}
+\textit{Note: metrics above were recomputed 2026-08-24 by scoring the
+on-disk artifacts (\texttt{paysense\_model.pkl}, \texttt{paysense\_}
+\texttt{preprocessor.pkl}, \texttt{paysense\_master\_dataset.csv}) through
+the real \texttt{src.fraud\_model.score()} ensemble path via
+\texttt{resweep\_threshold\_against\_ensemble.py}, per
+Section~\ref{sec:ensemble-correction}. Two earlier corrections to this
+table are now superseded, each for a different reason: a 2026-08-22 drift
+(a stale hand-transcribed table not matching the artifacts of that time)
+and a 2026-08-23 deliberate model change ($\tau=0.30$ after adopting
+\texttt{monotone\_constraints}, Section~V-D) were both legitimate at the
+time, but both were computed against raw XGBoost rather than the ensemble
+that is actually deployed -- this correction is categorically different
+from either: it is not that a number went stale or that the model
+changed, but that every prior number measured the wrong component of the
+deployed system.}
 
 \subsection{The Accuracy Paradox}
 
@@ -569,10 +604,11 @@ computed but not used.
 
 \subsection{PR-AUC Interpretation}
 
-The PR-AUC of 0.5352 should be contextualised against the baseline of a
+The PR-AUC of 0.5498 (real ensemble; Section~\ref{sec:ensemble-correction})
+should be contextualised against the baseline of a
 random classifier, which achieves a PR-AUC equal to the positive class
 prevalence: $0.0421$ (the fraud rate of the master dataset). The PaySense
-model achieves a PR-AUC that is \textbf{12.71 times} above this random
+model achieves a PR-AUC that is \textbf{13.05 times} above this random
 baseline, across all possible decision thresholds. This is the primary
 evidence that the model has learned genuinely discriminative fraud patterns
 rather than memorising the training distribution.
@@ -584,7 +620,7 @@ was conducted post-training (Table~\ref{tab:threshold_sweep}).
 
 \begin{table}[H]
 \centering
-\caption{Threshold Sweep Results (Test Set, $n = 6{,}000$)}
+\caption{Raw XGBoost Threshold Sweep (Test Set, $n = 6{,}000$) --- Component-Level Analysis, Not the Deployed Ensemble's Operating Point}
 \label{tab:threshold_sweep}
 \begin{tabular}{@{}ccccc@{}}
 \toprule
@@ -607,14 +643,19 @@ $\tau$ & Precision & Recall & F1 & TP / FP \\
 \textit{Note: recomputed 2026-08-23 directly against the on-disk artifacts
 (test set: 6{,}000 rows, 253 fraud), which were retrained the same day with
 \texttt{monotone\_constraints} on three behavioural features -- see the
-Honest Finding immediately below and the Limitations section. $\tau=0.30$
-is the frozen, deployed threshold for this model -- it is the max-F1 point
-among all ten swept values, since none meet the business constraint of
-Recall $\geq 75\%$, so selection falls back to unconditional max-F1, exactly
-as the frozen \texttt{paysense\_threshold.pkl} (0.30) reflects. This table
+Honest Finding immediately below and the Limitations section. This sweep
+scores raw XGBoost alone (\texttt{model.predict\_proba()}), the same
+scope \texttt{RECALL\_CEILING\_REMEDIATION.md} and
+\texttt{PLATT\_SCALING\_RESULT.md} used to diagnose and test fixes for
+XGBoost's own ranking behavior -- it is \textbf{not} the deployed
+ensemble's threshold selection. $\tau=0.30$ was the max-F1 point among
+these ten raw-XGBoost values and was, until 2026-08-24, mistakenly treated
+as the deployed threshold; Section~\ref{sec:ensemble-correction} corrects
+this -- the actual deployed threshold, chosen by sweeping the real
+ensemble instead, is $\tau=0.50$ (Table~\ref{tab:results}). This table
 supersedes an earlier version computed against the pre-monotonic model
-(deployed threshold 0.40, ceiling 69.96\% at $\tau=0.05$); the change is a
-deliberate, tested model update, not drift.}
+(ceiling 69.96\% at $\tau=0.05$); the change is a deliberate, tested model
+update, not drift.}
 
 \textbf{Honest finding:} Even at the most aggressive threshold
 ($\tau = 0.05$), the model's recall ceiling is \textbf{71.94\%} (182 of 253
@@ -864,9 +905,10 @@ generalisation to unseen merchant names.
 This paper presented PaySense, a three-layer defence-in-depth fraud detection
 system for Android that combines a deterministic SMS filter, a
 self-improving HITL categorisation cache, and an XGBoost classifier served
-over a FastAPI backend. The system achieves a ROC-AUC of 0.8889 and
-PR-AUC of 0.5352 on held-out synthetic test data, with 86.44\% precision at
-the deployed operating threshold ($\tau=0.30$).
+over a FastAPI backend as part of a three-scorer ensemble. The system
+achieves a ROC-AUC of 0.8969 and PR-AUC of 0.5498 on held-out synthetic
+test data scored through that real ensemble, with 91.74\% precision at
+the deployed operating threshold ($\tau=0.50$).
 The term \emph{defence-in-depth} is used deliberately: each layer provides
 an independent security check; a transaction must clear all three before
 classification as safe.

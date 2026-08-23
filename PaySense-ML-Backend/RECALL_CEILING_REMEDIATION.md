@@ -21,6 +21,23 @@
 > and `tests/test_frozen_model_metrics.py` carry the current, live,
 > re-verified numbers for whatever is actually on disk today.
 
+> **UPDATE (2026-08-24) — scope clarification:** every metric in this
+> document (the 76/177 split, the 71.94%/69.96% recall ceilings, all
+> variant comparisons) was computed by calling `model.predict_proba()`
+> directly on the raw XGBoost artifact — the correct scope for the
+> question this document asks (is a tree-structure/feature-dominance
+> problem in XGBoost itself fixable), but **not** a description of the
+> full deployed system. `/predict` calls `src.fraud_model.score()`, a
+> 3-scorer ensemble; see README.md's Key Results note and
+> `EDA_FEATURE_ENGINEERING.md` §4.5 for the correction discovered
+> 2026-08-24 (the ensemble behaves substantially differently from raw
+> XGBoost, and the deployed threshold moved from 0.30 to 0.50 as a
+> result). This document's own conclusions about XGBoost's ranking
+> behavior and the monotonic-constraints fix remain valid on their own
+> terms; only the implicit assumption that "the frozen model's metrics"
+> meant "the deployed system's metrics" was wrong, and is corrected
+> elsewhere, not here.
+
 **Date:** 2026-08-23
 **Author's intent:** PLATT_SCALING_RESULT.md already showed, correctly, that
 Platt scaling cannot move the frozen model's recall ceiling (76 of 253 fraud
