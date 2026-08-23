@@ -1,0 +1,432 @@
+{
+  "test_set": "category_generalization_test_set.csv",
+  "n_rows": 200,
+  "accuracy": 0.725,
+  "macro_f1": 0.7258356151449343,
+  "weighted_f1": 0.7258356151449344,
+  "classification_report": {
+    "EMI": {
+      "precision": 0.8888888888888888,
+      "recall": 1.0,
+      "f1-score": 0.9411764705882353,
+      "support": 40.0
+    },
+    "Food": {
+      "precision": 0.4827586206896552,
+      "recall": 0.7,
+      "f1-score": 0.5714285714285714,
+      "support": 40.0
+    },
+    "Investment": {
+      "precision": 0.673469387755102,
+      "recall": 0.825,
+      "f1-score": 0.7415730337078652,
+      "support": 40.0
+    },
+    "Shopping": {
+      "precision": 0.875,
+      "recall": 0.525,
+      "f1-score": 0.65625,
+      "support": 40.0
+    },
+    "Travel": {
+      "precision": 0.9583333333333334,
+      "recall": 0.575,
+      "f1-score": 0.71875,
+      "support": 40.0
+    },
+    "accuracy": 0.725,
+    "macro avg": {
+      "precision": 0.775690046133396,
+      "recall": 0.725,
+      "f1-score": 0.7258356151449343,
+      "support": 200.0
+    },
+    "weighted avg": {
+      "precision": 0.7756900461333959,
+      "recall": 0.725,
+      "f1-score": 0.7258356151449344,
+      "support": 200.0
+    }
+  },
+  "confusion_matrix": [
+    [
+      40,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      28,
+      8,
+      3,
+      1
+    ],
+    [
+      0,
+      7,
+      33,
+      0,
+      0
+    ],
+    [
+      4,
+      13,
+      2,
+      21,
+      0
+    ],
+    [
+      1,
+      10,
+      6,
+      0,
+      23
+    ]
+  ],
+  "confusion_matrix_labels": [
+    "EMI",
+    "Food",
+    "Investment",
+    "Shopping",
+    "Travel"
+  ],
+  "mean_top_confidence": 0.7536819376479957,
+  "fraction_above_0.65_confidence": 0.67,
+  "accuracy_among_above_0.65_confidence": 0.9253731343283582,
+  "correct_and_above_0.65_gate_fraction": 0.62,
+  "misclassified_rows": [
+    {
+      "text": "amt rs.499 dedcuted a/c XX7788 for BARBEQUE NATION on 05-08-26 upi ref 309112233445",
+      "true": "Food",
+      "pred": "Investment",
+      "confidence": 0.30634961799310817
+    },
+    {
+      "text": "Rs 60.00 sent to Chaiwala Cart via BHIM UPI, ref 302981726399",
+      "true": "Food",
+      "pred": "Investment",
+      "confidence": 0.3148497175685886
+    },
+    {
+      "text": "Sent Rs.1250 to THE COFFEE HOUSE using Amazon Pay UPI",
+      "true": "Food",
+      "pred": "Shopping",
+      "confidence": 0.9621082996751278
+    },
+    {
+      "text": "A/c XX9021 dr with Rs 340 towards KAKA HALWAI SWEETS on 12-Aug UPI Ref 309887766554",
+      "true": "Food",
+      "pred": "Investment",
+      "confidence": 0.30634961799310817
+    },
+    {
+      "text": "Milk & dairy subscription auto-debit Rs 780 - COUNTRY DELIGHT, UPI Ref 391827364500",
+      "true": "Food",
+      "pred": "Investment",
+      "confidence": 0.30634961799310817
+    },
+    {
+      "text": "HDFC Bank: Rs.610.00 debited from a/c **4521 on 22-Aug-26; UPI Ref 398217364512; VPA subwayindia@ybl",
+      "true": "Food",
+      "pred": "Investment",
+      "confidence": 0.30634961799310817
+    },
+    {
+      "text": "Canteen mess bill Rs 1500 settled via UPI to COLLEGE MESS COMMITTEE, ref 302819475610",
+      "true": "Food",
+      "pred": "Shopping",
+      "confidence": 0.5898015210434672
+    },
+    {
+      "text": "Kirana store bill Rs 560 paid via UPI to RAMESH KIRANA STORE, ref 309827364501",
+      "true": "Food",
+      "pred": "Shopping",
+      "confidence": 0.8830525503008776
+    },
+    {
+      "text": "EazyDiner reservation advance Rs 500 debited via UPI, ref 398271650912",
+      "true": "Food",
+      "pred": "Travel",
+      "confidence": 0.9769545443479666
+    },
+    {
+      "text": "Rs.310 dr a/c XX4409 SUBWAY SANDWICHES 21-08-26 UPI Ref 309817263540",
+      "true": "Food",
+      "pred": "Investment",
+      "confidence": 0.30634961799310817
+    },
+    {
+      "text": "Rs 4500 spent on CATERING SERVICES FOR EVENT, UPI Ref 398172635401 - HDFC Bank",
+      "true": "Food",
+      "pred": "Investment",
+      "confidence": 0.30634961799310817
+    },
+    {
+      "text": "Rs 60 sent to Milk Booth Vendor via Google Pay UPI",
+      "true": "Food",
+      "pred": "Investment",
+      "confidence": 0.2966531609093877
+    },
+    {
+      "text": "You paid \u20b91200 to IndiGo Airlines using Google Pay",
+      "true": "Travel",
+      "pred": "Food",
+      "confidence": 0.2882120933730611
+    },
+    {
+      "text": "amt rs.180 dedcuted a/c XX7788 for RAPIDO BIKE TAXI on 05-08-26 upi ref 309112298765",
+      "true": "Travel",
+      "pred": "Investment",
+      "confidence": 0.30634961799310817
+    },
+    {
+      "text": "Rs 40.00 sent to Auto Rickshaw Driver via BHIM UPI, ref 302981736412",
+      "true": "Travel",
+      "pred": "Investment",
+      "confidence": 0.3148497175685886
+    },
+    {
+      "text": "UPI/DR/394857612099/SPICEJET AIRLINES/HDFC Bank",
+      "true": "Travel",
+      "pred": "Food",
+      "confidence": 0.29205961885731807
+    },
+    {
+      "text": "Rs.120.00 debited a/c no. XX1123 towards TOLL PLAZA FASTAG on 19-08-2026",
+      "true": "Travel",
+      "pred": "Food",
+      "confidence": 0.29205961885731807
+    },
+    {
+      "text": "gpay: paid \u20b990 to Auto Stand Prepaid Booth",
+      "true": "Travel",
+      "pred": "Food",
+      "confidence": 0.2882120933730611
+    },
+    {
+      "text": "UPI-DR-395612874001-RAILWAY CATERING IRCTC-SBI-Rs.220.00",
+      "true": "Travel",
+      "pred": "Food",
+      "confidence": 0.29288567118219866
+    },
+    {
+      "text": "Car rental auto-debit Rs 2400 - ZOOMCAR RENTALS, UPI Ref 391827364511",
+      "true": "Travel",
+      "pred": "EMI",
+      "confidence": 0.7537028067242864
+    },
+    {
+      "text": "Rs 500 paid to Parking Lot Attendant via Paytm, Order#PK9012",
+      "true": "Travel",
+      "pred": "Food",
+      "confidence": 0.5633321694872476
+    },
+    {
+      "text": "HDFC Bank: Rs.3200.00 debited a/c **4521 22-Aug-26; UPI Ref 398217364500; VPA vistara@ybl",
+      "true": "Travel",
+      "pred": "Investment",
+      "confidence": 0.30634961799310817
+    },
+    {
+      "text": "paid rupees 210 2 sharing auto near station thru phonepe",
+      "true": "Travel",
+      "pred": "Food",
+      "confidence": 0.2882120933730611
+    },
+    {
+      "text": "UPI/DR/398761234511/VISTARA AIRLINES/Axis Bank",
+      "true": "Travel",
+      "pred": "Food",
+      "confidence": 0.29205961885731807
+    },
+    {
+      "text": "Rs 45 paid to Cycle Rickshaw via Google Pay",
+      "true": "Travel",
+      "pred": "Food",
+      "confidence": 0.29288567118219866
+    },
+    {
+      "text": "Rs.310 dr a/c XX4409 BLABLACAR CARPOOL 21-08-26 UPI Ref 309817263599",
+      "true": "Travel",
+      "pred": "Investment",
+      "confidence": 0.30634961799310817
+    },
+    {
+      "text": "UPI/DR/392817364999/AIR INDIA/ICICI Bank",
+      "true": "Travel",
+      "pred": "Food",
+      "confidence": 0.29205961885731807
+    },
+    {
+      "text": "Rs 350 spent on TOLL TAX HIGHWAY CROSSING, UPI Ref 398172635499 - HDFC Bank",
+      "true": "Travel",
+      "pred": "Investment",
+      "confidence": 0.30634961799310817
+    },
+    {
+      "text": "A/c XX8890 debited Rs 15000.00 - GOA TOUR PACKAGE ADVANCE - UPI Ref 391827465099",
+      "true": "Travel",
+      "pred": "Investment",
+      "confidence": 0.30634961799310817
+    },
+    {
+      "text": "INR 10000.00 debited ICICI Bank A/c XX0021 Info: UPI/302981736511/ZERODHA FUNDS ADD",
+      "true": "Investment",
+      "pred": "Food",
+      "confidence": 0.29205961885731807
+    },
+    {
+      "text": "NACH mandate executed: Rs 5000 debited towards NPS CONTRIBUTION, Ref NACH8891299",
+      "true": "Investment",
+      "pred": "Food",
+      "confidence": 0.29288567118219866
+    },
+    {
+      "text": "stok purchse paymnt rs 8900 debited, ref no 391827364522 UPSTOX SECURITIES",
+      "true": "Investment",
+      "pred": "Food",
+      "confidence": 0.29288567118219866
+    },
+    {
+      "text": "UPI/DR/394857612099/COIN ZERODHA/HDFC Bank",
+      "true": "Investment",
+      "pred": "Food",
+      "confidence": 0.29205961885731807
+    },
+    {
+      "text": "IPO application blocked amount Rs 15000 - ZOMATO IPO ASBA, Ref 391827364511",
+      "true": "Investment",
+      "pred": "Food",
+      "confidence": 0.9566084436547644
+    },
+    {
+      "text": "Rs 3400 invested via UPSTOX EQUITY DELIVERY, TxnID UP9099",
+      "true": "Investment",
+      "pred": "Food",
+      "confidence": 0.9566084436547644
+    },
+    {
+      "text": "HDFC Bank: Rs.10000.00 debited a/c **4521 towards SUKANYA SAMRIDDHI YOJANA 22-Aug-26; Ref 398217364522",
+      "true": "Investment",
+      "pred": "Food",
+      "confidence": 0.29288567118219866
+    },
+    {
+      "text": "Acct XX4521 debited INR 1200.00 UPI Ref 309876123522 NYKAA BEAUTY ORDER -Axis Bank",
+      "true": "Shopping",
+      "pred": "Food",
+      "confidence": 0.5775165015917066
+    },
+    {
+      "text": "Your purchase of Rs 8900 at RELIANCE DIGITAL has been debited - ICICI Bank",
+      "true": "Shopping",
+      "pred": "Food",
+      "confidence": 0.8861404482141328
+    },
+    {
+      "text": "onlin shoping paymnt rs 2900 debited, ref no 391827364533 MEESHO ORDER",
+      "true": "Shopping",
+      "pred": "Food",
+      "confidence": 0.5633321694872476
+    },
+    {
+      "text": "Rs 5600.00 debited towards FURNITURE MART SOFA PURCHASE, ref 302981736511",
+      "true": "Shopping",
+      "pred": "Food",
+      "confidence": 0.3620903400384653
+    },
+    {
+      "text": "A/c XX9021 dr with Rs 999 towards LENSKART EYEWEAR on 12-Aug UPI Ref 309887712322",
+      "true": "Shopping",
+      "pred": "Investment",
+      "confidence": 0.30634961799310817
+    },
+    {
+      "text": "Rs.7800.00 debited a/c no. XX1123 towards TANISHQ JEWELLERY on 19-08-2026",
+      "true": "Shopping",
+      "pred": "Food",
+      "confidence": 0.29205961885731807
+    },
+    {
+      "text": "jwelry purchse rs 25000 tanishq showrom paymnt thru card linked upi",
+      "true": "Shopping",
+      "pred": "EMI",
+      "confidence": 0.8264377467606856
+    },
+    {
+      "text": "Mobile purchase full payment Rs 22000 - VIJAY SALES, Ref 391827364522",
+      "true": "Shopping",
+      "pred": "EMI",
+      "confidence": 0.606205298749301
+    },
+    {
+      "text": "Rs 890 spent via SNAPDEAL ORDER, TxnID SD9188",
+      "true": "Shopping",
+      "pred": "Food",
+      "confidence": 0.5633321694872476
+    },
+    {
+      "text": "UPI/DR/398761234522/PUMA SPORTSWEAR/Axis Bank",
+      "true": "Shopping",
+      "pred": "Food",
+      "confidence": 0.29205961885731807
+    },
+    {
+      "text": "Rs 5600.00 debited - IKEA HOME DECOR PURCHASE - A/c XX2231 - Ref 391827364533",
+      "true": "Shopping",
+      "pred": "EMI",
+      "confidence": 0.6586432510517255
+    },
+    {
+      "text": "Rs.6700 dr a/c XX4409 SHOPPERS STOP APPAREL 21-08-26 UPI Ref 309817263533",
+      "true": "Shopping",
+      "pred": "Investment",
+      "confidence": 0.30634961799310817
+    },
+    {
+      "text": "Payment of Rs 8900 towards HOME CENTRE DECOR ITEMS via BHIM",
+      "true": "Shopping",
+      "pred": "EMI",
+      "confidence": 0.7680204257021636
+    },
+    {
+      "text": "Rs 3400 spent on GIFT SHOP BIRTHDAY PRESENT, Ref 398172635433 - HDFC Bank",
+      "true": "Shopping",
+      "pred": "Food",
+      "confidence": 0.29288567118219866
+    },
+    {
+      "text": "paid rs.2100 4 handbag purchase via paytm upi CARIBBEAN BAGS",
+      "true": "Shopping",
+      "pred": "Food",
+      "confidence": 0.3691622735757579
+    },
+    {
+      "text": "A/c XX8890 debited Rs 9800.00 - PEPPERFRY FURNITURE ORDER - Ref 391827465033",
+      "true": "Shopping",
+      "pred": "Food",
+      "confidence": 0.5633321694872476
+    },
+    {
+      "text": "INR 6700.00 debited HDFC Bank A/c XX0091 Info: UPI/302981736611/LIFESTYLE STORES",
+      "true": "Shopping",
+      "pred": "Food",
+      "confidence": 0.29205961885731807
+    },
+    {
+      "text": "shoping onlne rs 1200 flpkart big bilion day sale paymnt",
+      "true": "Shopping",
+      "pred": "Food",
+      "confidence": 0.29205961885731807
+    },
+    {
+      "text": "Rs.8900 dr a/c XX2299 WOODLAND FOOTWEAR PURCHASE 23-08-26 UPI Ref 309817263611",
+      "true": "Shopping",
+      "pred": "Food",
+      "confidence": 0.37456342674158805
+    }
+  ]
+}
