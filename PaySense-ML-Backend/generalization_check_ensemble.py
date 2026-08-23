@@ -49,7 +49,12 @@ warnings.filterwarnings("ignore", category=UserWarning, module="sklearn")
 # box-drawing characters in the summary tables below don't crash on a
 # cp1252 console (this only affects how this script prints output; it
 # changes nothing about how fraud_model.score() computes results).
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+if __name__ == "__main__":
+    # Guarded: unconditional reassignment at import time breaks pytest's
+    # capture mechanism for anything that imports this module. See
+    # ood_generalization_remediation.py's identical fix for the confirmed
+    # failure mode.
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
 import numpy as np
 import pandas as pd

@@ -37,7 +37,12 @@ import time
 import warnings
 
 warnings.filterwarnings("ignore", category=UserWarning, module="sklearn")
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+if __name__ == "__main__":
+    # Guarded: unconditional reassignment at import time breaks pytest's
+    # capture mechanism for anything that imports this module. See
+    # ood_generalization_remediation.py's identical fix for the confirmed
+    # failure mode.
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
 # src/fraud_model.py's _score_light_lr() does `float(txn_dict.get(key, 0.0))`
 # — .get()'s default only fires when the KEY IS ABSENT, not when the key is

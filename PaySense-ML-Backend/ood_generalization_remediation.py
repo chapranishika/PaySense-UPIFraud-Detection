@@ -79,7 +79,16 @@ import warnings
 
 warnings.filterwarnings("ignore")
 warnings.filterwarnings("ignore", category=UserWarning, module="sklearn")
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+if __name__ == "__main__":
+    # Only rewrap stdout when run as a standalone script (Windows console
+    # UTF-8 fix). Doing this unconditionally at import time breaks pytest's
+    # own capture mechanism for anything that imports this module (even
+    # transitively) -- confirmed: importing this from
+    # eda_feature_engineering.py, itself imported by
+    # tests/test_eda_feature_engineering.py, caused a
+    # "ValueError: I/O operation on closed file" in pytest's capture
+    # teardown that silently broke the entire test run.
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 logging.getLogger("paysense.ensemble").setLevel(logging.ERROR)
 
 import joblib

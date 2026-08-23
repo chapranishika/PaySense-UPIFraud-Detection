@@ -1,0 +1,243 @@
+{
+  "trained_at_unix": 1787492519.9352279,
+  "train_rows_final": 43045,
+  "train_rows_by_source": {
+    "paysense_v2_synthetic": 23765,
+    "kaggle_coderanand": 11000,
+    "fintext6k_train": 5000,
+    "kaggle_bhavya": 3280
+  },
+  "train_rows_by_label": {
+    "Food": 9961,
+    "Travel": 8704,
+    "Investment": 8505,
+    "EMI": 7965,
+    "Shopping": 7910
+  },
+  "vocab_size": 25318,
+  "baseline_vocab_size": 821,
+  "fintext_holdout_test": {
+    "accuracy": 1.0,
+    "macro_f1": 1.0,
+    "weighted_f1": 1.0,
+    "classification_report": {
+      "EMI": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 201.0
+      },
+      "Food": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 205.0
+      },
+      "Investment": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 172.0
+      },
+      "Shopping": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 230.0
+      },
+      "Travel": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 192.0
+      },
+      "accuracy": 1.0,
+      "macro avg": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 1000.0
+      },
+      "weighted avg": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 1000.0
+      }
+    },
+    "confusion_matrix": [
+      [
+        201,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        205,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        172,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        230,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        192
+      ]
+    ],
+    "confusion_matrix_labels": [
+      "EMI",
+      "Food",
+      "Investment",
+      "Shopping",
+      "Travel"
+    ],
+    "mean_top_confidence": 0.9993485660425834,
+    "fraction_above_0.65_confidence": 1.0,
+    "accuracy_among_above_0.65_confidence": 1.0,
+    "correct_and_above_0.65_gate_fraction": 1.0,
+    "n_rows": 1000
+  },
+  "gold_generalization_test": {
+    "accuracy": 0.975,
+    "macro_f1": 0.9751164215093411,
+    "weighted_f1": 0.9751164215093412,
+    "classification_report": {
+      "EMI": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 40.0
+      },
+      "Food": {
+        "precision": 0.926829268292683,
+        "recall": 0.95,
+        "f1-score": 0.9382716049382716,
+        "support": 40.0
+      },
+      "Investment": {
+        "precision": 1.0,
+        "recall": 0.975,
+        "f1-score": 0.9873417721518988,
+        "support": 40.0
+      },
+      "Shopping": {
+        "precision": 1.0,
+        "recall": 0.95,
+        "f1-score": 0.9743589743589743,
+        "support": 40.0
+      },
+      "Travel": {
+        "precision": 0.9523809523809523,
+        "recall": 1.0,
+        "f1-score": 0.975609756097561,
+        "support": 40.0
+      },
+      "accuracy": 0.975,
+      "macro avg": {
+        "precision": 0.9758420441347271,
+        "recall": 0.975,
+        "f1-score": 0.9751164215093411,
+        "support": 200.0
+      },
+      "weighted avg": {
+        "precision": 0.9758420441347271,
+        "recall": 0.975,
+        "f1-score": 0.9751164215093412,
+        "support": 200.0
+      }
+    },
+    "confusion_matrix": [
+      [
+        40,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        38,
+        0,
+        0,
+        2
+      ],
+      [
+        0,
+        1,
+        39,
+        0,
+        0
+      ],
+      [
+        0,
+        2,
+        0,
+        38,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        40
+      ]
+    ],
+    "confusion_matrix_labels": [
+      "EMI",
+      "Food",
+      "Investment",
+      "Shopping",
+      "Travel"
+    ],
+    "mean_top_confidence": 0.9796432947012854,
+    "fraction_above_0.65_confidence": 0.985,
+    "accuracy_among_above_0.65_confidence": 0.9847715736040609,
+    "correct_and_above_0.65_gate_fraction": 0.97,
+    "n_rows": 200
+  },
+  "cited_failure_examples_recheck": [
+    {
+      "text": "Sent Rs.1250 to THE COFFEE HOUSE using Amazon Pay UPI",
+      "true": "Food",
+      "pred": "Food",
+      "confidence": 0.9939150454907143,
+      "correct": true
+    },
+    {
+      "text": "IPO application blocked amount Rs 15000 - ZOMATO IPO ASBA, Ref 391827364511",
+      "true": "Investment",
+      "pred": "Food",
+      "confidence": 0.999062197846943,
+      "correct": false
+    },
+    {
+      "text": "EazyDiner reservation advance Rs 500 debited via UPI, ref 398271650912",
+      "true": "Food",
+      "pred": "Travel",
+      "confidence": 0.9329147273611744,
+      "correct": false
+    }
+  ],
+  "baseline_fintext_accuracy": 1.0,
+  "baseline_gold_accuracy": 0.725,
+  "baseline_gold_confidence_gate_pass_rate": 0.62
+}
