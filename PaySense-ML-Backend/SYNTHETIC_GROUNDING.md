@@ -310,34 +310,52 @@ Full script output reproducible via `python generalization_check_synthetic.py`.
 
 ### 5.1 Metrics (25,000 rows, 985 fraud = 3.94%) — recomputed 2026-08-24 at the corrected deployed threshold
 
+**Correction to this correction, stated plainly rather than quietly fixed:**
+an earlier version of this section reported ROC-AUC 0.6924, PR-AUC 0.1012,
+and 183/985 (18.6%) recall at τ=0.50, attributing the shift from 0.7000/
+0.1015 to "an intervening rules-scorer bugfix." That explanation was
+wrong, and so were the numbers — both traced to a real bug in the
+verification script written to check this, not to any change in
+`fraud_model.py`. `synthetic_grounded_dataset.csv` intentionally sends
+~2% of two columns as `null` (documented above), and the CSV loader
+represents that as a float `NaN`, not Python's `None`; the established,
+correct scripts (`generalization_check_synthetic.py`,
+`generalization_check_ensemble.py`) have always explicitly converted
+`NaN` to `None` before calling `fraud_model.score()`, because `NaN or 0.0`
+evaluates to `NaN` in Python (NaN is truthy), silently defeating the
+`or 0.0` coalescing used to fix the LightLR/rules-scorer null-handling
+bugs earlier tonight. The quick script written to re-check this threshold
+change omitted that conversion, so ~2% of rows were scored with raw NaN
+leaking through uncoalesced — a real, if narrow, regression in a
+just-written verification script, not in the production ensemble. Caught
+by cross-checking a fresh independent re-run against this document's own
+established methodology rather than trusting the quick script's number
+uncritically, corrected below, and left visible here rather than silently
+edited away.
+
 | Metric | Raw XGBoost only | Full ensemble (XGBoost + rules + LightLR) | Was (2026-08-23, @ τ=0.30) |
 |---|---:|---:|---:|
-| ROC-AUC | 0.6768 | **0.6924** | 0.7000 |
-| PR-AUC (average precision) | 0.0953 | **0.1012** | 0.1015 |
-| Confusion matrix @ threshold 0.50 (deployed) | — | TN=22,818 FP=1,197 / FN=802 TP=**183** | @ τ=0.30 that day: TP=359 |
-| Confusion matrix @ threshold 0.30 (superseded) | — | TN=21,375 FP=2,640 / FN=647 TP=338 | — |
-| Precision / Recall / F1 (fraud class, ensemble, @ 0.50) | — | 0.1326 / 0.1858 / 0.1548 | 0.1109 / 0.3645 / 0.1700 |
+| ROC-AUC | 0.6768 | **0.7000** | 0.7000 (unchanged) |
+| PR-AUC (average precision) | 0.0953 | **0.1015** | 0.1015 (unchanged) |
+| Confusion matrix @ threshold 0.50 (deployed) | — | TN=22,644 FP=1,371 / FN=785 TP=**200** | @ τ=0.30 that day: TP=359 |
+| Confusion matrix @ threshold 0.30 (superseded) | — | TN=21,136 FP=2,879 / FN=626 TP=359 (unchanged) | — |
+| Precision / Recall / F1 (fraud class, ensemble, @ 0.50) | — | 0.1273 / 0.2030 / 0.1548 | 0.1109 / 0.3645 / 0.1700 |
 | Max predicted score | 0.9961 | 0.9677 | 0.9677 |
 
-**Two things changed since 2026-08-23, and they pull in opposite
-directions — both reported plainly.** First, the small ROC-AUC/PR-AUC dip
-(0.7000→0.6924, 0.1015→0.1012) is a real effect of an intervening bugfix,
-not noise or drift: `_score_rules()`'s `failed_attempts_last_24h`
-None-handling bug (see below) was fixed in a later commit than the one
-that produced 0.7000, and re-scoring today with that fix in place
-naturally gives a slightly different number — the fix changed how ~2% of
-rows with a null value in that field are scored, in both directions
-depending on the row. Second, and larger: the deployed threshold moved
-from 0.30 to 0.50 (README.md's Key Results note,
+**Only one thing actually changed since 2026-08-23: the deployed
+threshold, from 0.30 to 0.50** (README.md's Key Results note,
 `EDA_FEATURE_ENGINEERING.md` §4.5 — a methodology correction, not a model
-change), and recall on this dataset **drops substantially** at the new
-threshold: 183/985 (18.6%) at τ=0.50, versus 338/985 (34.3%) at τ=0.30
-with the same current model. This is the honest, less flattering half of
-the 2026-08-24 correction: the "36.4% recall, the model does fire on real
-positives" finding from 2026-08-23 was real at the threshold deployed
-*that day*, but that threshold was itself wrong (chosen by sweeping raw
-XGBoost, not the ensemble) — at the threshold that's actually correct for
-the deployed ensemble, recall on this dataset is roughly half of what was
+change; ROC-AUC/PR-AUC are exactly unchanged because the underlying model
+and its scores never changed, only the threshold applied to them). Recall
+on this dataset **drops substantially** at the new threshold: 200/985
+(20.3%) at τ=0.50, versus 359/985 (36.4%) at τ=0.30 with the same current
+model — both numbers now verified twice, independently, in agreement.
+This is the honest, less flattering half of the 2026-08-24 threshold
+correction: the "36.4% recall, the model does fire on real positives"
+finding from 2026-08-23 was real at the threshold deployed *that day*,
+but that threshold was itself wrong (chosen by sweeping raw XGBoost, not
+the ensemble) — at the threshold that's actually correct for the deployed
+ensemble, recall on this dataset is a bit over half of what was
 previously reported.
 
 A side-effect from an earlier version of this check no longer reproduces:
@@ -360,9 +378,9 @@ than silently updating the number.
 
 | Metric | Dataset 1 (6/40 features, real UPI data) | Dataset 3 (2/40 features, real data) | **This dataset (40/40 features, synthetic)** |
 |---|---:|---:|---:|
-| ROC-AUC (full ensemble) | 0.7919 | 0.6046 (raw XGBoost only) | **0.6924** |
-| PR-AUC (full ensemble) | 0.3767 | 0.1157 | **0.1012** |
-| Recall @ 0.50 threshold (deployed) | 0/701 = **0.0%** | 0/64 = **0.0%** | **183/985 = 18.6%** |
+| ROC-AUC (full ensemble) | 0.7919 | 0.6046 (raw XGBoost only) | **0.7000** |
+| PR-AUC (full ensemble) | 0.3767 | 0.1157 | **0.1015** |
+| Recall @ 0.50 threshold (deployed) | 0/701 = **0.0%** | 0/64 = **0.0%** | **200/985 = 20.3%** |
 
 ### 5.3 What this actually means — the honest verdict
 
@@ -371,10 +389,10 @@ it is not flattering, in a specific and interesting way — made more so by
 the 2026-08-24 threshold correction:
 
 **Recall genuinely improves — from 0% on both real external datasets to
-18.6% here at the correct deployed threshold — confirming that missing
+20.3% here at the correct deployed threshold — confirming that missing
 features really were part of the problem in `GENERALIZATION_CHECK.md`.**
 With the full 40-feature vector present, the frozen threshold (0.50 as of
-2026-08-24) is no longer permanently out of reach: 183 of 985 real fraud
+2026-08-24) is no longer permanently out of reach: 200 of 985 real fraud
 rows in this dataset score above it, something that never happened even
 once across 74,917 + 1,000 real external rows. That is still a genuine,
 positive, previously-unmeasurable data point — but it is a meaningfully
@@ -387,7 +405,7 @@ flattering one is the point of this update.
 
 **ROC-AUC and PR-AUC are both *worse* here than on Dataset 1 — despite
 this dataset supplying 40/40 features against Dataset 1's 6/40.** ROC-AUC
-0.6924 vs. Dataset 1's 0.7919; PR-AUC 0.1012 vs. Dataset 1's 0.3767. Both are
+0.7000 vs. Dataset 1's 0.7919; PR-AUC 0.1015 vs. Dataset 1's 0.3767. Both are
 far below the model's own reported held-out training metrics (ROC-AUC
 0.8969, PR-AUC 0.5498 — the real-ensemble figures per README.md's Key
 Results note, not the raw-XGBoost figures reported before 2026-08-24). If
@@ -417,7 +435,7 @@ degrades ranking quality even as it (correctly) lets the model act on
 signals it couldn't see at all before.
 
 **What this proves:** feature completeness measurably helps the model act
-(0% → 18.6% recall at the correct deployed threshold of 0.50; the figure
+(0% → 20.3% recall at the correct deployed threshold of 0.50; the figure
 was reported as 36.4% at the since-superseded τ=0.30 before the
 2026-08-24 threshold correction, and was 0% → 25.4% before that, on the
 pre-monotonic model) — the missing-feature confound in
