@@ -250,7 +250,11 @@ def _score_rules(txn_dict: dict) -> float:
     elif amt_dev > 1.0: score += 0.03
 
     if txn_dict.get("is_night_transaction"):  score += 0.05
-    if txn_dict.get("failed_attempts_last_24h", 0) > 2: score += 0.08
+    # BUG FIX: .get(key, 0) only substitutes 0 when the key is absent; a
+    # field present but explicitly null makes .get() return None, and
+    # `None > 2` raises. `or 0` coalesces both cases, matching the pattern
+    # already used for amount_deviation_score two lines above.
+    if (txn_dict.get("failed_attempts_last_24h", 0) or 0) > 2: score += 0.08
 
     # Cold-start positive signal: new account + large transaction
     acc_age = txn_dict.get("usr_account_age_days", 999) or 999

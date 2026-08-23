@@ -1,0 +1,102 @@
+﻿.\venv\Scripts\python.exe :   File "E:\Projects\upi\PaySense_Final_Submission\PS\PaySense-ML-Backend\venv\Lib\site-pack
+ages\joblib\externals\loky\backend\context.py", line 257, in _count_physical_cores
+At line:3 char:1
++ .\venv\Scripts\python.exe -u ood_generalization_remediation.py *> ood ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (  File "E:\Proj..._physical_cores:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+    cpu_info = subprocess.run(
+               ^^^^^^^^^^^^^^^
+  File "C:\Users\chapr\AppData\Local\Programs\Python\Python311\Lib\subprocess.py", line 548, in run
+    with Popen(*popenargs, **kwargs) as process:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\chapr\AppData\Local\Programs\Python\Python311\Lib\subprocess.py", line 1026, in __init__
+    self._execute_child(args, executable, preexec_fn, close_fds,
+  File "C:\Users\chapr\AppData\Local\Programs\Python\Python311\Lib\subprocess.py", line 1538, in _execute_child
+    hp, ht, pid, tid = _winapi.CreateProcess(executable, args,
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+==============================================================================
+STEP 0 | Reproducing paysense_phase3.py Block 0 (split + preprocessing)
+==============================================================================
+Canonical split confirmed: train=(24000, 40), test=(6000, 40), fraud in test=253/253
+Baseline (frozen model) canonical test @ tau=0.3: ROC-AUC=0.8889 recall=0.4032 precision=0.8644
+==============================================================================
+STEP 1 | Generating blend synthetic dataset (seed=445566, n=12,000)
+==============================================================================
+Blend dataset: 12,000 rows, 457 fraud (3.81%) -- saved to E:\Projects\upi\PaySense_Final_Submission\PS\PaySense-ML-Backend\synthetic_grounded_dataset_seed445566_blend.csv
+Held-out synthetic set (seed=918273): 25,000 rows -- confirmed 0 full-row duplicates with the blend set (seed=445566); transaction_id strings themselves DO collide by design (both generators number rows sequentially from 0 regardless of seed) but that column is dropped before training (DROP_COLS) and is not used as an identity key anywhere in this script.
+==============================================================================
+STEP 2 | Variant A -- blended training data
+==============================================================================
+Variant A training data: 24,000 original + 12,000 blend = 36,000 rows before SMOTE (1,467 fraud, 4.08%)
+After SMOTE: (69066, 40)
+Training Variant A ... done.
+Saved -> paysense_model_blended_training.pkl / paysense_preprocessor_blended_training.pkl
+Variant A canonical test @ tau=0.3: ROC-AUC=0.8857 recall=0.3834 precision=0.9065
+==============================================================================
+STEP 3 | Variant B -- heavier regularization, original data only
+==============================================================================
+Variant B overrides vs. baseline: {'max_depth': 3, 'reg_lambda': 3.0, 'min_child_weight': 20}
+Training Variant B ... done.
+Saved -> paysense_model_regularized.pkl (reuses the frozen preprocessor's fitting procedure)
+Variant B canonical test @ tau=0.3: ROC-AUC=0.8925 recall=0.3874 precision=0.8909
+==============================================================================
+STEP 4 | Ensemble-path evaluation -- held-out synthetic set (seed 918273)
+==============================================================================
+Loading production ensemble state (frozen light_lr + rules; PaySense slot will be monkeypatched per-variant below) ...
+
+Scoring held-out synthetic set through Variant A's ensemble (25,000 rows) ...
+    ... 10,000 / 25,000 rows scored (140.1s elapsed)
+    ... 20,000 / 25,000 rows scored (266.8s elapsed)
+    scored 25,000 rows in 333.2s (75 rows/sec)
+  Variant A: ROC-AUC=0.7304 PR-AUC=0.1309 recall=0.2863 TP=282/985
+
+Scoring held-out synthetic set through Variant B's ensemble (25,000 rows) ...
+    ... 10,000 / 25,000 rows scored (133.2s elapsed)
+    ... 20,000 / 25,000 rows scored (266.2s elapsed)
+    scored 25,000 rows in 332.0s (75 rows/sec)
+  Variant B: ROC-AUC=0.6952 PR-AUC=0.1001 recall=0.3645 TP=359/985
+==============================================================================
+STEP 5 | Ensemble-path evaluation -- real Dataset 1 (upi_fraud_dataset.csv)
+        Only 6/40 features are honestly mappable (GENERALIZATION_CHECK.md
+        §3.1, reused verbatim -- not re-derived). Never trained on by anything.
+==============================================================================
+Dataset 1: 74,917 rows, 0.94% fraud, mapped columns: ['amount', 'hour_of_day', 'mrc_category', 'device_type', 'txn_success_flag', 'is_night_transaction']
+
+Scoring Dataset 1 through Variant A's ensemble (74,917 rows) ...
+    ... 10,000 / 74,917 rows scored (112.4s elapsed)
+    ... 20,000 / 74,917 rows scored (224.0s elapsed)
+    ... 30,000 / 74,917 rows scored (335.1s elapsed)
+    ... 40,000 / 74,917 rows scored (447.9s elapsed)
+    ... 50,000 / 74,917 rows scored (561.6s elapsed)
+    ... 60,000 / 74,917 rows scored (677.4s elapsed)
+    ... 70,000 / 74,917 rows scored (790.3s elapsed)
+    scored 74,917 rows in 843.7s (89 rows/sec)
+  Variant A: ROC-AUC=0.8442 PR-AUC=0.4764 TP=0/701
+
+Scoring Dataset 1 through Variant B's ensemble (74,917 rows) ...
+    ... 10,000 / 74,917 rows scored (109.1s elapsed)
+    ... 20,000 / 74,917 rows scored (220.0s elapsed)
+    ... 30,000 / 74,917 rows scored (324.3s elapsed)
+    ... 40,000 / 74,917 rows scored (433.6s elapsed)
+    ... 50,000 / 74,917 rows scored (540.8s elapsed)
+    ... 60,000 / 74,917 rows scored (650.0s elapsed)
+    ... 70,000 / 74,917 rows scored (760.2s elapsed)
+    scored 74,917 rows in 814.8s (92 rows/sec)
+  Variant B: ROC-AUC=0.8031 PR-AUC=0.2250 TP=0/701
+==============================================================================
+STEP 6 | Ensemble-path evaluation -- real Dataset 3 (low power, 64 fraud)
+==============================================================================
+Dataset 3: 1,000 rows, 6.40% fraud, mapped columns: ['amount', 'usr_account_age_days']
+    scored 1,000 rows in 10.2s (98 rows/sec)
+  Baseline : ROC-AUC=0.6046 PR-AUC=0.1157 TP=0/64
+    scored 1,000 rows in 10.2s (98 rows/sec)
+  Variant A: ROC-AUC=0.8913 PR-AUC=0.3295 TP=0/64
+    scored 1,000 rows in 10.1s (99 rows/sec)
+  Variant B: ROC-AUC=0.6929 PR-AUC=0.2207 TP=0/64
+
+Results saved -> E:\Projects\upi\PaySense_Final_Submission\PS\PaySense-ML-Backend\ood_generalization_remediation_results.json
+==============================================================================
+DONE
+==============================================================================
