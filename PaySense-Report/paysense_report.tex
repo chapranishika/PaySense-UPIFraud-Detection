@@ -835,12 +835,25 @@ recommended, with automatic rollback if the new model's PR-AUC on a
 validation set falls below 0.45.
 
 \textbf{Layer~2 NLP completion.} A Tier~2 classifier has since been trained
-(TF-IDF + Logistic Regression over transaction reference text) and scores
+(TF-IDF + calibrated linear SVM over transaction reference text) and scores
 100\% accuracy on its held-out test set; that number is a property of the
 evaluation data, not a generalisation claim---the test split draws from the
-same fixed template pool as training, so the true test is whether it holds
-up on merchant names it has never seen a variant of, which has not yet been
-measured. Replacing the TF-IDF representation with a TFLite on-device
+same fixed template pool as training. The true test---holding up on
+narration styles it has never seen a variant of---has since been measured
+directly: scored against 200 hand-authored, structurally-verified-novel
+transaction narrations (real HDFC/SBI/ICICI/Axis SMS formats, GPay/PhonePe/
+Paytm notifications), accuracy drops to \textbf{72.5\%}, and only 62.0\% of
+predictions both classify correctly and clear the Android client's own
+0.65 confidence gate. The mechanism was traced directly: the fitted TF-IDF
+vocabulary (821 tokens) is entirely mined from the 40 training templates,
+so novel sentences sharing no content word with training collapse to an
+identical, label-independent default prediction (30.0\% accuracy, near the
+20\% random baseline for 5 classes), while novel sentences that happen to
+reuse one training token score near training-level (86.7\%) but often via
+single-keyword lookup rather than narration understanding---see
+\texttt{CATEGORY\_CLASSIFIER\_GENERALIZATION.md} for the full breakdown,
+including specific misclassifications this causes in production-realistic
+text. Replacing the TF-IDF representation with a TFLite on-device
 DistilBERT model remains the recommended next step for genuine
 generalisation to unseen merchant names.
 
