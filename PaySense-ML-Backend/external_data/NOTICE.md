@@ -1,4 +1,32 @@
-# External data sources used for the V2 category classifier attempt
+# External data sources
+
+## kaggle_vbinh002_fraud_ecommerce/ — used for REAL_DATA_AND_RESEARCH_GROUNDING.md (Track A)
+
+- Source: https://www.kaggle.com/datasets/vbinh002/fraud-ecommerce
+- Owner: vbinh002
+- License: unspecified on Kaggle ("None") — used here only for internal
+  model evaluation in a student project, the same way this project already
+  scores against other unlicensed/unclear-license local CSVs; not
+  redistributed.
+- Downloaded 2026-08-24 via Kaggle's public, unauthenticated
+  `/api/v1/datasets/download/<owner>/<slug>` endpoint (same mechanism as the
+  two category-classifier downloads below).
+- Files: `Fraud_Data.csv` (151,112 rows: user_id, signup_time, purchase_time,
+  purchase_value, device_id, source, browser, sex, age, ip_address, class),
+  `IpAddress_to_Country.csv` (138,846-row IP block → country lookup table,
+  not used in the final honest mapping — see REAL_DATA_AND_RESEARCH_GROUNDING.md
+  §2 for why: no per-user home-country baseline exists to compare an IP
+  geolocation against, so `ip_location_mismatch` cannot be honestly derived
+  from it).
+- Genuinely real, not templated: a well-known e-commerce fraud benchmark,
+  cataloged as real fraud data ("fraudecom") in Amazon Science's Fraud
+  Dataset Benchmark paper (arXiv:2208.14417) — 151,112 unique transactions
+  (one per user), 9.36% fraud rate (not a round number), no duplicate rows,
+  no nulls, no categorical near-determinism (source/browser/sex all within
+  8.7-10.5% of the 9.36% base rate). See
+  REAL_DATA_AND_RESEARCH_GROUNDING.md §2 for the full vetting write-up.
+
+## kaggle_bhavya_financial_transaction/ and kaggle_coderanand_indian_banking/ — used for the V2 category classifier attempt
 
 See `CATEGORY_CLASSIFIER_V2_ATTEMPT.md` for the full account. Both datasets
 below were downloaded on 2026-08-23 via Kaggle's public, unauthenticated
