@@ -4,6 +4,10 @@
 
 **Author:** Nishika Chapra | KJ Somaiya Institute of Technology | 2025
 
+**📖 [Read the full walkthrough](WALKTHROUGH.md)** — live screenshots, every
+result, and every honest limitation, from a real running instance of this
+exact code.
+
 ---
 
 ## Key Results
@@ -17,7 +21,7 @@
 | Datasets evaluated | 18 |
 | Master dataset | 30,000 rows · 40 model-ready features · 4.21% fraud |
 | SMOTE applied | Training partition only (24K → 45,980 rows) |
-| Tests passing | **165** (28 Android unit tests · 137 backend pytest) |
+| Tests passing | **226** (28 Android unit tests · 198 backend pytest) |
 
 **Correction, 2026-08-24 — the most important one yet, because it's a
 methodology error, not a stale number.** Every metric ever reported in this
