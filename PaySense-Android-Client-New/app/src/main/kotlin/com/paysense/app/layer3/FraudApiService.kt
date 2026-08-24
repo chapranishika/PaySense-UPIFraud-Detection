@@ -21,10 +21,9 @@ import kotlin.math.sqrt
 
 private const val TAG = "PaySense_Layer3"
 
-// SharedPreferences file + keys shared with the login flow in MainActivity.kt.
-// Keep these string literals in sync with MainActivity's own "paysense_prefs" /
-// "is_authenticated" usage — they must refer to the same prefs file.
-private const val PREFS_NAME        = "paysense_prefs"
+// SharedPreferences keys shared with the login flow in MainActivity.kt. The
+// prefs instance itself comes from SecurePrefs.kt (EncryptedSharedPreferences),
+// not a raw getSharedPreferences() call -- see that file for why.
 private const val KEY_AUTH_TOKEN    = "auth_token"
 private const val KEY_IS_AUTHENTICATED = "is_authenticated"
 
@@ -39,8 +38,7 @@ private const val KEY_IS_AUTHENTICATED = "is_authenticated"
 // ──────────────────────────────────────────────────────────────────────────────
 private class AuthInterceptor(private val context: Context) : okhttp3.Interceptor {
     override fun intercept(chain: okhttp3.Interceptor.Chain): okhttp3.Response {
-        val token = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .getString(KEY_AUTH_TOKEN, null)
+        val token = SecurePrefs.get(context).getString(KEY_AUTH_TOKEN, null)
         val original = chain.request()
         val request = if (token.isNullOrBlank()) {
             original
@@ -142,7 +140,7 @@ class FraudApiService private constructor(private val context: Context) {
                     Log.w(TAG, "⚠️  /auth/token empty response body")
                     return@withContext false
                 }
-                context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                SecurePrefs.get(context)
                     .edit()
                     .putString(KEY_AUTH_TOKEN, body.accessToken)
                     .putBoolean(KEY_IS_AUTHENTICATED, true)
@@ -165,7 +163,7 @@ class FraudApiService private constructor(private val context: Context) {
     // ──────────────────────────────────────────────────────────────────────────
     private fun clearAuth() {
         Log.w(TAG, "🔒  401 received — clearing stored token, user must log in again")
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        SecurePrefs.get(context)
             .edit()
             .remove(KEY_AUTH_TOKEN)
             .putBoolean(KEY_IS_AUTHENTICATED, false)

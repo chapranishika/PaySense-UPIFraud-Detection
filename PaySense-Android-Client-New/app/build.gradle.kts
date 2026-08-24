@@ -51,6 +51,9 @@ dependencies {
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("com.google.android.material:material:1.12.0")
 
+    // Encrypted SharedPreferences (JWT storage -- see SecurePrefs.kt)
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
+
     // Room (Local SQLite — Layer 2 cache)
     val roomVersion = "2.8.4"
     implementation("androidx.room:room-runtime:$roomVersion")

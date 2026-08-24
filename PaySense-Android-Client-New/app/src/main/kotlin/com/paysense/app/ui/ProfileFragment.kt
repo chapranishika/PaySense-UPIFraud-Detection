@@ -12,6 +12,7 @@ import com.google.android.material.snackbar.Snackbar
 import com.paysense.app.R
 import com.paysense.app.databinding.FragmentProfileBinding
 import com.paysense.app.databinding.ItemProfileQuickLinkBinding
+import com.paysense.app.layer3.SecurePrefs
 
 class ProfileFragment : Fragment() {
 
@@ -49,7 +50,7 @@ class ProfileFragment : Fragment() {
         setupQuickLinks()
 
         binding.btnProfileLogout.setOnClickListener {
-            val prefs = requireContext().getSharedPreferences("paysense_prefs", Context.MODE_PRIVATE)
+            val prefs = SecurePrefs.get(requireContext())
             // Also remove auth_token, not just flip is_authenticated -- otherwise
             // a still-valid JWT (up to ~60 min server-side) sits in prefs after
             // the user believes they've logged out. Matches FraudApiService's

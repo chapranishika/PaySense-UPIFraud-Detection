@@ -23,6 +23,7 @@ import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.paysense.app.R
 import com.paysense.app.databinding.ActivityMainBinding
 import com.paysense.app.layer3.FraudApiService
+import com.paysense.app.layer3.SecurePrefs
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
 import java.util.Locale
@@ -116,7 +117,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         // ── Auth Handling ────────────────────────────────────────────────────
-        val prefs = getSharedPreferences("paysense_prefs", Context.MODE_PRIVATE)
+        val prefs = SecurePrefs.get(this)
         val isAuthenticated = prefs.getBoolean("is_authenticated", false)
         if (!isAuthenticated) {
             showLoginOverlay()
