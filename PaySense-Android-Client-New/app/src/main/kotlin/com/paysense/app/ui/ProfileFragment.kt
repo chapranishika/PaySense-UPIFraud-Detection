@@ -8,11 +8,14 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import com.google.android.material.snackbar.Snackbar
 import com.paysense.app.R
 import com.paysense.app.databinding.FragmentProfileBinding
 import com.paysense.app.databinding.ItemProfileQuickLinkBinding
+import com.paysense.app.layer3.FraudApiService
 import com.paysense.app.layer3.SecurePrefs
+import kotlinx.coroutines.launch
 
 class ProfileFragment : Fragment() {
 
@@ -48,6 +51,7 @@ class ProfileFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         setupQuickLinks()
+        loadLiveEnsembleConfig()
 
         binding.btnProfileLogout.setOnClickListener {
             val prefs = SecurePrefs.get(requireContext())
@@ -60,6 +64,36 @@ class ProfileFragment : Fragment() {
                 .remove("auth_token")
                 .apply()
             (activity as? MainActivity)?.showLoginOverlay()
+        }
+    }
+
+    // Populates Decision Threshold / Ensemble Weights from a real GET /health
+    // call instead of the hardcoded "0.4000 / Rules(0.15)*XGB(0.85)" text
+    // this screen originally shipped with -- stale since before this
+    // session's threshold corrections and before the real 3-scorer ensemble
+    // existed. Same fix, same reasoning, as the web dashboard's Profile page
+    // (see main.py's /health `nominal_weights` field). Leaves the existing
+    // placeholder text in place on any failure rather than showing an error.
+    private fun loadLiveEnsembleConfig() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            val health = FraudApiService.getInstance(requireContext()).getHealth() ?: return@launch
+            val threshold = (health["threshold"] as? Number)?.toDouble()
+            @Suppress("UNCHECKED_CAST")
+            val weights = health["nominal_weights"] as? Map<String, Any>
+
+            if (_binding == null) return@launch  // fragment view may be gone by the time this resolves
+            if (threshold != null) {
+                binding.tvDecisionThreshold.text = String.format("%.4f", threshold)
+            }
+            if (weights != null) {
+                val rules = (weights["rules"] as? Number)?.toDouble()
+                val paysense = (weights["paysense"] as? Number)?.toDouble()
+                val lightLr = (weights["light_lr"] as? Number)?.toDouble()
+                if (rules != null && paysense != null && lightLr != null) {
+                    binding.tvEnsembleWeights.text =
+                        "Rules ($rules) · XGBoost ($paysense) · LightLR ($lightLr)"
+                }
+            }
         }
     }
 

@@ -225,7 +225,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="XGBoost Ensemble Scorer Parameters"
+            android:text="Ensemble Scorer Parameters"
             android:textColor="@color/text_primary"
             android:textSize="15sp"
             android:fontFamily="@font/poppins_bold"
@@ -259,9 +259,10 @@
                         android:text="Decision Threshold"
                         android:textColor="@color/text_secondary" />
                     <TextView
+                        android:id="@+id/tvDecisionThreshold"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="0.4000"
+                        android:text="&#8212;"
                         android:textColor="@color/text_primary"
                         android:fontFamily="sans-serif-medium" />
                 </LinearLayout>
@@ -278,12 +279,13 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Rules &amp; XGBoost Weights"
+                        android:text="Ensemble Weights"
                         android:textColor="@color/text_secondary" />
                     <TextView
+                        android:id="@+id/tvEnsembleWeights"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Rules (0.15) · XGB (0.85)"
+                        android:text="&#8212;"
                         android:textColor="@color/text_primary"
                         android:fontFamily="sans-serif-medium" />
                 </LinearLayout>

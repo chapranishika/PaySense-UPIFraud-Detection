@@ -163,6 +163,26 @@ class FraudApiService private constructor(private val context: Context) {
     }
 
     // ──────────────────────────────────────────────────────────────────────────
+    //  HEALTH
+    //  Exposes GET /health so screens can read live model config (deployed
+    //  threshold, ensemble weights) instead of hand-typing values that go
+    //  stale the next time the backend's threshold or weights change --
+    //  exactly the bug fixed in ProfileFragment/fragment_profile.xml.
+    //  Returns null on any failure; callers keep their existing text.
+    // ──────────────────────────────────────────────────────────────────────────
+    suspend fun getHealth(): Map<String, Any>? {
+        return withContext(Dispatchers.IO) {
+            try {
+                val response = api.healthCheck()
+                if (response.isSuccessful) response.body() else null
+            } catch (e: Exception) {
+                Log.w(TAG, "⚠️  /health network error | ${e.message}")
+                null
+            }
+        }
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
     //  CLEAR AUTH
     //  Called whenever an authenticated call comes back 401 (expired/invalid
     //  token — this app has no refresh-token flow, so the fix is simply to
