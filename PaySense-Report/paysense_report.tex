@@ -883,16 +883,25 @@ same fixed template pool as training. The true test---holding up on
 narration styles it has never seen a variant of---has since been measured
 directly: scored against 200 hand-authored, structurally-verified-novel
 transaction narrations (real HDFC/SBI/ICICI/Axis SMS formats, GPay/PhonePe/
-Paytm notifications), accuracy drops to \textbf{72.5\%}, and only 62.0\% of
-predictions both classify correctly and clear the Android client's own
-0.65 confidence gate. The mechanism was traced directly: the fitted TF-IDF
-vocabulary (821 tokens) is entirely mined from the 40 training templates,
-so novel sentences sharing no content word with training collapse to an
-identical, label-independent default prediction (30.0\% accuracy, near the
-20\% random baseline for 5 classes), while novel sentences that happen to
-reuse one training token score near training-level (86.7\%) but often via
-single-keyword lookup rather than narration understanding---see
-\texttt{CATEGORY\_CLASSIFIER\_GENERALIZATION.md} for the full breakdown,
+Paytm notifications), the originally-trained classifier scored \textbf{72.5\%}
+accuracy, with only 62.0\% of predictions both classifying correctly and
+clearing the Android client's own 0.65 confidence gate. The mechanism was
+traced directly: the fitted TF-IDF vocabulary (821 tokens) was entirely mined
+from the 40 training templates, so novel sentences sharing no content word
+with training collapsed to an identical, label-independent default prediction
+(30.0\% accuracy, near the 20\% random baseline for 5 classes), while novel
+sentences that happened to reuse one training token scored near
+training-level (86.7\%) but often via single-keyword lookup rather than
+narration understanding. Retraining on a blend of FinText-6K plus 8,000
+hand-built templates spanning far more merchants, banks, and sentence
+structures---verified programmatically disjoint from the evaluation set
+before training---was deployed 2026-08-24, raising novel-set accuracy to
+\textbf{78.0\%} and the confidence-gate pass rate to 70.5\%. Food, Travel,
+and Shopping still leak into one another on ambiguous vocabulary; EMI
+remains the only class that generalises close to perfectly, since ``EMI''
+is a rare, unambiguous token the other four classes lack an equivalent
+of---see \texttt{CATEGORY\_CLASSIFIER\_GENERALIZATION.md} and
+\texttt{CATEGORY\_CLASSIFIER\_V3\_ATTEMPT.md} for the full breakdown,
 including specific misclassifications this causes in production-realistic
 text. Replacing the TF-IDF representation with a TFLite on-device
 DistilBERT model remains the recommended next step for genuine

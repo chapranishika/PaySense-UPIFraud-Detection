@@ -135,9 +135,25 @@ this gap likely needs a representation that captures some of that context
 DistilBERT model) rather than more TF-IDF training data, though more data
 in the meantime is a real, free, low-risk improvement worth keeping.
 
-Not wired into `main.py`/`src/fraud_model.py` — saved as
-`artefacts/paysense_category_classifier_v3.pkl` for a follow-up deployment
-decision, same as every other candidate artifact produced tonight.
+Not wired into `main.py`/`src/fraud_model.py` at the time this section was
+written — saved as `artefacts/paysense_category_classifier_v3.pkl` for a
+follow-up deployment decision, same as every other candidate artifact
+produced tonight.
+
+**Deployed 2026-08-24.** `src/fraud_model.py` loads
+`artefacts/paysense_category_classifier.pkl` by a fixed filename, so
+deployment was a file swap, not a code change: the original (v1) artifact
+was archived as
+`artefacts/paysense_category_classifier_v1_deployed_until_2026-08-24.pkl`,
+and this v3 pipeline was copied into the canonical filename in its place.
+Verified before and after via `tests/test_category_generalization.py`
+(pinned numbers updated to v3's: 78.0% accuracy / 0.7849 macro F1 / 86.0%
+confidence-gate pass rate on the 200-row novel eval set) and
+`tests/test_api.py`'s `TestClassify` class, which exercises the deployed
+model through the real `/classify` endpoint — both pass. v4 (§3.5,
+marginally better gate-pass-rate but dependent on re-downloading external
+Kaggle data to reproduce, with no accuracy gain over v3) was considered and
+not chosen, to keep the deployed model's training pipeline self-contained.
 
 ## 3.5. v4 — adding real Kaggle data on top of v3
 

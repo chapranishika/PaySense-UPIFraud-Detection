@@ -60,13 +60,17 @@ FINTEXT_TEMPLATE_SUFFIX_PATTERN = re.compile(
     r"^[A-Za-z ]+ of Rs [0-9]+ via UPI Ref [0-9]+$"
 )
 
-# Pinned from CATEGORY_CLASSIFIER_GENERALIZATION.md's actual run of
-# score_category_generalization.py against the frozen artifact. A tight
+# Pinned from artefacts/category_classifier_v3_metrics.json's
+# gold_novel_eval_set_generalization block -- v3 was deployed to
+# artefacts/paysense_category_classifier.pkl on 2026-08-24
+# (CATEGORY_CLASSIFIER_V3_ATTEMPT.md), replacing the v1 classifier this
+# file originally pinned (72.5% / 0.7258 / 67.0%, archived as
+# paysense_category_classifier_v1_deployed_until_2026-08-24.pkl). A tight
 # tolerance -- inference is deterministic, so this should match exactly
 # unless the artifact or the CSV changed underneath the document.
-PUBLISHED_ACCURACY = 0.7250
-PUBLISHED_MACRO_F1 = 0.7258
-PUBLISHED_FRACTION_ABOVE_CONFIDENCE_GATE = 0.6700
+PUBLISHED_ACCURACY = 0.78
+PUBLISHED_MACRO_F1 = 0.7849
+PUBLISHED_FRACTION_ABOVE_CONFIDENCE_GATE = 0.86
 NLP_CONFIDENCE_THRESHOLD = 0.65  # matches Android's NLP_CONFIDENCE_THRESHOLD
 
 
