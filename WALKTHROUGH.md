@@ -69,6 +69,51 @@ the full account (a DLL search-path issue, then a hardcoded Vulkan ICD
 path, then an off-by-one partition size, each one only visible after
 fixing the last).
 
+**A second, deeper pass (also 2026-08-25)** exercised the full pipeline end
+to end on that same emulator — not just screens rendering, but the actual
+SMS parsing, fraud scoring, and AI assistant logic running against a real
+local backend:
+
+- **SMS auto-detection → categorization.** Injected a real SMS via
+  `adb emu sms send`. It landed in the emulator's SMS provider and, this
+  time confirmed via `content://sms/inbox` and the Category prompt
+  appearing on screen, actually reached `SmsReceiver`, passed all three
+  parsing gates, and surfaced the "what was this for?" HITL prompt with
+  the correct extracted amount and payee. (An earlier attempt in this same
+  session wrongly concluded the OS was silently dropping the broadcast —
+  a `logcat -c` clear, run while chasing an unrelated dead end, had wiped
+  the evidence of a broadcast that had already succeeded. Worth recording
+  as a reminder that a clean log is not the same as a failed delivery.)
+- **Fraud triggering.** A ₹15,000 Amazon purchase scored `ensemble=0.0770,
+  alert=none` — correctly left alone. A manually-entered ₹185,000 payment
+  to an unfamiliar payee, flagged as a new device with an IP mismatch,
+  scored `ensemble=0.9519, alert=high` and flipped the dashboard from
+  "100% SAFE" to "97% AT RISK, 1 transaction(s) need review" in real time.
+- **Notifications.** No system-level push notification appears for a
+  high-risk alert — the app doesn't request `POST_NOTIFICATIONS` and has
+  no notification channel. The only signals are in-app: a red badge on
+  the Dashboard tab and the "AT RISK" card. For a fraud-detection app,
+  that's a real gap — an alert only reaches the user if they happen to
+  have the app open.
+- **AI Assistant.** All three quick-action chips (Summary, Savings Tip,
+  Fraud Status) pull live figures from the real transaction history — the
+  "Fraud Attempts Blocked: 1" count matched the high-risk transaction
+  above exactly. Free-text chat is keyword-routed rather than a real LLM
+  (typing something that doesn't contain "summary", "tip", "save", or
+  "fraud"/"security"/"status" gets an honest "try typing X" fallback
+  instead of a fabricated answer) — a deliberate, disclosed design choice
+  visible directly in `AssistantFragment.kt`, not a bug.
+- **Insights.** The Finance tab's monthly view (month-over-month % change,
+  pace-based month-end projection, per-category deltas, cash-flow chart)
+  is genuinely computed from live data, not placeholder content.
+
+| | |
+|---|---|
+| ![Category HITL prompt from a real parsed SMS](screenshots/19_real_emulator_sms_categorization.png) | ![Dashboard flipped to AT RISK after a high-risk transaction](screenshots/20_real_emulator_fraud_alert.png) |
+| Category prompt, populated from a real SMS the receiver actually parsed | Dashboard after a ₹185,000 new-device/IP-mismatch transaction scored `alert=high` |
+| ![Monthly insights: pace, projection, category deltas](screenshots/21_real_emulator_insights.png) | ![AI Assistant summary with a live fraud count](screenshots/22_real_emulator_ai_assistant.png) |
+| Finance tab's computed monthly insights | AI Assistant summary, fraud count matching the transaction above |
+
 **Earlier screenshots (2026-07-24/25), from a real physical device**,
 covering screens the quick verification pass above didn't revisit:
 
