@@ -29,6 +29,7 @@
             android:layout_width="20dp"
             android:layout_height="20dp"
             android:layout_gravity="center"
+            android:contentDescription="@null"
             app:tint="@android:color/white"
             tools:src="@drawable/ic_payment" />
     </FrameLayout>

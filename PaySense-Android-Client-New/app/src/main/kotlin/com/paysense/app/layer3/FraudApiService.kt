@@ -75,6 +75,11 @@ private class AuthInterceptor(private val context: Context) : okhttp3.Intercepto
 //    fallbackToDestructiveMigration() replaced with MIGRATION_1_2 in
 //    PaySenseDatabase.kt — user transaction history now survives app updates.
 // ============================================================================
+// Lint's StaticFieldLeak flags any class with a Context field held by a
+// static INSTANCE, but can't see past the constructor call below to confirm
+// it's actually applicationContext, not an Activity -- verified false
+// positive, suppressed rather than left as unexplained noise in the report.
+@Suppress("StaticFieldLeak")
 class FraudApiService private constructor(private val context: Context) {
 
     companion object {
@@ -84,6 +89,9 @@ class FraudApiService private constructor(private val context: Context) {
         @Volatile private var INSTANCE: FraudApiService? = null
         fun getInstance(context: Context): FraudApiService =
             INSTANCE ?: synchronized(this) {
+                // .applicationContext, not the passed-in context -- avoids
+                // exactly the leak this class's own StaticFieldLeak suppression
+                // above claims is a false positive. Keep them in sync.
                 INSTANCE ?: FraudApiService(context.applicationContext).also { INSTANCE = it }
             }
     }

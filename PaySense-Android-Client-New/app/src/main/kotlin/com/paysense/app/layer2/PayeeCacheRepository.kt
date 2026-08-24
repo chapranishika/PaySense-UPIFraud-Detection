@@ -27,6 +27,9 @@ private const val TAG = "PaySense_Layer2"
 //  This is the function you should walk the panel through — it is the
 //  architectural heart of Layer 2.
 // ──────────────────────────────────────────────────────────────────────────────
+// Same verified false positive as FraudApiService.kt -- getInstance() below
+// stores context.applicationContext, not an Activity Context.
+@Suppress("StaticFieldLeak")
 class PayeeCacheRepository private constructor(private val context: Context) {
 
     private val dao: PayeeDao =
