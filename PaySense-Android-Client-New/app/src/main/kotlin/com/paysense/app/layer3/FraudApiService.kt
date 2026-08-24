@@ -3,6 +3,7 @@ package com.paysense.app.layer3
 import android.content.Context
 import android.util.Log
 import com.google.gson.GsonBuilder
+import com.paysense.app.BuildConfig
 import com.paysense.app.layer1.ParsedTransaction
 import com.paysense.app.layer2.PaySenseDatabase
 import com.paysense.app.layer2.TransactionDao
@@ -93,8 +94,13 @@ class FraudApiService private constructor(private val context: Context) {
         PaySenseDatabase.getInstance(context).transactionDao()
 
     private val api: PaySenseApi by lazy {
+        // BODY logs the full request/response, including the Authorization:
+        // Bearer <jwt> header AuthInterceptor attaches below and every
+        // transaction payload -- fine for a debug build's own Logcat, a real
+        // credential/PII leak if it ran in release too. NONE logs nothing.
         val logging = HttpLoggingInterceptor { Log.d(TAG, "HTTP | $it") }
-            .apply { level = HttpLoggingInterceptor.Level.BODY }
+            .apply { level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BODY
+                              else HttpLoggingInterceptor.Level.NONE }
 
         val client = OkHttpClient.Builder()
             .addInterceptor(AuthInterceptor(context))

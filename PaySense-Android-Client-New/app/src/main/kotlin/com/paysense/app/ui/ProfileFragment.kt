@@ -50,7 +50,14 @@ class ProfileFragment : Fragment() {
 
         binding.btnProfileLogout.setOnClickListener {
             val prefs = requireContext().getSharedPreferences("paysense_prefs", Context.MODE_PRIVATE)
-            prefs.edit().putBoolean("is_authenticated", false).apply()
+            // Also remove auth_token, not just flip is_authenticated -- otherwise
+            // a still-valid JWT (up to ~60 min server-side) sits in prefs after
+            // the user believes they've logged out. Matches FraudApiService's
+            // own clearAuth(), used on the 401 path.
+            prefs.edit()
+                .putBoolean("is_authenticated", false)
+                .remove("auth_token")
+                .apply()
             (activity as? MainActivity)?.showLoginOverlay()
         }
     }
