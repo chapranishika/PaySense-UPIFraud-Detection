@@ -41,11 +41,13 @@ trusting anything enough to score against it.
 
 ## 1. Why this check exists
 
-The frozen model's only reported metrics (ROC-AUC 0.8889, PR-AUC 0.5352 as
-of the 2026-08-23 monotonic-constraints retrain — was ROC-AUC 0.8863, PR-AUC
-0.5339 on 2026-08-22, and an earlier, stale 0.8851/0.5303 before that had
-drifted from what the artifacts actually produced at the time, see
-README.md's Key Results note) come
+The frozen model's only reported metrics (ROC-AUC 0.8969, PR-AUC 0.5498,
+real 3-scorer ensemble, as of the 2026-08-24 raw-vs-ensemble methodology
+correction — was ROC-AUC 0.8889, PR-AUC 0.5352 raw-XGBoost-only figures
+mistakenly reported as canonical before that; 0.8863/0.5339 on 2026-08-23
+after the monotonic-constraints retrain; and an earlier, stale 0.8851/0.5303
+before that had drifted from what the artifacts actually produced at the
+time — see README.md's Key Results note) come
 from a held-out split of `paysense_master_dataset.csv` — a dataset built from
 one 20,000-row anchor plus one 10,000-row synthetic supplement, joined and
 schema-bridged by the same author who trained the model. A held-out split of

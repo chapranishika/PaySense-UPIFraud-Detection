@@ -389,16 +389,16 @@ The architecture diagram above says "Tier 2: NLP classifier" — until now, that
 
 ## Generalization Check
 
-The 0.8889 ROC-AUC above is measured on a held-out split of the model's *own* training pipeline — it proves the model didn't memorize its own test rows, not that it works on data it's never seen. `PaySense-ML-Backend/GENERALIZATION_CHECK.md` closes that gap: the frozen model, unmodified, was scored against real UPI/fraud datasets it was never trained on, using the same dataset-vetting rigor as the Trojan Family discovery (one 100K-row candidate with a suspicious flat 20.00% fraud rate and near-deterministic feature→label correlations was rejected outright, the same way the pre-balanced Trojan file was).
+The 0.8969 ROC-AUC above is measured on a held-out split of the model's *own* training pipeline — it proves the model didn't memorize its own test rows, not that it works on data it's never seen. `PaySense-ML-Backend/GENERALIZATION_CHECK.md` closes that gap: the frozen model, unmodified, was scored against real UPI/fraud datasets it was never trained on, using the same dataset-vetting rigor as the Trojan Family discovery (one 100K-row candidate with a suspicious flat 20.00% fraud rate and near-deterministic feature→label correlations was rejected outright, the same way the pre-balanced Trojan file was).
 
-On the one dataset that passed vetting (74,917 real rows, 0.94% fraud, only 6 of 40 features honestly mappable to PaySense's schema — the rest imputed):
+On the one dataset that passed vetting (74,917 real rows, 0.94% fraud, only 6 of 40 features honestly mappable to PaySense's schema — the rest imputed), scored through the real 3-scorer ensemble (not raw XGBoost alone — see the Key Results note above on why that distinction matters):
 
 | Metric | Value |
 |---|---|
-| ROC-AUC | 0.7687 — real ranking signal, using ~15% of the feature vector |
-| Recall @ production threshold (0.30) | **0 / 701** — the model's max output on this dataset was 0.0112, ~27× below its own decision threshold |
+| ROC-AUC | 0.7919 — real ranking signal, using ~15% of the feature vector (raw XGBoost alone: 0.7687) |
+| Recall @ deployed threshold (0.50) | **0 / 701** — the model's max output on this dataset was 0.0847, far below its own decision threshold |
 
-**Honest read:** the model learned *something* transferable — it isn't pure memorization — but it is not operationally useful on any transaction stream that can't supply its full 40-feature, personalization-heavy vector (per-user z-scores, device/IP risk, KYC flags), and no such real-world dataset appears to exist outside this project's own synthetic pipeline. That's a real generalization gap, reported rather than hidden. **Recomputed 2026-08-23** against the monotonic-constraints model adopted that day (see the Key Results note above) — the ROC-AUC moved from 0.8064 to 0.7687 (still a real, if more modest, ranking signal) and the zero-recall finding is unchanged. Full numbers, the ensemble comparison, and the secondary low-power dataset are in `GENERALIZATION_CHECK.md`.
+**Honest read:** the model learned *something* transferable — it isn't pure memorization — but it is not operationally useful on any transaction stream that can't supply its full 40-feature, personalization-heavy vector (per-user z-scores, device/IP risk, KYC flags), and no such real-world dataset appears to exist outside this project's own synthetic pipeline. That's a real generalization gap, reported rather than hidden. **Recomputed 2026-08-24** against the current model and the corrected deployed threshold — the ensemble ROC-AUC is 0.7919 and the zero-recall finding is unchanged regardless of which threshold (0.30 or 0.50) is applied, since the model's maximum score on this dataset sits below both. A newer, richer real dataset was also tried (`REAL_DATA_AND_RESEARCH_GROUNDING.md`) and scored at chance — traced to a currency-scale mismatch in the rules scorer specific to that USD-denominated dataset, not further evidence against the model. Full numbers, the ensemble comparison, and every secondary dataset are in `GENERALIZATION_CHECK.md` and `REAL_DATA_AND_RESEARCH_GROUNDING.md`.
 
 ---
 
