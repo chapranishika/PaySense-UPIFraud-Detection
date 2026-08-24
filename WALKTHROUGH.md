@@ -293,6 +293,21 @@ this project was audited with.
   acceleration confirmed available) and failed on a permission this
   automated environment can't grant itself. Documented for anyone running
   this from a normal desktop session.
+- **FOUND / FIXED** — `./gradlew build`'s lint step had never actually run
+  all session — the first JDK used (Eclipse Temurin) is missing the JPEG
+  codec library Lint's icon checker needs, confirmed by searching the
+  entire JDK install (genuinely absent, not a config issue), which crashed
+  lint before it could analyze anything. Swapped in the Microsoft Build of
+  OpenJDK 17 instead, and Lint finally ran — surfacing 8 real errors: two
+  broadcast receivers (`com.paysense.SHOW_CATEGORY_PROMPT`,
+  `com.paysense.FRAUD_ALERT_HIGH`) were exported with no protection at all
+  on pre-Android-13 devices, meaning any other installed app could have
+  broadcast either action to spoof a fake fraud alert or category prompt.
+  Fixed with `ContextCompat.registerReceiver(..., RECEIVER_NOT_EXPORTED)`,
+  applying the fix uniformly instead of only on newer API levels. The
+  other 6 errors were pure correctness bugs (below). `./gradlew build` now
+  completes with 0 lint errors, confirmed by lint's own tally, not just
+  the exit code.
 
 </details>
 
@@ -375,6 +390,24 @@ this project was audited with.
   weight constants through `/health` and having the dashboard read them
   live, rather than re-typing a corrected number that would just go stale
   again next time the model changes.
+- **FOUND / FIXED** — "Run gradle fully" surfaced that Android Lint had
+  never actually completed all session (see the Security section above for
+  the JDK-swap story and the exported-receiver finding it led to). The
+  other 6 lint errors were pure correctness bugs, not security: 4 were the
+  same root cause — `SmsReceiver.kt`'s named regex-group access
+  (`result.groups["amount"]`) compiles to `Matcher#start(String)`, which
+  requires Android API 26, but the app's `minSdk` is 24. This is Gate 3 of
+  the always-on SMS parser — it would have crashed with
+  `NoSuchMethodError` on every single incoming SMS on a real Android
+  7.0/7.1 device, silently breaking the app's core input path on hardware
+  it claims to support. Fixed by switching to indexed group access
+  (`result.groups[1]`..`[4]`) — identical regex, identical group order, no
+  API-26 dependency. The last 2 were an `AndroidManifest.xml` gap:
+  `RECEIVE_SMS`/`READ_SMS` with no `<uses-feature
+  android:name="android.hardware.telephony" required="false">` tag would
+  have made the Play Store treat telephony hardware as implicitly
+  required, blocking installation on Wi-Fi-only tablets and Chrome OS
+  devices that could otherwise use the app's manual-entry fallback.
 
 </details>
 

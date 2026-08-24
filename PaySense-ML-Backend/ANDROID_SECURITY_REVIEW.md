@@ -4,14 +4,19 @@
 code review only, with no JDK available in this environment to build or
 test anything. A portable Eclipse Temurin JDK 17 was installed for this
 session afterward (no admin rights, extracted to a local directory) so all
-four findings below marked FIXED could actually be compiled, assembled
+five findings below marked FIXED could actually be compiled, assembled
 into a real debug APK, and checked against the project's existing unit
 tests — not just written and hoped correct. `./gradlew assembleDebug` and
-`./gradlew testDebugUnitTest` both pass clean after all four changes.
-(Finding #4's fix compiles and builds clean like the other three, but its
+`./gradlew testDebugUnitTest` both pass clean after every change.
+(Finding #4's fix compiles and builds clean like the others, but its
 one genuinely runtime-only property — the Android Keystore round-trip —
 could not be live-verified in this environment; see its section below for
-exactly why and what was actually attempted.)
+exactly why and what was actually attempted. Finding #5 and the two purely-
+correctness bugs alongside it required a second, different JDK — Eclipse
+Temurin's Windows build is missing the JPEG codec library Lint's icon
+checker needs, so `./gradlew build`'s lint step never actually ran until
+the Microsoft Build of OpenJDK was substituted in — see finding #5 for the
+full account.)
 
 Scope: `PaySense-Android-Client-New/app/src/main/kotlin/com/paysense/app/`,
 focused on the login flow, token handling, and network layer.
@@ -125,6 +130,39 @@ Lower severity than #1 even so, given the JWT is already short-lived
 (~60 minutes) and there's no refresh-token to make persistent — but the
 fix is real and shipped, not just documented as a good idea.
 
+### 5. Two broadcast receivers were exported with no flag on pre-Android-13 — FIXED
+
+Found by finally getting Android Lint to run to completion, not by manual
+review (see below). `MainActivity.registerReceivers()` had a manual
+`Build.VERSION_CODES.TIRAMISU` branch: on Android 13+ it correctly passed
+`RECEIVER_NOT_EXPORTED`, but pre-13 it called the 2-arg `registerReceiver()`
+with no flag at all — which defaults to **exported**. `categoryPromptReceiver`
+and `fraudAlertReceiver` listen for `com.paysense.SHOW_CATEGORY_PROMPT` and
+`com.paysense.FRAUD_ALERT_HIGH`, custom action strings with no permission
+protection — meaning on any pre-Android-13 device, **any other installed
+app** could broadcast either action and trigger these receivers directly,
+spoofing a fake fraud alert or category prompt inside PaySense.
+
+Fixed by replacing the manual branch with
+`ContextCompat.registerReceiver(this, receiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)`
+— the AndroidX compat call applies the not-exported flag correctly across
+every API level in one call, closing the pre-13 exposure instead of just
+satisfying newer devices.
+
+**How this was found**: `./gradlew build` (the full lifecycle, lint
+included) had never actually completed all session. The first portable
+JDK used tonight (Eclipse Temurin) is missing `javajpeg.dll` — confirmed
+by searching the entire JDK install for any JPEG codec library, genuinely
+absent, not a config issue — which crashes Lint's `IconDetector` before
+analysis can even start. Downloaded the Microsoft Build of OpenJDK 17
+instead (built and tested specifically for Windows); confirmed
+`javajpeg.dll` exists there, and Lint finally ran, surfacing this finding
+plus two purely-correctness bugs (a `minSdk`-violating API call in the SMS
+parser, a missing Play Store `<uses-feature>` declaration) — all three
+fixed in the same pass. `./gradlew build` now completes with 0 lint
+errors (was 8), 283 advisory warnings (dependency versions, hardcoded
+strings — not correctness or security issues).
+
 ## Live-verifying the Keystore round-trip (left for an elevated session)
 
 The Android SDK, system image, and AVD are already set up:
@@ -148,8 +186,15 @@ state — the practical sign the Keystore round-trip actually works.
 
 ```
 cd PaySense-Android-Client-New
-JAVA_HOME=<path to a JDK 17 install> ./gradlew assembleDebug compileReleaseKotlin testDebugUnitTest
+JAVA_HOME=<path to a JDK 17 install> ./gradlew build
 ```
 Gradle wrapper is 9.1.0 (`gradle/wrapper/gradle-wrapper.properties`);
 `app/build.gradle.kts` pins `sourceCompatibility`/`targetCompatibility` to
 `JavaVersion.VERSION_17`, so a JDK 17 (not 21) install matches exactly.
+**Use a JDK that actually ships JPEG codec support for AWT/ImageIO** —
+Eclipse Temurin's Windows `jdk` archive does not (verified by searching the
+whole install for any `*jpeg*` native library; genuinely absent), which
+crashes `lintAnalyzeDebug` before analysis starts and silently prevents
+`./gradlew build`'s lint step from ever running. The Microsoft Build of
+OpenJDK 17 for Windows does ship it and was used to actually get Lint
+running for finding #5 above.
