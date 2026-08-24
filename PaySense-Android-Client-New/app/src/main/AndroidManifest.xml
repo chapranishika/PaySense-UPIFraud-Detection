@@ -7,6 +7,12 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
+    <!-- RECEIVE_SMS/READ_SMS otherwise implicitly require telephony hardware,
+         which would block Play Store installs on non-telephony devices
+         (Wi-Fi tablets, Chrome OS). required="false" because the app's
+         manual transaction entry works without SMS auto-detection. -->
+    <uses-feature android:name="android.hardware.telephony" android:required="false" />
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"

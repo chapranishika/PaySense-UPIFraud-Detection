@@ -187,11 +187,15 @@ class SmsReceiver : BroadcastReceiver() {
         var txnId : String? = null
         var date  : String? = null
 
+        // Indexed access (groups[N]), not named (groups["name"]) -- the named
+        // String-keyed overload calls Matcher#start(String), which requires
+        // API 26, but minSdk is 24. Indices below match GATE3_EXTRACTION_REGEX's
+        // left-to-right group order: 1=amount, 2=payee, 3=txnId, 4=date.
         for (result in GATE3_EXTRACTION_REGEX.findAll(body)) {
-            if (amount == null) amount = result.groups["amount"]?.value?.replace(",", "")
-            if (payee  == null) payee  = result.groups["payee"]?.value?.trim()
-            if (txnId  == null) txnId  = result.groups["txnId"]?.value?.trim()
-            if (date   == null) date   = result.groups["date"]?.value?.trim()
+            if (amount == null) amount = result.groups[1]?.value?.replace(",", "")
+            if (payee  == null) payee  = result.groups[2]?.value?.trim()
+            if (txnId  == null) txnId  = result.groups[3]?.value?.trim()
+            if (date   == null) date   = result.groups[4]?.value?.trim()
         }
 
         Log.d(TAG, "🔵  Gate 3 extract | amount=$amount payee=$payee txnId=$txnId")

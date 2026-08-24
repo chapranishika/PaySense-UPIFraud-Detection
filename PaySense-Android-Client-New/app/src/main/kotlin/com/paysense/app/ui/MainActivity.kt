@@ -293,12 +293,16 @@ class MainActivity : AppCompatActivity() {
     private fun registerReceivers() {
         val catFilter   = IntentFilter("com.paysense.SHOW_CATEGORY_PROMPT")
         val fraudFilter = IntentFilter("com.paysense.FRAUD_ALERT_HIGH")
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(categoryPromptReceiver, catFilter,   RECEIVER_NOT_EXPORTED)
-            registerReceiver(fraudAlertReceiver,    fraudFilter,  RECEIVER_NOT_EXPORTED)
-        } else {
-            registerReceiver(categoryPromptReceiver, catFilter)
-            registerReceiver(fraudAlertReceiver,    fraudFilter)
-        }
+        // ContextCompat.registerReceiver (not the manual SDK_INT branch this
+        // replaced) applies RECEIVER_NOT_EXPORTED uniformly across all API
+        // levels -- a no-op pre-33, enforced on 33+ -- and satisfies lint's
+        // UnspecifiedRegisterReceiverFlag check, which flagged the old
+        // pre-Tiramisu branch as an error even though it was intentional.
+        ContextCompat.registerReceiver(
+            this, categoryPromptReceiver, catFilter, ContextCompat.RECEIVER_NOT_EXPORTED,
+        )
+        ContextCompat.registerReceiver(
+            this, fraudAlertReceiver, fraudFilter, ContextCompat.RECEIVER_NOT_EXPORTED,
+        )
     }
 }
