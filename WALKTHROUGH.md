@@ -16,7 +16,35 @@ as the wins. Nothing here is softened for the writeup.
 ## Live proof
 
 The screenshots below are real — captured from an actual running instance
-of this exact code, not mocked or staged.
+of this exact code, not mocked or staged. PaySense ships as **two real
+clients against the same backend**: a native Android app, and a full web
+dashboard served directly by the FastAPI backend itself at `/` — the same
+process that answers the JSON API also serves a browser-based version of
+the whole product, which is what a Vercel/Render deployment of the backend
+actually puts online.
+
+### The web app
+
+Logged into a real running local instance (`http://127.0.0.1:8010/`)
+through an actual browser — real login against `/auth/token`, real data
+from `/health`, `/predict`, `/insights/weekly`:
+
+| | |
+|---|---|
+| ![Web login](screenshots/11_webapp_login.png) | ![Overview](screenshots/12_webapp_overview.png) |
+| Login — same `/auth/token` the Android client and the API use | Overview: live ensemble status ("3 ACTIVE SCORERS"), a real transaction feed, and a "Simulate SMS Intercept" tool for testing Layer-1 SMS parsing |
+| ![Finance tracker](screenshots/15_webapp_finance.png) | ![AI Assistant](screenshots/13_webapp_ai_assistant.png) |
+| Category spending analysis | The AI Assistant tab — chats against `/insights/weekly` |
+| ![Profile](screenshots/14_webapp_profile.png) | |
+| Profile — ensemble threshold and weights, now genuinely live (see the fix log) | |
+
+**A real bug was found and fixed while capturing these**: the Profile
+page's "Decision Threshold" and "Ensemble Weights" were hardcoded in
+`index.html` at `0.4000` / `Rules (0.15) · XGBoost (0.85)` — stale numbers
+from before tonight's threshold corrections and before the real 3-scorer
+ensemble existed. Fixed at the source: `/health` now exposes the actual
+weight constants `fraud_model.py` uses, and the dashboard reads them live
+instead of repeating hand-typed text that can silently go stale again.
 
 ### The Android client
 
@@ -31,13 +59,13 @@ of this exact code, not mocked or staged.
 | ![Finance tracker](screenshots/8_finance_tracker.png) | ![Cash flow view](screenshots/9_finance_cash_flow.png) |
 | Finance tracker | Cash flow breakdown |
 
-### The backend, live and unmocked
+### The raw API, for anyone integrating against it directly
 
 Captured 2026-08-24, against a real running `uvicorn` process on this exact
 codebase — real HTTP requests, real JWT auth, real model inference:
 
 ![Swagger UI](screenshots/01_swagger_ui_overview.png)
-*Every endpoint the Android client actually calls, self-documented.*
+*Every endpoint either client actually calls, self-documented.*
 
 ![/predict expanded](screenshots/02_swagger_predict_expanded.png)
 *The fraud-scoring endpoint's real contract: 40 features in, a calibrated score out.*
@@ -337,6 +365,16 @@ this project was audited with.
   test client) covering login → predict → classify → insights, plus every
   security fix (auth guard, prompt-injection rejection, VPA validation,
   numeric bounds) — all confirmed holding under real HTTP traffic.
+- **FOUND / FIXED** — There's a full web dashboard served at `/` by this
+  same backend, separate from the Android client and never actually
+  clicked through until asked "it should be an app, what is this?" Its
+  Profile page hardcoded `Decision Threshold: 0.4000` and
+  `Ensemble Weights: Rules (0.15) · XGBoost (0.85)` directly in
+  `index.html` — stale since before tonight's threshold corrections and
+  before the real 3-scorer ensemble existed. Fixed by exposing the actual
+  weight constants through `/health` and having the dashboard read them
+  live, rather than re-typing a corrected number that would just go stale
+  again next time the model changes.
 
 </details>
 

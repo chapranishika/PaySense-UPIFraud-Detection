@@ -4,6 +4,14 @@ An alternative to `DEPLOY.md`'s Render setup. Read the size finding below
 before deploying — it determines which Vercel plan setting is required, and
 skipping it will produce a build that fails with a bundle-size error.
 
+**This is not just an API deployment.** `main.py` serves a full web
+dashboard (`static/index.html` + `app.js`) at `/`, in addition to the JSON
+endpoints — real login, a transaction feed, an AI assistant tab, and a
+finance tracker, all wired to the same live backend. Deploying this
+function to Vercel puts that whole app online at `https://<project>.vercel.app/`,
+not just an API surface — see `WALKTHROUGH.md`'s "The web app" section for
+what it actually looks like.
+
 ---
 
 ## The size finding — measured, not estimated
