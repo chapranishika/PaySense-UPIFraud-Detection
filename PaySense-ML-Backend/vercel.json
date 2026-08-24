@@ -1,0 +1,8 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "main.py": {
+      "excludeFiles": "{tests/**,__pycache__/**,**/__pycache__/**,venv/**,.venv/**,static/plots/**,plots/**,external_data/**,*.csv,*.npy,*.log,*.zip,distilbert_train_tmp/**,artefacts/paysense_category_classifier_distilbert/**,artefacts/*_v1_deployed_until*.pkl,artefacts/*_v2.pkl,artefacts/*_v2_metrics.json,artefacts/*_v3.pkl,artefacts/*_v4.pkl,artefacts/*_v3_metrics.json,artefacts/*_v4_metrics.json,artefacts/*_blended_training*,artefacts/*_composite_feature*,artefacts/*_feature_engineered*,artefacts/*_interaction_constrained*,artefacts/*_monotonic*,artefacts/*_regularized*,artefacts/*_research_grounded*,artefacts/*_vanilla_replica*,artefacts/platt_calibrator.pkl,artefacts/category_classifier_distilbert_metrics.json,artefacts/category_generalization_metrics.json,artefacts/paysense_category_classifier_metrics.json,artefacts/light_lr_metrics.json,artefacts/paysense_phase3_metrics.json}"
+    }
+  }
+}
