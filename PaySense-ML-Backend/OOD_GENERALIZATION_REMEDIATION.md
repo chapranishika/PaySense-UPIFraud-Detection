@@ -220,3 +220,86 @@ Takes on the order of an hour — trains two model variants, then scores
 baseline + both variants through the real ensemble path against Dataset 1
 (74,917 rows, several minutes per model) and Dataset 3. Results are written
 to `ood_generalization_remediation_results.json`.
+
+## 7. Following up on the open question — does a lower threshold recover real fraud?
+
+§4 left two honest follow-up questions open rather than answered with
+unearned confidence. This closes the first one: **would a much lower,
+OOD-specific operating threshold applied to Variant A actually recover real
+fraud rows, given its improved ranking?**
+
+`ood_threshold_sweep_variant_a.py` re-scores Dataset 1 and Dataset 3 through
+Variant A's already-saved artifact (no retraining — read-only inference,
+same `swap_ps_state`/`score_ensemble_dataframe` harness as above) and sweeps
+a fine, low threshold grid instead of fixing it at the deployed 0.30. Full
+tables in `ood_threshold_sweep_variant_a_results.json`; key rows:
+
+**Dataset 1 (74,917 rows, 701 fraud, the primary real-world check):**
+
+| Threshold | TP | FP | Recall | Precision | FPR | Total flagged |
+|---:|---:|---:|---:|---:|---:|---:|
+| 0.30 (deployed) | 0 | 0 | 0.00% | — | 0.00% | 0 |
+| 0.060 | **37** | **0** | 5.28% | **100.00%** | 0.00% | 37 |
+| 0.055 | 319 | 283 | 45.51% | 52.99% | 0.38% | 602 |
+| 0.050 | 464 | 3,096 | 66.19% | 13.03% | 4.17% | 3,560 |
+| 0.035 and below | 701 | 74,216 | 100.00% | 0.94% | 100.00% | 74,917 |
+
+**This is a real, if modest, answer — the first time any check tonight (or
+any prior night) found a threshold on any model that catches *any* real
+fraud on this dataset.** At τ=0.06, Variant A catches 37 of 701 real fraud
+rows with zero false positives — a small slice of real capability that
+simply does not exist at the deployed threshold, where every single check
+this project has ever run reports exactly 0/701, no exceptions. A more
+aggressive threshold (0.055) recovers ten times more fraud (45.5%) but the
+cost has to be reported in the same breath: 283 legitimate transactions
+would also be flagged. Below 0.035, the model's score distribution on this
+dataset stops discriminating anything at all — literally every row, fraud
+or not, scores above the threshold, so "100% recall" there is worthless
+(0.94% precision, the base fraud rate, i.e. flagging the entire dataset).
+
+**Dataset 3 (1,000 rows, 64 fraud, only 5% of features honestly mappable —
+much sparser than Dataset 1's 15%) shows no such usable middle ground.**
+The transition is a cliff, not a ramp: 0 recall at threshold 0.04, then
+straight to 64/64 (100%) recall with 936/936 (100% FPR) at threshold 0.035
+— nothing in between. The remediation that works on Dataset 1 does not
+generalize to a dataset with less feature coverage; this is consistent with
+every other finding in this project tying generalization quality to how
+much of the 40-feature vector a real dataset can honestly supply.
+
+**The necessary caveat, stated as plainly as the finding itself:** this
+threshold was found by sweeping directly against Dataset 1's own labels,
+not a separate calibration split held out from the sweep itself. The
+honest reading of "37/701 @ 100% precision, threshold 0.06" is *"this
+specific dataset, examined in retrospect,"* not *"a validated operating
+point that would reproduce on the next unseen external dataset."* Reporting
+the full curve (not just the best point) is the mitigation available here —
+a reader can see exactly how narrow the useful band is (0.050–0.062, a
+razor's edge in a model whose scores are otherwise flat) and judge for
+themselves rather than take a single cherry-picked number on faith.
+
+**What this changes, and what it doesn't:** this is not a deployment
+recommendation. Variant A remains undeployed, for the same reason §4 gave —
+no OOD-specific threshold policy exists in `main.py`/`src/fraud_model.py`,
+and building one (detecting "this looks like an out-of-distribution
+transaction, switch to threshold X instead of the deployed 0.30/0.50")
+is a materially different, larger piece of engineering than this document
+set out to do. What *does* change: "the model catches literally zero real
+out-of-distribution fraud, always, at any threshold anyone has tried" was
+true of every prior check in this project and is no longer true — a real,
+narrow, quantified, honestly-caveated exception now exists, and it's
+documented rather than left as an unexplored dead end.
+
+## 8. Reproducing the threshold sweep
+
+```
+cd PaySense-ML-Backend
+venv\Scripts\python.exe ood_threshold_sweep_variant_a.py
+```
+
+Read-only inference against the already-trained
+`artefacts/paysense_model_blended_training.pkl` (no retraining). Takes
+about 11 minutes — Dataset 1's 74,917 rows scored row-by-row through the
+real ensemble at ~119 rows/sec is the only slow part; Dataset 3 (1,000
+rows) takes seconds. Results written to
+`ood_threshold_sweep_variant_a_results.json`; pinned in
+`tests/test_ood_threshold_sweep_variant_a.py`.
