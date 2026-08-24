@@ -114,6 +114,38 @@ local backend:
 | ![Monthly insights: pace, projection, category deltas](screenshots/21_real_emulator_insights.png) | ![AI Assistant summary with a live fraud count](screenshots/22_real_emulator_ai_assistant.png) |
 | Finance tab's computed monthly insights | AI Assistant summary, fraud count matching the transaction above |
 
+**A third pass, this time in a visible emulator window (also 2026-08-25).**
+Every screenshot above was captured with the emulator running headless —
+driven blind through `adb`, with no window to actually watch. Asked why
+nothing appeared on-screen during that pass, the honest answer was: it
+never should have — Gradle is a CLI tool with no window of its own, and the
+AVD itself was launched via the headless qemu backend directly. Getting a
+real, visible emulator window took one more fix: `emulator.exe`'s Qt-based
+UI needs its DLLs on `PATH` (`emulator/lib64/qt/lib`) same as the qemu
+backend did, and — separately — this machine has two Android SDK
+installations, and `ANDROID_SDK_ROOT` has to point at the one
+(`E:\Android\SDK`) that actually holds the AVD's system image, not the one
+with the emulator binaries. With both fixed, `emulator.exe` opens a real,
+watchable window with WHPX hardware acceleration.
+
+That window surfaced a real bug the headless pass had missed entirely:
+the Profile screen's "Ensemble Scorer Parameters" card was still showing
+the old hardcoded `0.4000` / `Rules (0.15) · XGB (0.85)` on this AVD — a
+different, separate device instance than the one the live-data fix had
+been installed and tested on earlier, still running a build from before
+that fix. Reinstalling the current APK corrected it immediately. Worth
+recording as a reminder that "fixed and installed on one test device" and
+"fixed everywhere" are not the same claim.
+
+| | |
+|---|---|
+| ![Real login, credentials visible mid-type](screenshots/23_windowed_emulator_login.png) | ![Dashboard after a real POST /auth/token](screenshots/24_windowed_emulator_dashboard.png) |
+| A genuine login — typed live, `POST /auth/token` → `200` confirmed in the backend log | Dashboard rendered after that real login, watched live in the emulator window |
+| ![Profile screen showing live ensemble config](screenshots/25_windowed_emulator_live_profile.png) | ![Finance tab at native Pixel 9 resolution](screenshots/26_windowed_emulator_finance.png) |
+| Decision Threshold `0.5000`, Weights `Rules (0.15) · XGBoost (0.6) · LightLR (0.25)` — live, not hardcoded | Finance tab rendering cleanly at native 1080×2424 |
+| ![AI Assistant summary, live figures](screenshots/27_windowed_emulator_assistant.png) | |
+| Assistant's Summary quick action, pulling the real transaction total and fraud count | |
+
 **Earlier screenshots (2026-07-24/25), from a real physical device**,
 covering screens the quick verification pass above didn't revisit:
 
