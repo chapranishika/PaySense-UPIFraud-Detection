@@ -50,7 +50,7 @@ import pandas  as pd
 import uvicorn
 from dotenv import load_dotenv
 
-from fastapi               import Depends, FastAPI, HTTPException, Request, status
+from fastapi               import Depends, FastAPI, HTTPException, Query, Request, status
 from fastapi.responses     import HTMLResponse
 from fastapi.staticfiles   import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -537,6 +537,20 @@ async def classify(
     return CategoryResponse(category=result.category, confidence=result.confidence)
 
 
+# The exact set of categories _rule_based_tip() below has a hand-written tip
+# for, and the only values top_category is allowed to take. This is also
+# what closes the endpoint's real prompt-injection surface: top_category is
+# f-string-interpolated straight into the Gemini prompt below, so before
+# this fix any authenticated caller (including the shared demo credentials)
+# could pass arbitrary text as "top_category" and it would go untouched into
+# an LLM prompt. Keep this in sync with the keys of the `tips` dict in
+# _rule_based_tip() if a new category tip is ever added there.
+SpendCategory = Literal[
+    "Food", "Food & Dining", "Travel", "Shopping",
+    "Grocery", "Entertainment", "Recharge", "Healthcare",
+]
+
+
 # ════════════════════════════════════════════════════════════════════════════
 #  /insights/weekly  — AI SAVINGS RECOMMENDATIONS  (JWT-protected)
 # ════════════════════════════════════════════════════════════════════════════
@@ -548,11 +562,11 @@ async def classify(
 )
 async def weekly_insights(
     user            : Annotated[str, Depends(get_current_user)],
-    total_spent     : float = 12500.0,
-    top_category    : str   = "Food",
-    top_category_pct: float = 38.0,
-    fraud_alerts    : int   = 0,
-    vs_last_week_pct: float = 12.0,
+    total_spent     : float         = Query(12500.0, ge=0, le=10_000_000),
+    top_category    : SpendCategory = Query("Food"),
+    top_category_pct: float         = Query(38.0, ge=0, le=100),
+    fraud_alerts    : int           = Query(0, ge=0, le=10_000),
+    vs_last_week_pct: float         = Query(12.0, ge=-100, le=100_000),
 ) -> WeeklyInsight:
     """
     **Requires:** `Authorization: Bearer <token>`.
