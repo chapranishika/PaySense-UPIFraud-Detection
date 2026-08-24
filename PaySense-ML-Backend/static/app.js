@@ -172,15 +172,29 @@ function initNavigation() {
 async function checkHealth() {
     const healthStatus = document.getElementById("health-status");
     const healthModel = document.getElementById("health-model");
-    
+    const profileThreshold = document.getElementById("profile-threshold");
+    const profileWeights = document.getElementById("profile-weights");
+
     try {
         const response = await fetch(`${CONFIG.apiBase}/health`);
         const data = await response.json();
-        
+
         if (response.ok && data.status === "ok") {
             healthStatus.textContent = "Online";
             healthStatus.className = "badge badge-online";
             healthModel.textContent = `XGBoost (${data.feature_count} features)`;
+
+            // Live from /health -- never hand-edited, can't drift the way
+            // this page's old hardcoded "0.4000 / Rules(0.15)*XGBoost(0.85)"
+            // did after the deployed threshold and ensemble changed.
+            if (profileThreshold && typeof data.threshold === "number") {
+                profileThreshold.textContent = data.threshold.toFixed(4);
+            }
+            if (profileWeights && data.nominal_weights) {
+                const w = data.nominal_weights;
+                profileWeights.textContent =
+                    `Rules (${w.rules}) · XGBoost (${w.paysense}) · LightLR (${w.light_lr})`;
+            }
         } else {
             healthStatus.textContent = "Error";
             healthStatus.className = "badge badge-offline";

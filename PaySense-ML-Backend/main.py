@@ -66,6 +66,7 @@ import sys, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
 from src.fraud_model import (
     load_artefacts, score as ensemble_score, get_state, classify_category,
+    W_RULES, W_PAYSENSE, W_LIGHT_LR,
 )
 
 load_dotenv()
@@ -711,6 +712,14 @@ async def health_check():
         "category_classifier_loaded" : state.category_model is not None,
         "rules_always_on" : True,
         "threshold"       : state.ps_threshold,
+        # Nominal weights when all three scorers are active -- sourced from
+        # fraud_model.py's own W_RULES/W_PAYSENSE/W_LIGHT_LR constants, the
+        # same ones score() actually uses, so this can't drift from reality
+        # the way the dashboard's old hardcoded "0.4000 / Rules(0.15)*
+        # XGBoost(0.85)" display did. A dropped scorer renormalises the
+        # *actual* per-request weights (see /predict's weights_used) --
+        # this field always reflects the full-ensemble case.
+        "nominal_weights" : {"rules": W_RULES, "paysense": W_PAYSENSE, "light_lr": W_LIGHT_LR},
         "feature_count"   : len(state.ps_features) if state.ps_features else 0,
         "auth_required"   : True,
         "rate_limit"      : "60/min on /predict",
