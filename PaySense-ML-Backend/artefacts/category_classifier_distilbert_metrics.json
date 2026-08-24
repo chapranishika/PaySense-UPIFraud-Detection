@@ -1,0 +1,178 @@
+{
+  "fintext_own_test_set_in_distribution": {
+    "accuracy": 1.0,
+    "correct_and_confident": 1.0,
+    "gate_pass_rate": 1.0,
+    "per_class": {
+      "Food": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 205.0
+      },
+      "Travel": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 192.0
+      },
+      "EMI": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 201.0
+      },
+      "Investment": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 172.0
+      },
+      "Shopping": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 230.0
+      },
+      "accuracy": 1.0,
+      "macro avg": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 1000.0
+      },
+      "weighted avg": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 1000.0
+      }
+    },
+    "confusion_matrix": [
+      [
+        205,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        192,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        201,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        172,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        230
+      ]
+    ],
+    "n": 1000
+  },
+  "gold_novel_eval_set_generalization": {
+    "accuracy": 0.83,
+    "correct_and_confident": 0.82,
+    "gate_pass_rate": 0.96,
+    "per_class": {
+      "Food": {
+        "precision": 0.627906976744186,
+        "recall": 0.675,
+        "f1-score": 0.6506024096385542,
+        "support": 40.0
+      },
+      "Travel": {
+        "precision": 0.8571428571428571,
+        "recall": 0.9,
+        "f1-score": 0.8780487804878049,
+        "support": 40.0
+      },
+      "EMI": {
+        "precision": 0.9523809523809523,
+        "recall": 1.0,
+        "f1-score": 0.975609756097561,
+        "support": 40.0
+      },
+      "Investment": {
+        "precision": 1.0,
+        "recall": 0.775,
+        "f1-score": 0.8732394366197183,
+        "support": 40.0
+      },
+      "Shopping": {
+        "precision": 0.7619047619047619,
+        "recall": 0.8,
+        "f1-score": 0.7804878048780488,
+        "support": 40.0
+      },
+      "accuracy": 0.83,
+      "macro avg": {
+        "precision": 0.8398671096345515,
+        "recall": 0.8300000000000001,
+        "f1-score": 0.8315976375443374,
+        "support": 200.0
+      },
+      "weighted avg": {
+        "precision": 0.8398671096345516,
+        "recall": 0.83,
+        "f1-score": 0.8315976375443374,
+        "support": 200.0
+      }
+    },
+    "confusion_matrix": [
+      [
+        27,
+        6,
+        0,
+        0,
+        7
+      ],
+      [
+        4,
+        36,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        40,
+        0,
+        0
+      ],
+      [
+        4,
+        0,
+        2,
+        31,
+        3
+      ],
+      [
+        8,
+        0,
+        0,
+        0,
+        32
+      ]
+    ],
+    "n": 200
+  }
+}

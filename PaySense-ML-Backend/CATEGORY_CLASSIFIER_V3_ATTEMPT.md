@@ -214,6 +214,76 @@ tried tonight.
 Saved as `artefacts/paysense_category_classifier_v4.pkl` — not deployed,
 same as v3.
 
+## 3.6. DistilBERT — testing architecture, not just data
+
+§3's verdict named the real limitation plainly: "the underlying model is
+still a word-level lookup, not a narration-understanding system," and
+recommended a small on-device DistilBERT model as the actual fix, not more
+TF-IDF training data. This section tests that directly, deployed 2026-08-24
+evening.
+
+**Methodology, designed to isolate one variable.** `train_category_classifier_distilbert.py`
+fine-tunes `distilbert-base-uncased` for 5-way sequence classification on
+**the exact same training blend v3 used** — FinText-6K's train split +
+`category_training_v3_synthetic.csv`, same 13,000 rows, same eval sets
+(FinText-6K's own held-out test for the in-distribution check,
+`category_generalization_test_set.csv` for the real generalization check).
+Nothing about the data changed — only the model went from TF-IDF + linear
+SVM to a fine-tuned transformer. Any accuracy difference is attributable to
+architecture, not a data change riding along with it. 3 epochs, batch size
+16, learning rate 2e-5, max sequence length 48 tokens, CPU-only (no CUDA
+GPU in this environment) via HuggingFace `transformers` + `accelerate`.
+
+**Results — a real, meaningfully larger gain than v3's data-diversity lever
+produced, on the identical training data:**
+
+| Evaluation set | v1 (deployed until today) | v3 (deployed today) | DistilBERT (this run) |
+|---|---:|---:|---:|
+| FinText-6K own test (in-distribution) | 100.0% | 100.0% | 100.0% (no regression) |
+| Gold novel eval set — accuracy | 72.5% | 78.0% | **83.0%** |
+| Gold novel eval set — correct & confident | 62.0% | 70.5% | **82.0%** |
+| Gate pass rate (≥0.65 confidence) | 67.0% | 86.0% | **96.0%** |
+
+Per-class on the gold eval set: EMI still generalizes essentially perfectly
+(precision 0.952, recall 1.0 — same distinctive-token advantage every prior
+version showed). Travel improved the most (precision 0.794→0.857, recall
+0.675→0.9 vs. v3). Food remains the hardest class across every architecture
+tried so far (precision 0.628, recall 0.675) — still the largest confusion
+sink, though the *pattern* of what it gets confused with shifted (mostly
+Shopping/Travel now, vs. mostly Investment for the TF-IDF versions),
+suggesting the failure mode changed shape rather than just shrinking.
+
+**This answers the open question honestly: it was not purely a data
+problem.** v3 already tested "more/better data, same architecture" and got
++5.5pp. This test held the data completely constant and changed only the
+architecture, and got a *larger* gain (+5.0pp accuracy over v3, +11.5pp on
+the correct-and-confident metric that actually determines production
+Tier-2 resolution rate) — real evidence that TF-IDF's ceiling was
+architectural, not just a training-diversity shortfall, exactly as §3
+predicted before this was tested.
+
+**Deployment cost, measured, not estimated:** the fine-tuned model is
+267.8MB (`model.safetensors`) versus v3's ~2.1MB pickle — roughly 128x
+larger. Single-request CPU inference measured at **369ms** on this
+machine, versus TF-IDF's sub-millisecond — roughly 370x slower. Deploying
+it would also mean shipping `torch` and `transformers` (CPU wheel + deps,
+several hundred MB) alongside the backend's existing dependencies.
+
+**Not deployed, on purpose, given the deployment cost above** — a
+meaningfully different decision than v2/v4 (which weren't deployed because
+they weren't actually better). This one *is* actually better, and stays
+undeployed anyway because the risk profile is different in kind from a
+pickle-file swap: the production backend
+(`paysense-api.onrender.com`) already loads XGBoost, LightLR, and the TF-IDF
+classifier, and this environment has no way to verify that adding a 268MB
+transformer plus its runtime won't exceed whatever memory limit that
+deployment's hosting tier actually has. An out-of-memory crash on the live
+service is a categorically worse outcome than keeping the faster, slightly
+less accurate classifier deployed. Saved as
+`artefacts/paysense_category_classifier_distilbert/` (HuggingFace format,
+not a joblib pickle) for a future deployment decision once the hosting
+tier's headroom is known.
+
 ## 4. Reproducing this check
 
 ```
@@ -224,6 +294,14 @@ venv\Scripts\python.exe train_category_classifier_v3.py
 REM v4 additionally re-downloads the two vetted Kaggle datasets into
 REM external_data/ (requires internet access) before blending:
 venv\Scripts\python.exe train_category_classifier_v4.py
+
+REM DistilBERT -- requires torch + transformers + accelerate (not in the
+REM base requirements; pip install torch --index-url
+REM https://download.pytorch.org/whl/cpu transformers "accelerate>=1.1.0").
+REM CPU-only, ~2-3 hours on a modern desktop CPU, no GPU required or used
+REM in this environment. Downloads distilbert-base-uncased (~268MB) from
+REM the HuggingFace Hub on first run.
+venv\Scripts\python.exe train_category_classifier_distilbert.py
 ```
 
 The generator refuses to write output if it finds any overlap (exact or

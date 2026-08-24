@@ -10,3 +10,10 @@ local.properties
 .idea/
 .DS_Store
 .env
+
+# DistilBERT category classifier candidate (CATEGORY_CLASSIFIER_V3_ATTEMPT.md
+# §3.6): 255MB model.safetensors exceeds GitHub's 100MB hard file-size
+# limit. Not deployed -- validated result + metrics are what matter, not
+# the weights themselves, which are trivially reproducible via
+# train_category_classifier_distilbert.py.
+PaySense-ML-Backend/artefacts/paysense_category_classifier_distilbert/
