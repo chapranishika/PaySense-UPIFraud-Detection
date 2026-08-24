@@ -48,6 +48,30 @@ instead of repeating hand-typed text that can silently go stale again.
 
 ### The Android client
 
+**Captured 2026-08-25 on a real, locally-running Android emulator on this
+machine** — not a mockup, not the July screenshots below. Installed the
+actual APK, tapped through the real UI via `adb`, logged in for real
+(confirmed by `POST /auth/token` landing in the backend's own request log,
+not just the app claiming success), and force-stopped and relaunched the
+process to prove the encrypted token storage genuinely survives a cold
+restart:
+
+| | |
+|---|---|
+| ![First-launch SMS permission prompt](screenshots/16_real_emulator_permission.png) | ![Real dashboard after a real login](screenshots/17_real_emulator_dashboard.png) |
+| Genuine first-run permission dialog — not staged | Dashboard after a real `/auth/token` round-trip, rendered from the app's actual local database |
+| ![Real finance screen with a live chart](screenshots/18_real_emulator_finance.png) | |
+| Finance tracker, category breakdown chart rendering live on-device | |
+
+Getting an emulator running in this environment at all took real,
+multi-layered debugging — see `ANDROID_SECURITY_REVIEW.md`'s finding #4 for
+the full account (a DLL search-path issue, then a hardcoded Vulkan ICD
+path, then an off-by-one partition size, each one only visible after
+fixing the last).
+
+**Earlier screenshots (2026-07-24/25), from a real physical device**,
+covering screens the quick verification pass above didn't revisit:
+
 | | |
 |---|---|
 | ![Login](screenshots/1_login_screen.png) | ![Dashboard, empty state](screenshots/2_dashboard_empty.png) |
@@ -283,16 +307,18 @@ this project was audited with.
 - **FOUND / FIXED** — `usesCleartextTraffic="true"` was a standing
   permission nothing used (every endpoint is already `https://`). Flipped
   to `false`; the app still assembles clean.
-- **FOUND / FIXED** — The JWT was stored in plain SharedPreferences.
-  Rebuilt on `EncryptedSharedPreferences`, migrating all four call sites
-  together (a partial migration would silently break login, since
-  encrypted and plain storage can't read each other's values). Compiles
-  clean, assembles into a real APK, existing unit tests still pass. A real
-  Android emulator was built from scratch in this environment to
-  live-verify the Keystore round-trip — it reached the last step (hardware
-  acceleration confirmed available) and failed on a permission this
-  automated environment can't grant itself. Documented for anyone running
-  this from a normal desktop session.
+- **FOUND / FIXED, fully live-verified** — The JWT was stored in plain
+  SharedPreferences. Rebuilt on `EncryptedSharedPreferences`, migrating all
+  four call sites together (a partial migration would silently break
+  login, since encrypted and plain storage can't read each other's
+  values). A real local emulator was eventually built and run successfully
+  on this machine (see the Security section below for how a stubborn
+  multi-layer environment issue — not the originally-suspected permission
+  wall — finally got resolved). Installed the real app, logged in for real
+  (confirmed in the backend's own request log), force-stopped the process
+  entirely to clear all in-memory state, and relaunched: straight to the
+  authenticated dashboard, no login prompt — direct proof the Keystore
+  round-trip actually works, not just that the code compiles.
 - **FOUND / FIXED** — `./gradlew build`'s lint step had never actually run
   all session — the first JDK used (Eclipse Temurin) is missing the JPEG
   codec library Lint's icon checker needs, confirmed by searching the
@@ -426,8 +452,9 @@ Every finding above traces to a script or test file in this repo:
   `CATEGORY_CLASSIFIER_V3_ATTEMPT.md` — the category classifier's full
   audit trail, including the DistilBERT result (§3.6)
 - `PaySense-ML-Backend/ANDROID_SECURITY_REVIEW.md` — every Android finding,
-  what's fixed and verified, and exactly how to finish the one remaining
-  live check from an elevated session
+  all fixed and live-verified, plus the working recipe for running the
+  local emulator (a genuinely non-obvious multi-layer fix, worth reading
+  before trying to reproduce it from scratch)
 - `PaySense-ML-Backend/DEPLOY.md` — how the backend deploys to Render
 
 See the main [README](README.md) for architecture, setup, and the full API

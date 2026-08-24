@@ -1,22 +1,26 @@
 # Android Client Security Review
 
-**Update, 2026-08-24:** the original version of this document was manual
-code review only, with no JDK available in this environment to build or
-test anything. A portable Eclipse Temurin JDK 17 was installed for this
-session afterward (no admin rights, extracted to a local directory) so all
-five findings below marked FIXED could actually be compiled, assembled
-into a real debug APK, and checked against the project's existing unit
-tests — not just written and hoped correct. `./gradlew assembleDebug` and
-`./gradlew testDebugUnitTest` both pass clean after every change.
-(Finding #4's fix compiles and builds clean like the others, but its
-one genuinely runtime-only property — the Android Keystore round-trip —
-could not be live-verified in this environment; see its section below for
-exactly why and what was actually attempted. Finding #5 and the two purely-
-correctness bugs alongside it required a second, different JDK — Eclipse
-Temurin's Windows build is missing the JPEG codec library Lint's icon
-checker needs, so `./gradlew build`'s lint step never actually ran until
-the Microsoft Build of OpenJDK was substituted in — see finding #5 for the
-full account.)
+**Update, 2026-08-24 → 2026-08-25:** the original version of this document
+was manual code review only, with no JDK available in this environment to
+build or test anything. A portable Eclipse Temurin JDK 17 was installed
+afterward so all five findings below marked FIXED could actually be
+compiled, assembled into a real debug APK, and checked against the
+project's existing unit tests. Finding #5 needed a second, different
+JDK — Eclipse Temurin's Windows build is missing the JPEG codec library
+Lint's icon checker needs, so `./gradlew build`'s lint step never actually
+ran until the Microsoft Build of OpenJDK was substituted in (see finding
+#5 for the full account).
+
+**Finding #4's Keystore round-trip — the one thing that stayed unverified
+the longest — is now fully live-verified.** A real local Android emulator
+was eventually built and run on this same machine (see finding #4's "How
+the emulator blocker actually got resolved"), the app was installed, real
+login was performed against a real running backend, the process was force-
+stopped to clear all in-memory state, and a relaunch went straight to the
+authenticated dashboard with no login prompt — direct proof the encrypted
+storage actually round-trips through the real Android Keystore. Every
+finding in this document is now either fixed-and-live-verified or
+documented with the exact reasoning behind why it's out of scope.
 
 Scope: `PaySense-Android-Client-New/app/src/main/kotlin/com/paysense/app/`,
 focused on the login flow, token handling, and network layer.
@@ -68,7 +72,7 @@ standing permission. Flipped to `false` in `AndroidManifest.xml`; the debug
 APK still assembles clean (`processDebugMainManifest` succeeded), so
 nothing in the app was relying on cleartext traffic being allowed.
 
-### 4. JWT stored in plain (unencrypted) SharedPreferences — FIXED, compile/build verified; Keystore round-trip NOT live-verified
+### 4. JWT stored in plain (unencrypted) SharedPreferences — FIXED, fully live-verified
 
 `FraudApiService.kt` and `MainActivity.kt` read/write the JWT via
 `context.getSharedPreferences("paysense_prefs", MODE_PRIVATE)`.
@@ -88,43 +92,51 @@ load-bearing, not cosmetic: `EncryptedSharedPreferences` can't read a value
 a plain `SharedPreferences` wrote or vice versa, so a partial migration
 would silently break auth state, not just leave it unencrypted.
 
-**What was actually verified, and what wasn't:** `compileDebugKotlin`,
-`assembleDebug` (full APK), `compileReleaseKotlin`, and `testDebugUnitTest`
-all pass clean with the new dependency and code in place — the same bar as
-findings #1–3. What could **not** be verified is the one thing that
-actually matters for `EncryptedSharedPreferences`: that its first-run key
-generation against the real Android Keystore succeeds and the value
-round-trips correctly. That only happens at runtime on a device or
-emulator, not in a compile check or a local-JVM unit test (this project's
-existing unit tests already avoid the Android framework runtime
-entirely — see `build.gradle.kts`'s `isReturnDefaultValues = true` comment).
+**Keystore round-trip: live-verified, on a real running emulator, 2026-08-25.**
+Installed the app, logged in for real (`POST /auth/token`, 200, confirmed
+in the backend's own request log — not just the app's UI), then
+`am force-stop`'d the process entirely (clearing all in-memory state) and
+relaunched. The app went straight to the authenticated dashboard with no
+login prompt — proof the encryption key was generated against the real
+Android Keystore on first write, persisted, and was successfully retrieved
+and used to decrypt the stored JWT and `is_authenticated` flag on a
+completely fresh process. This is the actual thing that mattered; compiling
+cleanly was never proof of this specific behavior.
 
-**A real attempt was made to close that gap, not just asserted as
-impossible.** This session set up a full local Android emulator from
-scratch: downloaded and installed Android SDK cmdline-tools, accepted
-licenses, installed an x86_64 API 34 `google_apis` system image, freed disk
-space to fit it (see below), created an AVD, and got as far as the
-emulator's own hypervisor-capability check reporting **WHPX available and
-compatible**. It then failed silently at actual VM creation. Root cause,
-confirmed directly: this session's process token is a member of
-`BUILTIN\Administrators` but running **non-elevated**
-(`IsInRole(Administrator)` returns `False` — classic UAC split-token
-behavior), and while WHPX *capability detection* doesn't require elevation,
-*creating* a hypervisor partition does. This is a permission this
-non-interactive automated session cannot grant itself (no UAC prompt can be
-answered here). Whoever runs this build interactively, in a normal elevated
-or admin desktop session, would very likely not hit this and could complete
-the live verification — the SDK/AVD setup is already done and left in
-place for that (see below).
+**How the emulator blocker actually got resolved** (kept here since it's
+non-obvious and worth not rediscovering): the earlier theory — a
+non-elevated process token blocking WHPX partition creation — turned out to
+be incomplete. Testing with acceleration fully disabled (`-no-accel`)
+produced the *exact same* failure, proving the real blocker was upstream of
+WHPX entirely: a `STATUS_DLL_NOT_FOUND` failure to load
+`api-ms-win-crt-utility-l1-1-0.dll`, confirmed via direct `LoadLibrary`
+P/Invoke, native PowerShell process creation (ruling out a Bash/MSYS
+quoting artifact), and a full PE import-table dependency walk. The DLL
+itself was fine in isolation (`LoadLibrary` on it alone succeeded) — the
+real issue was that invoking the qemu backend binary directly, bypassing
+`emulator.exe`'s own `PATH`/library-search-path setup, meant its actual
+runtime dependencies (`libandroid-emu-*.dll`, `libglib2*.dll`, several
+`api-ms-win-crt-*.dll`), which live in `emulator/` and `emulator/lib64/`,
+not next to the qemu binary, were never found. Fixing `PATH` to include
+`emulator/`, `emulator/lib64/`, `emulator/lib64/gles_swiftshader/`, and
+`emulator/lib64/vulkan/` before invoking qemu resolved it. A second,
+separate issue then surfaced once past that: the Vulkan loader hardcodes
+its ICD manifest search path relative to the qemu binary's own directory
+(`emulator/qemu/windows-x86_64/lib/qemu/lib64/vulkan/`), which doesn't
+exist — the real files live in `emulator/lib64/vulkan/`. Setting
+`VK_ICD_FILENAMES` didn't help (the app overrides it internally regardless
+of the environment), so the fix was creating the expected directory and
+copying `vk_swiftshader_icd.json` + `vk_swiftshader.dll` there directly. A
+last, trivial fix: `-partition-size 2048` is invalid (max is 2047), off by
+one. With all three fixed and hardware acceleration re-enabled (WHPX was
+never actually the blocker), the AVD booted fully in ~170 seconds.
 
 **Along the way:** the machine's C: drive was nearly full (1.3GB free, then
 0 after a failed download), which independently blocked the system-image
 install until `pip cache purge` and `npm cache clean --force` were run —
-with explicit confirmation before either — freeing ~6.6GB. The AVD's data
-partition also needed to be manually sized down (`-partition-size 2048` at
-launch) to fit in the remaining space on E:. None of this is a reason the
-encryption fix itself is wrong; it's exactly the kind of environment
-friction a live device/CI run wouldn't have.
+with explicit confirmation before either — freeing ~6.6GB. None of this is
+a reason the encryption fix itself is wrong; it's exactly the kind of
+environment friction a live device/CI run wouldn't have.
 
 Lower severity than #1 even so, given the JWT is already short-lived
 (~60 minutes) and there's no refresh-token to make persistent — but the
@@ -163,24 +175,45 @@ fixed in the same pass. `./gradlew build` now completes with 0 lint
 errors (was 8), 283 advisory warnings (dependency versions, hardcoded
 strings — not correctness or security issues).
 
-## Live-verifying the Keystore round-trip (left for an elevated session)
+## Running the emulator (done — this is the working recipe)
 
-The Android SDK, system image, and AVD are already set up:
+No elevation needed, in the end — see finding #4 above for why the earlier
+"needs an elevated session" note was based on an incomplete diagnosis. The
+Android SDK, system image, and AVD are already set up:
 ```
 SDK root:  C:\Users\chapr\AppData\Local\Android\Sdk
            (cmdline-tools\latest, system-images on E: via a junction)
 AVD home:  E:\android-sdk-data\avd  (AVD name: paysense_test)
 ```
-From an **elevated** (Run as Administrator) terminal with `JAVA_HOME` set
-to a JDK 17:
+The `emulator.exe` wrapper itself still doesn't surface the underlying
+qemu-backend error clearly on this specific SDK download, so launch the
+qemu backend directly with its dependency paths and Vulkan ICD location
+set explicitly:
+```powershell
+$env:ANDROID_AVD_HOME = "E:\android-sdk-data\avd"
+$env:ANDROID_SDK_ROOT = "C:\Users\chapr\AppData\Local\Android\Sdk"
+$env:PATH = "$env:ANDROID_SDK_ROOT\emulator;$env:ANDROID_SDK_ROOT\emulator\lib64;$env:ANDROID_SDK_ROOT\emulator\lib64\gles_swiftshader;$env:ANDROID_SDK_ROOT\emulator\lib64\vulkan;$env:ANDROID_SDK_ROOT\emulator\qemu\windows-x86_64;$env:PATH"
+& "$env:ANDROID_SDK_ROOT\emulator\qemu\windows-x86_64\qemu-system-x86_64-headless.exe" `
+    -avd paysense_test -no-window -no-audio -no-boot-anim `
+    -gpu swiftshader_indirect -no-snapshot -partition-size 2000
 ```
-set ANDROID_AVD_HOME=E:\android-sdk-data\avd
-set ANDROID_SDK_ROOT=C:\Users\chapr\AppData\Local\Android\Sdk
-"%ANDROID_SDK_ROOT%\emulator\emulator.exe" -avd paysense_test -partition-size 2048
+One-time setup the Vulkan loader needs (its ICD manifest path is hardcoded
+relative to the qemu binary and doesn't match where the real files ship):
+```powershell
+$vk = "$env:ANDROID_SDK_ROOT\emulator\qemu\windows-x86_64\lib\qemu\lib64\vulkan"
+New-Item -ItemType Directory -Force -Path $vk
+Copy-Item "$env:ANDROID_SDK_ROOT\emulator\lib64\vulkan\vk_swiftshader_icd.json" $vk
+Copy-Item "$env:ANDROID_SDK_ROOT\emulator\lib64\vulkan\vk_swiftshader.dll" $vk
 ```
-Then install and launch the app (`adb install -r app-debug.apk`), log in,
-and confirm no crash and that a re-launch still shows the authenticated
-state — the practical sign the Keystore round-trip actually works.
+Then install and launch the app:
+```
+adb install -r app-debug.apk
+adb shell am start -n com.paysense.app/.ui.MainActivity
+```
+To verify the Keystore round-trip specifically: log in, then
+`adb shell am force-stop com.paysense.app` followed by the `am start`
+above again — a re-launch straight to the dashboard with no login prompt
+confirms it. This was done in this session on 2026-08-25; see finding #4.
 
 ## Reproducing this check
 
