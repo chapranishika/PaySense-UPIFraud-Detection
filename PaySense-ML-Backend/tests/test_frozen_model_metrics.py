@@ -206,3 +206,163 @@ def test_ensemble_differs_materially_from_raw_xgboost_at_threshold(frozen_eval):
         f"were changed to matter less), update this test's rationale rather "
         f"than deleting it silently."
     )
+
+
+# ── Business-constraint verification, added 2026-08-26 audit ────────────────
+# paysense_phase3.py and resweep_threshold_against_ensemble.py both target a
+# documented business constraint: Recall >= 75% AND Precision >= 50%. Neither
+# script's own sweep output was ever turned into a test asserting whether the
+# DEPLOYED threshold actually satisfies it -- an easy thing to silently drift
+# out of sync with reality the same way the raw-vs-ensemble metrics did.
+#
+# Full sweep (ensemble_threshold_resweep_results.json, 0.05-0.95 step 0.05)
+# confirms zero thresholds meet both constraints simultaneously. The closest
+# candidate, t=0.15, hits recall=75.9% but precision=15.99% -- 84% of alerts
+# at that threshold would be false alarms. This is a genuine constraint
+# infeasibility on this test set, not a threshold-selection bug: no single
+# threshold trades recall for precision favorably enough to clear both bars
+# at once, which is exactly why both selection scripts fall back to
+# unconditional max-F1 (landing on 0.50) rather than ever finding a
+# constraint-satisfying row.
+#
+# This test pins the CURRENT, VERIFIED, KNOWN state: the deployed threshold
+# does not meet the originally-documented recall floor. It exists so that if
+# the model is ever retrained well enough to change this, that's a genuine,
+# visible event requiring a documentation update (revising the "Recall >=75%"
+# claim to match reality, or reporting that the constraint is newly
+# achievable) -- not something that silently drifts one way or the other
+# unnoticed the way the raw-vs-ensemble metrics did for weeks.
+RECALL_CONSTRAINT_MIN = 0.75
+PRECISION_CONSTRAINT_MIN = 0.50
+
+
+def test_deployed_threshold_does_not_meet_documented_recall_constraint(frozen_eval):
+    precision = precision_score(frozen_eval["y_test"], frozen_eval["y_pred"], zero_division=0)
+    recall = recall_score(frozen_eval["y_test"], frozen_eval["y_pred"], zero_division=0)
+
+    assert recall < RECALL_CONSTRAINT_MIN, (
+        f"Recall at the deployed threshold is now {recall:.4f}, which MEETS "
+        f"the documented Recall>={RECALL_CONSTRAINT_MIN:.0%} business "
+        f"constraint that this test previously verified was NOT met. If this "
+        f"is a real improvement (retrained model, more/better features), "
+        f"this is good news -- update README.md/PROJECT.md to remove the "
+        f"'documented requirement not currently satisfied' finding and note "
+        f"the fix. Do not just relax this assertion without checking why it "
+        f"changed."
+    )
+    assert precision == pytest.approx(PUBLISHED_PRECISION_AT_THRESHOLD, abs=0.01), (
+        f"Precision at the deployed threshold ({precision:.4f}) drifted from "
+        f"the published {PUBLISHED_PRECISION_AT_THRESHOLD} -- recompute the "
+        f"full trade-off table (see resweep_threshold_against_ensemble.py) "
+        f"before updating any documented business-constraint claim."
+    )
+
+
+def test_no_swept_threshold_meets_both_business_constraints(frozen_eval):
+    """Reproduces the full 0.05-0.95 sweep against the frozen artefacts and
+    confirms the documented gap directly, rather than trusting the static
+    ensemble_threshold_resweep_results.json file to still reflect reality."""
+    import numpy as np
+
+    y_test = frozen_eval["y_test"]
+    y_proba = np.array(frozen_eval["y_proba"])
+    sweep = np.round(np.arange(0.05, 0.96, 0.05), 2)
+
+    meets_both = []
+    for t in sweep:
+        pred = (y_proba >= float(t)).astype(int)
+        p = precision_score(y_test, pred, zero_division=0)
+        r = recall_score(y_test, pred, zero_division=0)
+        if r >= RECALL_CONSTRAINT_MIN and p >= PRECISION_CONSTRAINT_MIN:
+            meets_both.append((float(t), p, r))
+
+    assert meets_both == [], (
+        f"Found {len(meets_both)} threshold(s) that now satisfy BOTH "
+        f"Recall>={RECALL_CONSTRAINT_MIN:.0%} AND "
+        f"Precision>={PRECISION_CONSTRAINT_MIN:.0%}: {meets_both}. This "
+        f"contradicts the 2026-08-24 sweep finding that no threshold does. "
+        f"If the model genuinely improved, re-run "
+        f"resweep_threshold_against_ensemble.py and deploy the new "
+        f"constraint-satisfying threshold -- don't leave the model sitting "
+        f"on the max-F1 fallback if a real constraint-satisfying option now "
+        f"exists."
+    )
+
+
+# ── Source-stratified metrics -- the biggest finding of the 2026-08-26 audit ─
+# EDA_FEATURE_ENGINEERING.md documented that the 10K-row "supplement" source
+# (schema-bridged from an external synthetic_fraud_dataset.csv) carries a
+# near-tautological relationship between new_device_flag/ip_location_mismatch
+# and is_fraud (that external dataset's own label-generation formula, not a
+# bug introduced by this project). What had not been checked before this
+# audit: since the train/test split is a plain stratified random split over
+# the FULL blended dataset (data_source plays no role in the split), the test
+# set inherits the same ~35% supplement contamination -- and the model's
+# performance on that slice versus the organic "anchor" slice is wildly
+# different:
+#
+#   Full blended test set (what every doc has ever reported):
+#     ROC-AUC 0.8969   PR-AUC 0.5498   recall@0.50 = 39.53% (TP=100/253)
+#   Anchor-only (organic, real-style data, n=3913, 157 fraud):
+#     ROC-AUC 0.7465   PR-AUC 0.1138   recall@0.50 =  2.55% (TP=4/157)
+#   Supplement-only (tautological-label data, n=2087, 96 fraud):
+#     ROC-AUC 1.0000   PR-AUC 1.0000   recall@0.50 = 100.00% (TP=96/96)
+#
+# The model catches essentially none of the organic fraud in this test set
+# (4 of 157) -- its reported 39.53% blended recall is almost entirely the
+# supplement subset's trivially-learnable synthetic shortcut, not evidence
+# of learned, transferable fraud-detection skill. This does not mean the
+# model is worthless (0.7465 ROC-AUC / 2.8x-baseline PR-AUC on organic data
+# alone is still real, positive signal) -- but every "13x baseline" /
+# "0.90 ROC-AUC" headline claim in this project's docs is computed on the
+# contaminated blended set and materially overstates real-world performance.
+#
+# This test exists to make sure that gap stays visible and quantified rather
+# than being silently smoothed over by a future retrain that "fixes" the
+# blended number without anyone checking whether organic-only performance
+# actually improved.
+def test_organic_subset_performance_is_much_weaker_than_blended_headline(frozen_eval):
+    import numpy as np
+    from src import fraud_model as _fm  # noqa: F401  (ensures artefacts loaded)
+
+    df = pd.read_csv(MASTER_CSV).drop(columns=[c for c in DROP_COLS if c != "data_source"])
+    X = df.drop(columns=["is_fraud"])
+    y = df["is_fraud"].astype(int)
+    _, X_test, _, y_test = train_test_split(
+        X, y, test_size=0.20, random_state=RANDOM_STATE, stratify=y
+    )
+    sources = X_test["data_source"].values
+    anchor_mask = sources == "anchor"
+
+    y_test_arr = y_test.values
+    y_proba_arr = np.array(frozen_eval["y_proba"])
+
+    assert len(y_proba_arr) == len(anchor_mask), (
+        "frozen_eval's scored rows and this test's re-derived source labels "
+        "are out of sync -- the split parameters must match exactly "
+        "(same DROP_COLS minus data_source, same random_state/test_size)."
+    )
+
+    anchor_roc_auc = roc_auc_score(y_test_arr[anchor_mask], y_proba_arr[anchor_mask])
+    anchor_pr_auc = average_precision_score(y_test_arr[anchor_mask], y_proba_arr[anchor_mask])
+
+    blended_roc_auc = roc_auc_score(y_test_arr, y_proba_arr)
+    blended_pr_auc = average_precision_score(y_test_arr, y_proba_arr)
+
+    assert anchor_roc_auc < blended_roc_auc - 0.10, (
+        f"Anchor-only ROC-AUC ({anchor_roc_auc:.4f}) is no longer "
+        f"substantially below the blended ROC-AUC ({blended_roc_auc:.4f}). "
+        f"If the model genuinely improved on organic data, that's real "
+        f"progress worth documenting explicitly in WALKTHROUGH.md/"
+        f"PROJECT.md -- but verify it's a real improvement (e.g. via "
+        f"feature engineering or more organic training data) and not a "
+        f"measurement artifact before updating the headline claims."
+    )
+    assert anchor_pr_auc < blended_pr_auc - 0.20, (
+        f"Anchor-only PR-AUC ({anchor_pr_auc:.4f}) is no longer "
+        f"substantially below the blended PR-AUC ({blended_pr_auc:.4f}). "
+        f"Same caveat as above -- verify before updating any documented "
+        f"'Nx baseline' claim, since that claim is computed on the blended "
+        f"set and would need to be recomputed on organic-only data to be "
+        f"an honest representation of real-world generalization."
+    )

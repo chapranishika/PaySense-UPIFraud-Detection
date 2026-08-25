@@ -178,13 +178,22 @@ codebase — real HTTP requests, real JWT auth, real model inference:
 
 | Metric | Value |
 |---|---:|
-| ROC-AUC (real 3-scorer ensemble) | **0.8969** |
-| PR-AUC | **0.5498** (13.1× the random baseline) |
-| Precision @ deployed threshold (τ=0.50) | **91.74%** |
-| Recall @ deployed threshold (τ=0.50) | **39.53%** |
-| Backend test suite | **211 / 211 passing** |
+| ROC-AUC (real 3-scorer ensemble, blended test set*) | **0.8969** |
+| PR-AUC (blended test set*) | **0.5498** (13.1× that set's random baseline) |
+| Precision @ deployed threshold (τ=0.50, blended test set*) | **91.74%** |
+| Recall @ deployed threshold (τ=0.50, blended test set*) | **39.53%** |
+| Backend test suite | **214 / 214 passing** |
 | Category classifier, real-world accuracy | **78.0%** deployed (83.0% validated, undeployed — see below) |
 | Android security findings | **4 found, 4 fixed** (3 fully verified, 1 compile-verified) |
+
+**\*Every row above is computed on the canonical test set as a whole — see
+the first item in "Honest findings" directly below.** That set is ~35%
+rows from a source with a near-tautological label relationship; on the
+organic (anchor-only) ~65% majority, ROC-AUC is 0.7465, PR-AUC is 0.1138,
+and recall @ 0.50 is 2.55% (4/157), not 39.53%. This isn't a caveat added
+for completeness — it's the single most important number in this document,
+and it belongs next to the headline figures, not buried in a footnote
+nobody reads.
 
 **Every one of these numbers has a documented negative result sitting next
 to it.** That's not a caveat tacked on afterward — it's the actual method
@@ -193,6 +202,62 @@ this project was audited with.
 ---
 
 ## Honest findings, reported the same way as the wins
+
+> **The single most important finding of the 2026-08-26 audit, and it changes
+> how every other number in this table should be read.** `EDA_FEATURE_
+> ENGINEERING.md` had already documented that the 10K-row "supplement"
+> source (a third of the training data, schema-bridged from an external
+> synthetic dataset) carries a near-tautological relationship between two
+> risk flags and the fraud label — that external dataset's own label-
+> generation formula, not a bug this project introduced. What hadn't been
+> checked: the train/test split doesn't account for `data_source` at all,
+> so the canonical test set inherits the same ~35% contamination — and
+> splitting the reported metrics by source shows the model's performance on
+> the two halves is not remotely similar:
+>
+> | | Full blended (every number above) | Anchor only (organic data) | Supplement only (tautological labels) |
+> |---|---:|---:|---:|
+> | ROC-AUC | 0.8969 | **0.7465** | 1.0000 |
+> | PR-AUC | 0.5498 | **0.1138** | 1.0000 |
+> | Recall @ 0.50 | 39.53% (100/253) | **2.55% (4/157)** | 100.00% (96/96) |
+>
+> The model catches essentially none of the organic fraud in this test set —
+> 4 cases out of 157. Its reported 39.53% recall is almost entirely the
+> supplement subset's trivially-learnable shortcut, not evidence of learned,
+> transferable fraud-detection skill. The "13.05× random baseline" PR-AUC
+> claim and the 0.8969 ROC-AUC headline are both computed on the
+> contaminated blended set; on organic data alone, PR-AUC (0.1138) is only
+> ~2.8× that subset's own ~4% base rate — real, positive signal, but a very
+> different, much weaker story than the headline number tells. **Not fixed
+> in this pass** — fixing it means either dropping the supplement source
+> entirely and retraining (untested how much organic-only training data
+> would then remain, or how the model would perform), or building a
+> genuinely separate, larger organic dataset, both real projects bigger
+> than a hardening pass. Regression-tested
+> (`test_organic_subset_performance_is_much_weaker_than_blended_headline`
+> in `tests/test_frozen_model_metrics.py`) so this gap can't silently
+> shrink or grow unnoticed the way the raw-XGBoost-vs-ensemble discrepancy
+> did for weeks.
+
+> **The documented business requirement (Recall ≥75% AND Precision ≥50%) is
+> not achievable by this model on this test set at any threshold** — traced
+> precisely, not assumed. `resweep_threshold_against_ensemble.py`'s full
+> 0.05–0.95 sweep (`ensemble_threshold_resweep_results.json`) shows zero
+> thresholds meeting both constraints simultaneously; the deployed 0.50 is
+> the unconditional max-F1 fallback both selection scripts fall back to for
+> exactly this reason. The closest candidate to the recall floor, t=0.15,
+> does clear 75.9% recall — at 15.99% precision (84% of its alerts would be
+> false alarms). Deploying that would trade a trustworthy-but-blind system
+> for a noisy one, not a strict improvement. **Decision: keep 0.50** — it's
+> the genuinely best available F1 operating point, not a threshold picked
+> to look good. **The honest fix is revising the documented requirement**,
+> not the deployed threshold: "Recall ≥75%" as originally stated is not
+> currently achievable without a materially better model or more organic
+> training data (see the finding above — likely the same root cause).
+> Regression-tested (`test_no_swept_threshold_meets_both_business_
+> constraints`, `test_deployed_threshold_does_not_meet_documented_recall_
+> constraint`) so a future retrain that *does* close this gap is a visible,
+> deliberate event, not a silent drift in either direction.
 
 > **Recall plateaued at 69.96%** even at the most aggressive threshold
 > tested. The first hypothesis (a calibration problem, fixable with Platt

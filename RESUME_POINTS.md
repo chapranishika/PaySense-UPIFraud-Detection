@@ -134,21 +134,31 @@ external dataset's $-denominated values.
 
 ## C. Data Scientist
 
-**Bullet:** Traced a near-tautological feature→label relationship in a
-third of a fraud model's training data to its origin — an external
-synthetic dataset whose own label-generation formula, not this project's
-pipeline, produced zero-overlap separation between two risk flags and the
-fraud label — and documented it as a real, unresolved training-data
-limitation rather than silently accepting the resulting metrics.
-- **Evidence:** `EDA_FEATURE_ENGINEERING.md` §1.1, verified independently
-  against the raw external source file (`device_risk_score > 0.70` → exact
-  500/500 fraud, 9500/9500 legitimate split).
+**Bullet:** Discovered that a fraud model's headline metrics (ROC-AUC
+0.8969, PR-AUC 0.5498, 13× baseline) were computed on a test set
+contaminated by the same near-tautological label-generation artifact
+found in a third of the training data — quantified by source-stratified
+re-evaluation showing real-world (organic-subset) performance is
+substantially weaker (ROC-AUC 0.7465, PR-AUC 0.1138, recall 2.55% vs. the
+reported 39.53%) — and shipped this as a headline finding, not a footnote,
+with a regression test protecting it from silently drifting unnoticed.
+- **Evidence:** `EDA_FEATURE_ENGINEERING.md` §1.1 (mechanism: an external
+  source dataset's own label-generation formula, zero-overlap separation
+  on two risk flags verified against the raw source file); this audit's
+  source-stratified scoring (`WALKTHROUGH.md`'s honest findings,
+  `DATASET.md`); `tests/test_frozen_model_metrics.py::
+  test_organic_subset_performance_is_much_weaker_than_blended_headline`.
 - **Interview Q:** "Why does this matter if the model still performs
-  well?" **A:** Because a model that performs well partly by exploiting a
-  formula-generated shortcut in synthetic data won't generalize the same
-  way to organic real-world fraud that doesn't share that shortcut — which
-  is exactly what the separate OOD evaluation (0/701 real frauds caught)
-  demonstrates.
+  well?" **A:** Because the reported performance is dominated by the model
+  memorizing a synthetic shortcut on a third of the data — on the organic
+  two-thirds, it catches 4 of 157 real fraud cases in this test set. This
+  is consistent with, and likely the same root cause as, a separate OOD
+  evaluation catching 0 of 701 real frauds on external data.
+- **Weak point:** Root cause identified and quantified, not yet fixed —
+  fixing it means either retraining on organic-only data (untested how
+  much would remain, or how the model would perform) or sourcing a larger
+  organic dataset, both real projects beyond a documentation/hardening
+  pass. Stated honestly as an open item, not hidden.
 
 **Bullet:** Selected PR-AUC over accuracy as the primary evaluation metric
 for a 4.21%-base-rate fraud classification problem, explicitly computing

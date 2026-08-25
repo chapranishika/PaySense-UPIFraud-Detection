@@ -2,7 +2,7 @@
 fastapi==0.115.0
 uvicorn[standard]==0.30.6
 pydantic==2.8.2
-python-multipart==0.0.9
+python-multipart==0.0.31  # bumped 2026-08-26 audit -- pip-audit found real CVEs in 0.0.9
 
 # ML
 pandas==2.2.2
@@ -16,11 +16,13 @@ scipy==1.13.1
 matplotlib==3.9.0
 
 # Security (Phase 1 — JWT + rate limiting)
-python-jose[cryptography]==3.3.0
+# python-jose, python-dotenv, cryptography versions bumped 2026-08-26 audit:
+# pip-audit found real CVEs in the previously-pinned versions. All bumps
+# verified against the full test suite (214/214 passing) before pinning.
+# cryptography is python-jose's own dependency, bumped for the same reason.
+python-jose[cryptography]==3.4.0
 slowapi==0.1.9
-python-dotenv==1.0.1
+python-dotenv==1.2.2
 passlib[bcrypt]==1.7.4
 httpx==0.27.0          # Gemini API calls + test client
-
-# Async DB (Phase 2 — weekly insights persistence)
-aiosqlite==0.20.0
+cryptography==50.0.0

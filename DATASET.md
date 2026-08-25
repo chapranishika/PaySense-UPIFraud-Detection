@@ -40,8 +40,37 @@ introduced by this project's bridge — the label-generation formula in the
 external dataset itself produces this near-tautological relationship. This
 is a third of the frozen model's training data carrying a near-deterministic
 feature→label shortcut that has nothing to do with real fraud behavior.
-Documented, not silently absorbed — see the full writeup for how this
-informed the retrain decisions in `RECALL_CEILING_REMEDIATION.md`.
+
+**Quantified for the first time in the 2026-08-26 audit: this contaminates
+the test set too, and it explains almost the entire headline recall
+number.** The train/test split (`train_test_split(..., stratify=y)`) does
+not account for `data_source` at all, so the canonical 6,000-row test set
+inherits the same ~35% supplement contamination (verified directly:
+2,087 supplement rows / 3,913 anchor rows, 96 supplement-fraud / 157
+anchor-fraud). Scoring the frozen ensemble separately on each subset:
+
+| | Full blended (reported everywhere) | Anchor only (organic) | Supplement only (tautological) |
+|---|---:|---:|---:|
+| ROC-AUC | 0.8969 | **0.7465** | 1.0000 |
+| PR-AUC | 0.5498 | **0.1138** | 1.0000 |
+| Recall @ τ=0.50 | 39.53% (TP=100/253) | **2.55% (TP=4/157)** | 100.00% (TP=96/96) |
+
+The model catches 4 of 157 organic fraud cases in this test set. Its
+reported 39.53% recall is almost entirely the supplement subset's
+trivially-learnable shortcut. This is **not classic leakage** in the
+train/future-information sense — `new_device_flag`/`ip_location_mismatch`
+are legitimately available at prediction time — it is a **label-validity
+problem**: a third of the dataset's fraud examples were labeled by a
+formula applied to two features the model also sees, so the model can
+solve that third by memorizing the formula rather than learning organic
+fraud patterns, and the contaminated test set can't detect this because it
+shares the same contamination. Regression-tested
+(`test_organic_subset_performance_is_much_weaker_than_blended_headline`,
+`tests/test_frozen_model_metrics.py`) so this gap is tracked, not silently
+absorbed. **Not fixed in this pass** — see `PROJECT.md`'s remediation plan
+for why (it requires either a retrain on organic-only data of unverified
+sufficient size, or a genuinely new organic dataset, both larger projects
+than a hardening/documentation pass).
 
 **Feature engineering:** 50 raw columns → 40 model-ready features (README's
 "40 model-ready features" claim, verified consistent with `/health`'s
@@ -51,14 +80,26 @@ informed the retrain decisions in `RECALL_CEILING_REMEDIATION.md`.
 per-user personalization columns (`usr_avg_monthly_txn_profile`,
 `usr_is_high_risk`, ...).
 
-**Split & class imbalance handling:** SMOTE applied to the training
-partition only (24K → 45,980 rows after oversampling) — the correct
-direction (never oversample before splitting, or synthetic neighbors of a
-test-set row can leak into training). **NOT independently re-verified this
-audit** which exact script performs the split point vs. the SMOTE call, or
-confirmed the split is not itself contaminated some other way — this is
-the single highest-value thing for a future audit pass to re-derive from
-`paysense_phase3.py` directly rather than trust the existing claim.
+**Split & class imbalance handling, fully verified in the 2026-08-26 audit
+by reading `paysense_phase3.py` and `resweep_threshold_against_ensemble.py`
+directly, not inferred from documentation:** a single stratified random
+split (`sklearn.train_test_split(..., test_size=0.20, random_state=42,
+stratify=y)`), identical parameters and identical dropped columns in both
+scripts — confirmed by checking they produce the exact same held-out
+partition (both recover the published 253-fraud test set). The
+preprocessor (imputation + ordinal encoding) is fit on the training
+partition only, confirmed by reading the fit/transform calls directly.
+SMOTE is applied to the training partition only, after the split (24K →
+45,980 rows) — the correct direction. **Real gap, found in this same
+audit:** the threshold itself is selected on this same held-out partition
+(there is no third, separate validation set) — `resweep_threshold_
+against_ensemble.py` sweeps thresholds and picks the best-F1 one using the
+*same* 6,000 rows it then reports "test" performance on. This means the
+reported precision/recall numbers are somewhat threshold-optimistic (the
+threshold was chosen to look good on exactly this data), though this is a
+narrower issue than the source-contamination finding above and doesn't
+affect the underlying trained model's parameters, only which operating
+point was chosen.
 
 **Known dataset limitations (from the project's own docs, not invented
 here):**

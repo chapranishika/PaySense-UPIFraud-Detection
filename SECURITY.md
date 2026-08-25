@@ -167,10 +167,33 @@ every deployed bundle, and exactly the kind of "planned but never wired up"
 dependency the size-constrained Vercel deployment path (`DEPLOY_VERCEL.md`)
 can't afford. **Recommendation: remove it** (P2 — see remediation plan).
 
-**NOT VERIFIED.** No `pip-audit` / `safety` / Dependabot-style CVE scan of
-`requirements.txt`'s pinned versions was run as part of this audit. This is
-a real gap in this security review, not a claim that the dependencies are
-clean — it is simply unchecked.
+**Real scan run, 2026-08-26, `pip-audit` against the actual project venv:**
+
+*Before:* 35 known vulnerabilities in 8 packages, including 5 CVEs in
+`python-jose` — the JWT library this project's entire auth model depends
+on (`PYSEC-2024-232`, `PYSEC-2024-233`, `PYSEC-2025-185`).
+
+*Fixed and verified (full test suite re-run after each bump, 214/214
+passing throughout):* `python-jose` 3.3.0→3.4.0, `cryptography` 49.0.0→
+50.0.0, `python-dotenv` 1.0.1→1.2.2, `python-multipart` 0.0.9→0.0.31 — all
+CVEs in these four packages fully cleared.
+
+*Not fixed, documented honestly:*
+- **`starlette` 0.38.6** (8 CVE entries, fix versions 0.40.0+/1.x) — FastAPI
+  0.115.0 pins `starlette<0.39.0,>=0.37.2`; every fix version is outside
+  that range. Fixing this requires a coordinated FastAPI+starlette upgrade
+  with real regression testing (OpenAPI schema generation, response model
+  behavior can change between major Starlette versions) — out of scope for
+  this pass, flagged as P1.
+- **`ecdsa` 0.19.2** (1 CVE, no fix version listed upstream) — transitive
+  dependency, nothing to upgrade to yet.
+- **`pyasn1` 0.4.8** (multiple CVEs) — transitive dependency.
+- **`pip` 24.0` / `setuptools` 78.1.0`** — packaging tooling, not code that
+  runs in the deployed service.
+
+*Result as of 2026-08-26:* 27 known vulnerabilities remain in 5 packages
+(down from 35 in 8). **No claim of "secure"** — this is the actual,
+current, dated result of one tool's scan, not a guarantee.
 
 ---
 
@@ -179,8 +202,13 @@ clean — it is simply unchecked.
 - Formal penetration testing of the live Render deployment (which, as of
   this audit, is not responding at all — see `PROJECT.md`'s known
   limitations).
-- A CVE scan of pinned dependency versions (noted above as unverified).
-- Anything about the abandoned `android/`, `backend/`, and
-  `PaySense-Android-Client` (no "-New") directories — they are dead code,
-  not maintained, and out of scope for a security review of the live
-  system. See `PROJECT.md`'s repository map.
+- The remaining 27 dependency vulnerabilities documented above as not yet
+  fixed (starlette, ecdsa, pyasn1, pip, setuptools).
+- Anything about `PaySense-Android-Client` (no "-New") — explicitly kept
+  by the project owner per an existing README.md comment ("early,
+  incomplete scaffold — superseded by -New, kept for history"), a
+  deliberate choice this audit did not override. `android/` and `backend/`
+  — the two undocumented, unreferenced first-commit scaffolds with no such
+  comment anywhere — were removed via `git rm -r` in this audit; their
+  full history remains in git regardless. See `PROJECT.md`'s repository
+  map for the distinction.

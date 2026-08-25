@@ -196,24 +196,24 @@ inferred from documentation alone.
 |---|---|---|---|
 | `PaySense-ML-Backend/` | **ACTIVE** | 2026-08-26 (this audit) | The real backend. |
 | `PaySense-Android-Client-New/` | **ACTIVE** | 2026-08-25 | The real Android client. |
-| `PaySense-Android-Client/` (no "-New") | **DEAD** | 2026-07-23 | Superseded by `-New`, ~207KB, never touched since. |
-| `android/` | **DEAD** | 2026-04-29 (initial commit only) | First-draft scaffold, ~172KB, never touched again in 4 months. |
-| `backend/` | **DEAD** | 2026-04-29 (initial commit only) | First-draft scaffold, ~2.1MB, never touched again in 4 months. |
+| `PaySense-Android-Client/` (no "-New") | **DEAD, kept deliberately** | 2026-07-23 | Superseded by `-New`, ~207KB. README.md already documents this explicitly: "early, incomplete scaffold — superseded by -New, kept for history." A conscious choice by the project owner, not an oversight — this audit did not override it. |
+| `android/` | **REMOVED, 2026-08-26** | was 2026-04-29 only | First-draft scaffold, ~172KB, never touched again in 4 months, never mentioned anywhere. Verified unreferenced by any config/CI/docs before removal via `git rm -r`; full history remains in git. |
+| `backend/` | **REMOVED, 2026-08-26** | was 2026-04-29 only | First-draft scaffold, ~2.1MB, same verification and removal as `android/`. |
 | `PaySense-Report/` | Static assets | — | LaTeX report + generated plots (SHAP, evaluation figures). Not code. |
 | `screenshots/` | Documentation assets | — | Real captures referenced by `WALKTHROUGH.md`, not decorative. |
 | `.github/workflows/ci.yml` | **ACTIVE, now fixed** | 2026-08-26 | Was fully broken (100% failure rate) — see `SECURITY.md` §1. |
 
-**Recommendation (P1, not yet done):** delete `android/`, `backend/`, and
-`PaySense-Android-Client`. They add ~2.5MB of dead weight and — more
-importantly — real confusion for anyone reviewing this repo cold: a
-newcomer has no way to know these are abandoned without doing exactly the
-`git log` archaeology this audit just did. This is the single most
-"looks-unmaintained" finding in the entire repository, and it is a one-line
-`git rm -r` away from being fixed. Left undone in this audit deliberately
-(see §21 change-plan discipline: this response prioritizes documentation
-and a verified P0 fix over a bulk deletion that wasn't explicitly
-requested — flagged here for the maintainer to execute with one command:
-`git rm -r android/ backend/ "PaySense-Android-Client/"`).
+**Resolution, 2026-08-26 audit:** `android/` and `backend/` were removed
+via `git rm -r` after verifying (a) no CI/build config references either
+path, (b) no documentation anywhere frames them as intentional (unlike the
+old Android client, below), and (c) their full history remains permanently
+retrievable via `git log --all`/`git show` — deletion from the working
+tree loses nothing. `PaySense-Android-Client` (no "-New") was deliberately
+**left in place**: README.md already documents it as a conscious "kept for
+history" decision by the project owner, and overriding that unilaterally
+would replace one person's judgment call with this audit's own, which
+isn't the same kind of "safe, verified, unreferenced" deletion the other
+two were.
 
 **Inside `PaySense-ML-Backend/` — genuinely large experiment-script sprawl,
 by design, not by accident:** 30 loose `.py` scripts at the top level
@@ -321,12 +321,44 @@ See `SECURITY.md`.
 
 ## 16. Performance
 
-**NOT VERIFIED.** No load testing, no measured latency/throughput numbers
-for the live API exist in this repo as of this audit — beyond the
-category classifier's measured 369ms single-request CPU inference time
-(DistilBERT candidate) vs. sub-millisecond (deployed classifier), which
-*is* real and measured (`WALKTHROUGH.md`). No fabricated numbers are
-provided here to fill this gap.
+**A modest, reproducible local benchmark — not a load test — run 2026-08-26**
+to establish basic evidence where none existed. Not claimed to represent
+production behavior (different hardware, single local request stream, no
+concurrency).
+
+*Environment:* this development machine (Intel Core Ultra 9 185H, Windows
+11 Home), local `uvicorn main:app` process, Python 3.11, sequential
+(non-concurrent) requests over `localhost`.
+
+*Cold start* (process launch to first successful `GET /health`, includes
+loading all ML artefacts): **1.77 seconds**, one run.
+
+*Warm inference latency*, `POST /predict`, 50 sequential requests against
+an already-running server, real JWT auth on every request, using the test
+suite's own `legit_payload()` fixture:
+
+| | ms |
+|---|---:|
+| Mean | 14.58 |
+| Median | 11.98 |
+| P95 | 35.23 |
+| P99 | 39.23 |
+| Min | 6.94 |
+| Max | 39.23 |
+
+**NOT MEASURED reliably: process memory (RSS).** An attempted measurement
+returned an implausible 4MB for a process with XGBoost/pandas/scikit-learn
+loaded — almost certainly the wrong process handle, not a real number.
+Rather than report it, this is flagged as a failed measurement attempt.
+
+**NOT MEASURED at all:** concurrent request throughput, behavior under
+load, production-hardware latency (Render's actual instance size is
+unknown from this environment), and the category classifier's separately-
+measured 369ms (DistilBERT) vs. sub-millisecond (deployed) single-request
+inference numbers already documented in `WALKTHROUGH.md` are the only
+other real performance evidence this project has. This benchmark is
+explicitly a floor for "basic engineering evidence exists," not a
+production capacity claim.
 
 ## 17. Testing
 
@@ -415,6 +447,32 @@ Trade-off: A finite, hand-authored pattern list is not exhaustive — a
           red-teamed at scale.
 ```
 
+```
+Decision: Keep the deployed threshold at 0.50 despite it not satisfying
+          the documented Recall>=75% business constraint.
+Context:  A full 0.05-0.95 sweep against the real ensemble found ZERO
+          thresholds meeting Recall>=75% AND Precision>=50% simultaneously.
+          The closest candidate (t=0.15) clears 75.9% recall at 15.99%
+          precision -- 84% of its alerts would be false alarms.
+Options:  (a) deploy t=0.15 to technically satisfy the recall floor;
+          (b) keep 0.50 (best F1); (c) revise the documented requirement.
+Chosen:   (b) and (c) together -- keep 0.50, document that the original
+          Recall>=75% requirement is not currently achievable.
+Why:      A system that fires false fraud alerts 84% of the time destroys
+          user trust faster than missing fraud does, and doesn't actually
+          satisfy the *spirit* of the requirement even if it satisfies the
+          letter. Choosing a threshold to make a number technically true
+          is exactly the kind of "prettier metric" selection that caused
+          the raw-XGBoost-vs-ensemble bug in the first place.
+Trade-off: The deployed system misses most organic fraud (2.55% recall on
+          the organic test subset). This is now precisely quantified and
+          regression-tested, not softened.
+Consequence: Whoever owns this project's requirements needs to either
+          accept a revised, lower recall target, or fund the larger work
+          (more/better organic training data, or a materially different
+          model) that could make Recall>=75% genuinely achievable.
+```
+
 ## 22. Known limitations — brutally honest
 
 **Technical:**
@@ -425,17 +483,36 @@ Trade-off: A finite, hand-authored pattern list is not exhaustive — a
 - Single-process, single-worker deployment — no horizontal scaling path
   documented or built.
 
-**Data:**
+**Data — the single most important finding of the 2026-08-26 audit:**
 - A third of the fraud training data (the 10K supplement) carries a
-  near-tautological feature→label relationship inherited from its source.
+  near-tautological feature→label relationship inherited from its source
+  — and this contaminates the test set in the same proportion, because the
+  split doesn't account for `data_source`. Quantified precisely: on the
+  organic (anchor-only) subset of the canonical test set, ROC-AUC is
+  0.7465 and PR-AUC is 0.1138 (vs. 0.8969 / 0.5498 blended) — real,
+  positive signal, but nowhere near the headline numbers. Full breakdown
+  in `DATASET.md` and `WALKTHROUGH.md`'s honest findings.
+- The threshold is selected on the same held-out partition its performance
+  is then reported on — no separate validation set exists. Narrower issue
+  than the above, but means reported precision/recall are somewhat
+  threshold-optimistic.
 - The category classifier's original training data is 40 fixed sentence
   templates — worked around, not eliminated (the deployed model's 78.0%
   accuracy is real, but still template-influenced relative to true
   open-domain text).
 
 **Model:**
-- Recall caps at 39.53% at the deployed threshold — the majority of real
-  fraud in this system's own held-out test data is still missed.
+- Recall caps at 39.53% at the deployed threshold on the blended test
+  set — but only 2.55% (4/157) on the organic subset alone (see above).
+  The majority of real, organic fraud in this system's own held-out test
+  data is essentially undetected.
+- **The documented business requirement (Recall≥75% AND Precision≥50%) is
+  confirmed, by a full threshold sweep, to be unachievable by this model on
+  this test set at any threshold** — not a threshold-selection oversight.
+  The deployed 0.50 is the best available F1 operating point, not a
+  constraint-satisfying one. The honest resolution is revising the
+  documented requirement, not changing the deployed threshold (see design
+  decision below).
 - 0/701 real frauds caught on one specific external OOD dataset at the
   production threshold (root-caused, not mysterious, but not fixed either
   — fixing it would require either a currency-aware rules scorer or
@@ -471,26 +548,33 @@ account: check the dashboard's deploy logs directly.
 **High impact:**
 1. Diagnose and fix the Render deployment (§23) — without this, the
    production `BASE_URL` the shipped app points at serves nothing.
-2. Delete the three dead directories (§9) — the single highest-leverage
-   "looks unmaintained" fix available, costs one command.
-3. Push recall past 39.53% at the deployed threshold, or explicitly decide
-   (with documented reasoning) that the precision/recall trade-off at 0.50
-   is the right business call and stop treating it as unfinished.
+2. **~~Delete the dead directories (§9)~~ — DONE, 2026-08-26** (`android/`,
+   `backend/`; `PaySense-Android-Client` deliberately kept, see §9).
+3. Retrain on organic-only data (or a genuinely new organic dataset) to
+   close the gap found in §22/`DATASET.md` — 2.55% real recall on organic
+   fraud is the actual number that matters, not the blended 39.53%. This
+   is now the single highest-value remaining item in the entire project.
+4. Formally revise the "Recall≥75%" documented requirement, or fund the
+   model/data work that could make it achievable — confirmed unachievable
+   at any threshold on the current model (§21 design decision).
 
 **Medium impact:**
-4. Remove the unused `aiosqlite` dependency (`SECURITY.md` §5).
-5. Move the 30 loose experiment scripts under `PaySense-ML-Backend/` into
+5. **~~Remove the unused `aiosqlite` dependency~~ — DONE, 2026-08-26.**
+6. Move the 30 loose experiment scripts under `PaySense-ML-Backend/` into
    an `experiments/` subdirectory.
-6. Add a real load test and publish actual latency/throughput numbers
+7. Add a real load test and publish actual latency/throughput numbers
    instead of leaving §16 empty.
+8. Upgrade `starlette`/`fastapi` together to clear the remaining CVEs
+   (`SECURITY.md` §5) — needs real regression testing, not a blind bump.
 
 **Nice to have:**
-7. System-level push notifications for high-risk fraud alerts (currently
+9. System-level push notifications for high-risk fraud alerts (currently
    in-app only).
-8. A CVE/dependency scan (`pip-audit` or Dependabot) — not yet run.
-9. Deploy the DistilBERT category classifier once the hosting tier's
-   memory headroom is actually confirmed, recovering ~5 points of real
-   accuracy.
+10. **~~A CVE/dependency scan~~ — DONE, 2026-08-26** (`pip-audit`; 4 of 8
+    flagged packages fully fixed, remainder documented in `SECURITY.md`).
+11. Deploy the DistilBERT category classifier once the hosting tier's
+    memory headroom is actually confirmed, recovering ~5 points of real
+    accuracy.
 
 ## 25–28. How to run / train / evaluate / run inference
 
