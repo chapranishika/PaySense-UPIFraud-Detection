@@ -33,6 +33,14 @@ jobs:
       - name: Run pytest
         env:
           APP_ENV: production
+          # CI-only dummy values -- not secrets. JWT_SECRET_KEY only needs to
+          # be *some* string for tests to sign/verify tokens against; it is
+          # never used to protect anything real. API_DEMO_USER/PASS are the
+          # same publicly-documented demo credentials already printed in
+          # .env.example and README.md, not a real account.
+          JWT_SECRET_KEY: ci-test-secret-not-used-in-production
+          API_DEMO_USER: paysense
+          API_DEMO_PASS: guardian2025
         run: pytest tests/ -v
 
   android-tests:
