@@ -21,7 +21,7 @@ exact code.
 | Datasets evaluated | 18 |
 | Master dataset | 30,000 rows · 40 model-ready features · 4.21% fraud |
 | SMOTE applied | Training partition only (24K → 45,980 rows) |
-| Tests passing | **226** (28 Android unit tests · 198 backend pytest) |
+| Tests passing | **239** (28 Android unit tests · 211 backend pytest) |
 
 **Correction, 2026-08-24 — the most important one yet, because it's a
 methodology error, not a stale number.** Every metric ever reported in this
