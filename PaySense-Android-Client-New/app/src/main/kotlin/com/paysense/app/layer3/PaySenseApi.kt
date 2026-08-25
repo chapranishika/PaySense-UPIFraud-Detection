@@ -84,4 +84,19 @@ interface PaySenseApi {
         @retrofit2.http.Query("fraud_alerts") fraudAlerts: Int,
         @retrofit2.http.Query("vs_last_week_pct") vsLastWeekPct: Double = 12.0
     ): Response<WeeklyInsight>
+
+    /**
+     * POST /assistant/chat
+     * Real LLM-backed AI Assistant, guardrailed server-side (see main.py's
+     * ASSISTANT_SYSTEM_INSTRUCTION and _JAILBREAK_PATTERNS pre-filter). This
+     * replaced the client-side keyword router that used to live in
+     * AssistantFragment.kt -- the "brain" now lives on the backend so it can
+     * be upgraded to a real Gemini call (by setting GEMINI_API_KEY server-
+     * side) without an app update, and so the same guardrails apply no
+     * matter which client calls this endpoint.
+     */
+    @POST("/assistant/chat")
+    suspend fun assistantChat(
+        @Body request: AssistantChatRequest
+    ): Response<AssistantChatResponse>
 }

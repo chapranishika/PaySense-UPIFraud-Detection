@@ -98,11 +98,9 @@ local backend:
 - **AI Assistant.** All three quick-action chips (Summary, Savings Tip,
   Fraud Status) pull live figures from the real transaction history — the
   "Fraud Attempts Blocked: 1" count matched the high-risk transaction
-  above exactly. Free-text chat is keyword-routed rather than a real LLM
-  (typing something that doesn't contain "summary", "tip", "save", or
-  "fraud"/"security"/"status" gets an honest "try typing X" fallback
-  instead of a fabricated answer) — a deliberate, disclosed design choice
-  visible directly in `AssistantFragment.kt`, not a bug.
+  above exactly. Free-text chat used to be keyword-routed entirely on the
+  client (see the finding right below this one) — it's now a real,
+  guardrailed LLM call, decided server-side.
 - **Insights.** The Finance tab's monthly view (month-over-month % change,
   pace-based month-end projection, per-category deltas, cash-flow chart)
   is genuinely computed from live data, not placeholder content.
@@ -184,7 +182,7 @@ codebase — real HTTP requests, real JWT auth, real model inference:
 | PR-AUC | **0.5498** (13.1× the random baseline) |
 | Precision @ deployed threshold (τ=0.50) | **91.74%** |
 | Recall @ deployed threshold (τ=0.50) | **39.53%** |
-| Backend test suite | **198 / 198 passing** |
+| Backend test suite | **211 / 211 passing** |
 | Category classifier, real-world accuracy | **78.0%** deployed (83.0% validated, undeployed — see below) |
 | Android security findings | **4 found, 4 fixed** (3 fully verified, 1 compile-verified) |
 
@@ -452,6 +450,58 @@ this project was audited with.
   live backend's hosting tier has the memory headroom for `torch` +
   `transformers` alongside the existing model stack. An OOM crash on the
   live service is worse than keeping the faster classifier deployed.
+
+</details>
+
+<details>
+<summary><b>AI Assistant — from client-side keyword router to a guardrailed LLM</b> (click to expand)</summary>
+
+- **FOUND** — The AI Assistant's free-text chat was a purely client-side
+  `when` block in `AssistantFragment.kt`: it string-matched on "summary",
+  "tip"/"save", and "fraud"/"security"/"status", and anything else got a
+  canned "try typing X" reply. Disclosed honestly in this document from the
+  start, but a real gap against the "real LLM" the app's own copy implied.
+  The one existing Gemini call (the savings-tip endpoint) also had a real,
+  if narrow, weakness: the user's `top_category` was f-string-concatenated
+  directly into the prompt with no system/user separation — mitigated
+  earlier this session by making it a closed `Literal` allowlist, but the
+  underlying pattern (one blended prompt string, no real instruction
+  channel) was still there.
+- **FIXED** — Added `POST /assistant/chat`, backed by a real Gemini call
+  through a shared `_call_gemini()` helper that uses the API's actual
+  `system_instruction` field — a channel kept separate from the user's own
+  message, not string-concatenated into one prompt the way the original
+  savings-tip call did it. The system instruction constrains scope (spending/
+  fraud/savings/this app only), forbids inventing numbers not present in the
+  request's real context data, and refuses role-override attempts.
+- **Two layers of guardrail, not one** — a deterministic regex pre-filter
+  (`_JAILBREAK_PATTERNS`) blocks common injection phrasing ("ignore all
+  previous instructions", "you are now…", "reveal your system prompt",
+  "developer mode", etc.) *before any LLM call is made at all* — cheaper,
+  and immune to a cleverer rephrase arguing past the model. The system
+  instruction is the second layer, for everything the regex doesn't catch.
+  Verified with 4 different jailbreak phrasings plus a sanity test that the
+  regex isn't so broad it eats legitimate questions containing words like
+  "act" or "pretend" in an innocent context.
+- **Never goes silent** — no `GEMINI_API_KEY` configured (true of this
+  deployment right now), or the Gemini call fails for any reason (timeout,
+  non-2xx, malformed response), and the endpoint falls back to the same
+  deterministic summary/tip/fraud-status logic the client used to run
+  locally — now living server-side instead, so every client gets the
+  upgrade without an app update, and the assistant degrades gracefully
+  instead of returning nothing.
+- **Verified**: 13 new tests (`TestAssistantChat` in `tests/test_api.py`) —
+  auth guard, input-length limits, three intents reflecting real request
+  data back correctly, an off-topic message getting a redirect instead of
+  silence, 4 jailbreak phrasings all blocked pre-LLM, and the false-positive
+  sanity check — all passing, plus the existing 198 unaffected (211/211
+  total). Live-smoke-tested against a real running `uvicorn` process over
+  actual HTTP (not just the test client) for the fallback, blocked, and
+  off-topic paths. On-device UI verification on the emulator was attempted
+  but blocked by a stuck host-level crash-consent dialog (unrelated to this
+  feature — triggered by an earlier forced process kill during disk
+  cleanup) after several retries; the backend contract itself is fully
+  verified independent of that.
 
 </details>
 

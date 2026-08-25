@@ -243,3 +243,48 @@ data class WeeklyInsight(
     @SerializedName("budget_status")
     val budgetStatus: String
 )
+
+// ──────────────────────────────────────────────────────────────────────────────
+//  /assistant/chat — matches AssistantChatRequest / AssistantChatResponse in
+//  FastAPI main.py.
+//
+//  AssistantChatRequest → the user's free-text message plus their current
+//                          spend figures, so the backend (real Gemini call
+//                          or its deterministic fallback) can ground any
+//                          numbers it states in what's actually true instead
+//                          of inventing them.
+//  AssistantChatResponse → source tells you which of three things produced
+//                          `reply`:
+//                            "gemini"   — a real LLM call, scoped by a
+//                                         system_instruction the user's
+//                                         message cannot override.
+//                            "fallback" — GEMINI_API_KEY isn't configured
+//                                         server-side, or the Gemini call
+//                                         failed; a deterministic rule-based
+//                                         reply was used instead. Never blank.
+//                            "blocked"  — the message matched a known
+//                                         prompt-injection/jailbreak pattern
+//                                         and was refused before any LLM call
+//                                         was made at all.
+// ──────────────────────────────────────────────────────────────────────────────
+data class AssistantChatRequest(
+    @SerializedName("message")
+    val message: String,
+    @SerializedName("total_spent")
+    val totalSpent: Double = 0.0,
+    @SerializedName("top_category")
+    val topCategory: String = "Uncategorized",
+    @SerializedName("top_category_pct")
+    val topCategoryPct: Double = 0.0,
+    @SerializedName("fraud_alerts")
+    val fraudAlerts: Int = 0,
+    @SerializedName("vs_last_week_pct")
+    val vsLastWeekPct: Double = 0.0
+)
+
+data class AssistantChatResponse(
+    @SerializedName("reply")
+    val reply: String,
+    @SerializedName("source")
+    val source: String
+)

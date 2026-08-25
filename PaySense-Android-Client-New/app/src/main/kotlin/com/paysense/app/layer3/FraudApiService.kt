@@ -465,6 +465,50 @@ class FraudApiService private constructor(private val context: Context) {
     }
 
     // ──────────────────────────────────────────────────────────────────────────
+    //  ASSISTANT CHAT  (real LLM-backed, guardrailed server-side)
+    //
+    //  Called by AssistantFragment for every message -- both the quick-action
+    //  chips (which send a canned message like "Give me a spending summary")
+    //  and real free-text input. The backend decides how to answer (a real
+    //  Gemini call if GEMINI_API_KEY is configured there, else a deterministic
+    //  fallback) -- this client only displays whatever comes back. Returns
+    //  null on any network failure so the fragment can show an honest
+    //  "can't reach PaySense" message instead of a fabricated reply.
+    // ──────────────────────────────────────────────────────────────────────────
+    suspend fun chatWithAssistant(
+        message: String,
+        totalSpent: Double,
+        topCategory: String,
+        topCategoryPct: Double,
+        fraudAlerts: Int,
+        vsLastWeekPct: Double = 0.0
+    ): AssistantChatResponse? {
+        return withContext(Dispatchers.IO) {
+            try {
+                val response = api.assistantChat(
+                    AssistantChatRequest(
+                        message = message,
+                        totalSpent = totalSpent,
+                        topCategory = topCategory,
+                        topCategoryPct = topCategoryPct,
+                        fraudAlerts = fraudAlerts,
+                        vsLastWeekPct = vsLastWeekPct
+                    )
+                )
+                if (response.isSuccessful) {
+                    response.body()
+                } else {
+                    Log.e(TAG, "❌ Assistant chat API failed: ${response.code()}")
+                    null
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ Assistant chat API exception: ${e.message}")
+                null
+            }
+        }
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
     //  CLASSIFY CATEGORY  (Layer 2, Tier 2 — NLP classifier over /classify)
     //
     //  Called by PayeeCacheRepository.runNlpClassifier() on a Tier-1 cache

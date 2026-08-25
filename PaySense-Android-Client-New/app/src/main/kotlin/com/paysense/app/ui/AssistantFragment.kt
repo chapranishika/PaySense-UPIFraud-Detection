@@ -4,7 +4,6 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
@@ -15,8 +14,6 @@ import com.paysense.app.databinding.ItemChatBubbleBinding
 import com.paysense.app.layer3.FraudApiService
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.text.NumberFormat
-import java.util.Locale
 
 data class ChatMessage(val text: String, val isUser: Boolean)
 
@@ -29,7 +26,6 @@ class AssistantFragment : Fragment() {
 
     private val messages = mutableListOf<ChatMessage>()
     private lateinit var chatAdapter: ChatAdapter
-    private val currencyFmt = NumberFormat.getCurrencyInstance(Locale("en", "IN"))
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -83,33 +79,51 @@ class AssistantFragment : Fragment() {
         }
     }
 
+    // Sends every message -- quick-action chips and real free-text alike --
+    // to the backend's /assistant/chat, along with the user's real current
+    // spend figures so the reply (real Gemini call or its guardrailed
+    // fallback, decided entirely server-side) can ground any numbers it
+    // states instead of inventing them. This replaced a client-side keyword
+    // router that lived here before; see FraudApiService.chatWithAssistant()
+    // and main.py's ASSISTANT_SYSTEM_INSTRUCTION for where the logic moved.
     private fun handleUserQuery(query: String) {
-        // 1. Add user message
         addUserMessage(query)
 
-        // 2. Launch coroutine to generate reply with simulated thinking delay
         viewLifecycleOwner.lifecycleScope.launch {
-            delay(800) // 800ms thinking delay
+            delay(800) // thinking delay, matches the assistant's prior feel
 
-            val lower = query.lowercase(Locale.ROOT)
-            when {
-                lower.contains("summary") || lower.contains("spend") -> {
-                    val summaryText = generateSpendingSummary()
-                    addAssistantMessage(summaryText)
-                }
-                lower.contains("tip") || lower.contains("save") || lower.contains("dining") -> {
-                    // Call live insights API!
-                    val tipText = fetchSavingsTipFromApi()
-                    addAssistantMessage(tipText)
-                }
-                lower.contains("fraud") || lower.contains("security") || lower.contains("status") || lower.contains("alert") -> {
-                    val fraudStatusText = generateFraudStatusReport()
-                    addAssistantMessage(fraudStatusText)
-                }
-                else -> {
-                    addAssistantMessage("I can analyze your spending history. Try typing:\n- \"spending summary\"\n- \"savings tip\"\n- \"fraud status\"")
+            val txns = viewModel.transactions.value
+            val totalSpent = viewModel.totalSpent.value
+            val fraudCount = viewModel.fraudCount.value
+
+            val categories = txns
+                .filter { !it.isFraud && it.category != "Income" && it.category != "Refund" }
+                .groupBy { it.category }
+            var topCategoryName = "Uncategorized"
+            var topCategorySpent = 0.0
+            for ((cat, catTxns) in categories) {
+                val spent = catTxns.sumOf { it.amount }
+                if (spent > topCategorySpent) {
+                    topCategoryName = cat
+                    topCategorySpent = spent
                 }
             }
+            val topCategoryPct = if (totalSpent > 0) (topCategorySpent / totalSpent) * 100 else 0.0
+
+            val result = FraudApiService.getInstance(requireContext()).chatWithAssistant(
+                message = query,
+                totalSpent = totalSpent,
+                topCategory = topCategoryName,
+                topCategoryPct = topCategoryPct,
+                fraudAlerts = fraudCount
+            )
+
+            if (_binding == null) return@launch // fragment view may be gone by the time this resolves
+
+            addAssistantMessage(
+                result?.reply
+                    ?: "I can't reach PaySense right now — check your connection and try again."
+            )
         }
     }
 
@@ -123,79 +137,6 @@ class AssistantFragment : Fragment() {
         messages.add(ChatMessage(text, isUser = false))
         chatAdapter.notifyItemInserted(messages.size - 1)
         binding.rvChatMessages.scrollToPosition(messages.size - 1)
-    }
-
-    private fun generateSpendingSummary(): String {
-        val txns = viewModel.transactions.value
-        val totalSpent = viewModel.totalSpent.value
-        val fraudCount = viewModel.fraudCount.value
-
-        if (txns.isEmpty()) {
-            return "You don't have any transaction history yet. Type or simulate an SMS to get started!"
-        }
-
-        // Aggregate category counts
-        val categories = txns.filter { !it.isFraud && it.category != "Income" && it.category != "Refund" }.groupBy { it.category }
-        var topCategoryName = "Uncategorized"
-        var topCategorySpent = 0.0
-        
-        for ((cat, catTxns) in categories) {
-            val spent = catTxns.sumOf { it.amount }
-            if (spent > topCategorySpent) {
-                topCategoryName = cat
-                topCategorySpent = spent
-            }
-        }
-
-        return "📊 **Spending Summary:**\n\n" +
-                "- **Total Outflow:** ${currencyFmt.format(totalSpent)}\n" +
-                "- **Top Category:** $topCategoryName (${currencyFmt.format(topCategorySpent)})\n" +
-                "- **Fraud Attempts Blocked:** $fraudCount hits\n\n" +
-                "Your weekly budget utilization is at **${((totalSpent / 15000.0) * 100).toInt()}%** of your ₹15,000 threshold."
-    }
-
-    private suspend fun fetchSavingsTipFromApi(): String {
-        val totalSpent = viewModel.totalSpent.value
-        val fraudCount = viewModel.fraudCount.value
-        val txns = viewModel.transactions.value
-
-        // Find top category
-        val categories = txns.filter { !it.isFraud && it.category != "Income" && it.category != "Refund" }.groupBy { it.category }
-        var topCategoryName = "Food"
-        var topCategorySpent = 0.0
-        for ((cat, catTxns) in categories) {
-            val spent = catTxns.sumOf { it.amount }
-            if (spent > topCategorySpent) {
-                topCategoryName = cat
-                topCategorySpent = spent
-            }
-        }
-        val topCategoryPct = if (totalSpent > 0) (topCategorySpent / totalSpent) * 100 else 0.0
-
-        // Call backend API
-        val service = FraudApiService.getInstance(requireContext())
-        val insight = service.getWeeklyInsights(
-            totalSpent = totalSpent,
-            topCategory = topCategoryName,
-            topCategoryPct = topCategoryPct,
-            fraudAlerts = fraudCount
-        )
-
-        return if (insight != null) {
-            "💡 **AI Savings Tip:**\n\n\"${insight.savingsTip}\"\n\n*Budget Pace: ${insight.budgetStatus}*"
-        } else {
-            // Local fallback tip
-            "💡 **Savings Tip:**\n\nCooking meals at home instead of ordering out can save up to ₹800/week on food expenses."
-        }
-    }
-
-    private fun generateFraudStatusReport(): String {
-        val fraudCount = viewModel.fraudCount.value
-        return "🛡️ **PaySense Security Status:**\n\n" +
-                "- **Active Engine:** XGBoost 41-feature Ensemble Scorer.\n" +
-                "- **Layer 1 Gate:** TRAI format check active.\n" +
-                "- **Blocked Incidents:** $fraudCount fraud attempts intercepted.\n" +
-                "- **Current Threat Level:** LEGIT. Any transaction scoring above 0.70 will trigger immediate block alerts."
     }
 
     override fun onDestroyView() {
