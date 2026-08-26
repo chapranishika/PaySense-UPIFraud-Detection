@@ -11,6 +11,11 @@ local.properties
 .DS_Store
 .env
 
+# Private candidate knowledge base: interview prep, resume material, and
+# internal decision/failure-analysis notes for the project owner only.
+# Never public.
+.private/
+
 # DistilBERT category classifier candidate (CATEGORY_CLASSIFIER_V3_ATTEMPT.md
 # §3.6): 255MB model.safetensors exceeds GitHub's 100MB hard file-size
 # limit. Not deployed -- validated result + metrics are what matter, not

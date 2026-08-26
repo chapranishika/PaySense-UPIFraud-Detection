@@ -55,22 +55,40 @@ anchor-fraud). Scoring the frozen ensemble separately on each subset:
 | PR-AUC | 0.5498 | **0.1138** | 1.0000 |
 | Recall @ τ=0.50 | 39.53% (TP=100/253) | **2.55% (TP=4/157)** | 100.00% (TP=96/96) |
 
-The model catches 4 of 157 organic fraud cases in this test set. Its
-reported 39.53% recall is almost entirely the supplement subset's
-trivially-learnable shortcut. This is **not classic leakage** in the
-train/future-information sense — `new_device_flag`/`ip_location_mismatch`
-are legitimately available at prediction time — it is a **label-validity
-problem**: a third of the dataset's fraud examples were labeled by a
-formula applied to two features the model also sees, so the model can
-solve that third by memorizing the formula rather than learning organic
-fraud patterns, and the contaminated test set can't detect this because it
-shares the same contamination. Regression-tested
+The model catches 4 of 157 organic fraud cases in this test set at the
+deployed threshold. Its reported 39.53% recall is almost entirely the
+supplement subset's trivially-learnable shortcut. This is **not classic
+leakage** in the train/future-information sense —
+`new_device_flag`/`ip_location_mismatch` are legitimately available at
+prediction time — it is a **label-and-feature-validity problem**, and it
+runs deeper than two columns: a follow-up forensic investigation
+(`SOURCE_CONTAMINATION_INVESTIGATION.md`) found **23 of ~30 numeric
+columns and 12 of 14 categorical columns are a single constant value
+across the entire 10,000-row supplement subset** (including
+`receiver_id == "SYN_MRC_UNKNOWN"`, a literal synthetic marker) — not
+diverse synthetic data, one templated profile repeated 10,000 times.
+`device_risk_score.notnull()` alone separates supplement from anchor rows
+with exactly 100% accuracy.
+
+**Tested directly, not assumed: retraining on anchor-only data does NOT
+improve organic-subset performance** (ROC-AUC 0.7260→0.7261,
+statistically identical) — the contamination inflates the *blended*
+metrics dramatically but was never suppressing genuine organic-fraud-
+detection capability, so removing it doesn't unlock any. A properly
+re-derived threshold (train/validation/test split, selected on validation
+only, entirely on organic data) gives a more honest operating point than
+the earlier 2.55% figure — which was measured at threshold 0.50,
+calibrated for a different, contaminated score distribution: **21.05%
+recall at 8.82% precision** (TP=32/152) on a genuinely untouched final
+test set. Neither number meets the documented Recall≥75% constraint;
+full detail, mechanism, and all three experiments in
+`SOURCE_CONTAMINATION_INVESTIGATION.md`. Regression-tested
 (`test_organic_subset_performance_is_much_weaker_than_blended_headline`,
-`tests/test_frozen_model_metrics.py`) so this gap is tracked, not silently
-absorbed. **Not fixed in this pass** — see `PROJECT.md`'s remediation plan
-for why (it requires either a retrain on organic-only data of unverified
-sufficient size, or a genuinely new organic dataset, both larger projects
-than a hardening/documentation pass).
+`test_supplement_source_is_near_fully_constant_and_perfectly_separable`,
+`tests/test_frozen_model_metrics.py`) so none of this drifts unnoticed.
+**Not fixed in the deployed system** — the investigation shows this isn't
+fixable by retraining on existing data; a genuinely new/better organic
+dataset is the only path to real improvement.
 
 **Feature engineering:** 50 raw columns → 40 model-ready features (README's
 "40 model-ready features" claim, verified consistent with `/health`'s

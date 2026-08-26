@@ -366,3 +366,53 @@ def test_organic_subset_performance_is_much_weaker_than_blended_headline(frozen_
         f"set and would need to be recomputed on organic-only data to be "
         f"an honest representation of real-world generalization."
     )
+
+
+# ── Structural fact behind the finding above, 2026-08-27 forensic follow-up ──
+# The organic-vs-supplement performance gap isn't a minor distributional
+# quirk -- investigate_source_safe_retrain.py's Phase 1/2 EDA found the
+# supplement source is a single templated synthetic profile repeated
+# 10,000 times: 23 of ~30 numeric columns and 12 of 14 categorical columns
+# are a SINGLE CONSTANT VALUE across the entire subset (including
+# receiver_id == "SYN_MRC_UNKNOWN", a literal synthetic marker). A trivial
+# single-column classifier (device_risk_score.notnull()) separates anchor
+# from supplement with exactly 100% accuracy. This test protects that
+# structural fact directly against the raw dataset file, independent of
+# any trained model, so a future dataset regeneration that quietly
+# "fixes" (or worsens) this doesn't go unnoticed.
+def test_supplement_source_is_near_fully_constant_and_perfectly_separable():
+    if not MASTER_CSV.exists():
+        pytest.skip(f"Master dataset not present in this environment: {MASTER_CSV}")
+
+    df = pd.read_csv(MASTER_CSV)
+    supp = df[df["data_source"] == "supplement"]
+    anchor = df[df["data_source"] == "anchor"]
+    assert len(supp) > 0 and len(anchor) > 0, "Expected both data_source values to be present."
+
+    # Perfect separability via a single column -- the clearest, cheapest
+    # signal of the underlying problem.
+    trivial_pred = df["device_risk_score"].notnull()
+    trivial_actual = df["data_source"] == "supplement"
+    separability = (trivial_pred == trivial_actual).mean()
+    assert separability == pytest.approx(1.0), (
+        f"device_risk_score.notnull() no longer perfectly separates "
+        f"supplement from anchor rows (accuracy={separability:.4f}, was "
+        f"1.0000). If the dataset was regenerated with mixed/organic risk "
+        f"scores, that could be a genuine improvement -- verify and update "
+        f"DATASET.md/WALKTHROUGH.md's contamination finding accordingly "
+        f"rather than just relaxing this assertion."
+    )
+
+    # At least a large majority of columns should be near-single-valued in
+    # the supplement subset -- pinned as a range, not an exact count, since
+    # the precise number is incidental to the finding (that it's a large
+    # majority of the feature space, not one or two columns).
+    numeric_cols = [c for c in supp.select_dtypes(include="number").columns if c != "is_fraud"]
+    constant_numeric = sum(1 for c in numeric_cols if supp[c].nunique(dropna=True) <= 1)
+    assert constant_numeric >= 15, (
+        f"Only {constant_numeric} of {len(numeric_cols)} numeric columns are "
+        f"near-constant in the supplement subset (was 23 of ~30). If this "
+        f"dropped substantially, the supplement source may have been "
+        f"regenerated with real per-row variation -- a genuine improvement "
+        f"worth documenting, not silently accepting a weaker test."
+    )

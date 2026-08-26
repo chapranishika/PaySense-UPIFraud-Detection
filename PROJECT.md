@@ -279,36 +279,13 @@ returning nothing at all (see §23) — a different class of failure than
 anything ML-related: the model could be perfect and no request would ever
 reach it right now.
 
-## 13. Challenges (selected, from real git history + docs)
+## 13. Challenges
 
-```
-Problem:  Category classifier's documented 100% accuracy was hollow.
-Why:      Train and test splits shared the same 40 sentence templates.
-Options:  (a) trust the number, (b) build an independent test set.
-Decision: (b) — 200 hand-authored, structurally-verified-novel narrations.
-Result:   72.5% real accuracy — 27.5 points below the reported figure.
-Trade-off: Took real effort to build a proper eval set; worth it because
-           the false number would have shipped into a resume/interview.
-```
-
-```
-Problem:  Every fraud metric ever reported used raw XGBoost predict_proba(),
-          but /predict calls the real 3-scorer ensemble.
-Why:      The ensemble blending code was added after the metrics-reporting
-          habit was established, and nobody re-checked which function the
-          numbers actually came from.
-Options:  (a) leave it, it's "close enough", (b) re-score everything
-          through the real ensemble and accept whatever changes.
-Decision: (b).
-Result:   Precision at the previously-deployed threshold (0.30) dropped
-          from a claimed 86.44% to a real 40.81%. Threshold re-tuned to
-          0.50 against the real ensemble.
-Trade-off: A worse-looking number, reported anyway, plus a new regression
-           test (test_frozen_model_metrics.py) specifically guarding
-           against this exact class of mistake recurring silently.
-```
-
-More in `WALKTHROUGH.md`'s "Full fix log" — not re-derived here.
+See `EXPERIMENTS.md` for the full chronological record — four real
+methodology corrections (ensemble scoring, category classifier
+contamination, the DistilBERT ablation, and the source-contamination
+investigation), each with the initial wrong result, how it was caught,
+and the fix. Not re-derived here to avoid duplicating that document.
 
 ## 14. Architecture
 
@@ -412,66 +389,13 @@ See `ARCHITECTURE.md` §5 and §23 below.
 See §4 above — merged rather than duplicated, per the "avoid documentation
 fragmentation" principle this audit was asked to follow.
 
-## 21. Design decisions log (selected)
+## 21. Design decisions
 
-```
-Decision: Deploy the data-diversity-retrained category classifier (78.0%),
-          not the more-accurate DistilBERT fine-tune (83.0%).
-Context:  Both were trained on identical data; DistilBERT scored higher.
-Options:  Deploy the better model; keep the faster/smaller one.
-Chosen:   Keep the smaller, faster, already-deployed model.
-Why:      267.8MB model vs ~2.1MB (128× larger); 369ms vs sub-millisecond
-          inference (370× slower); no way to verify the live hosting
-          tier's memory headroom for torch+transformers alongside the
-          existing stack.
-Trade-off: Leaves 5 percentage points of real accuracy on the table.
-Consequence: An OOM crash on the live service would be strictly worse than
-          keeping the faster, slightly-less-accurate classifier running.
-```
-
-```
-Decision: Assistant LLM guardrails as two separate layers (regex pre-filter
-          + system_instruction), not one.
-Context:  A single-layer defense (only a system_instruction, the way the
-          original savings-tip Gemini call worked) is real but can
-          sometimes be argued past by a sufficiently clever rephrase.
-Options:  System-instruction only; regex-only; both.
-Chosen:   Both, regex first.
-Why:      The regex layer is free (no LLM call, no latency, no cost) and
-          categorically cannot be argued past — it either matches known
-          phrasing or it doesn't. The system instruction is what has to
-          hold for everything the regex doesn't catch.
-Trade-off: A finite, hand-authored pattern list is not exhaustive — a
-          novel injection phrasing relies entirely on layer 2 holding,
-          which was tested against 4 phrasings, not adversarially
-          red-teamed at scale.
-```
-
-```
-Decision: Keep the deployed threshold at 0.50 despite it not satisfying
-          the documented Recall>=75% business constraint.
-Context:  A full 0.05-0.95 sweep against the real ensemble found ZERO
-          thresholds meeting Recall>=75% AND Precision>=50% simultaneously.
-          The closest candidate (t=0.15) clears 75.9% recall at 15.99%
-          precision -- 84% of its alerts would be false alarms.
-Options:  (a) deploy t=0.15 to technically satisfy the recall floor;
-          (b) keep 0.50 (best F1); (c) revise the documented requirement.
-Chosen:   (b) and (c) together -- keep 0.50, document that the original
-          Recall>=75% requirement is not currently achievable.
-Why:      A system that fires false fraud alerts 84% of the time destroys
-          user trust faster than missing fraud does, and doesn't actually
-          satisfy the *spirit* of the requirement even if it satisfies the
-          letter. Choosing a threshold to make a number technically true
-          is exactly the kind of "prettier metric" selection that caused
-          the raw-XGBoost-vs-ensemble bug in the first place.
-Trade-off: The deployed system misses most organic fraud (2.55% recall on
-          the organic test subset). This is now precisely quantified and
-          regression-tested, not softened.
-Consequence: Whoever owns this project's requirements needs to either
-          accept a revised, lower recall target, or fund the larger work
-          (more/better organic training data, or a materially different
-          model) that could make Recall>=75% genuinely achievable.
-```
+Selected engineering decisions (why DistilBERT wasn't deployed, why the
+LLM guardrails are two layers, why the threshold stays at 0.50) are
+covered in `EXPERIMENTS.md` and the "Honest findings" sections of
+`WALKTHROUGH.md`, in the context of the experiments that produced them —
+not duplicated here as a separate log.
 
 ## 22. Known limitations — brutally honest
 
@@ -483,19 +407,30 @@ Consequence: Whoever owns this project's requirements needs to either
 - Single-process, single-worker deployment — no horizontal scaling path
   documented or built.
 
-**Data — the single most important finding of the 2026-08-26 audit:**
-- A third of the fraud training data (the 10K supplement) carries a
-  near-tautological feature→label relationship inherited from its source
-  — and this contaminates the test set in the same proportion, because the
+**Data — the single most important finding across the 2026-08-26/27
+audits:**
+- A third of the fraud training data (the 10K supplement) is a single
+  templated synthetic profile repeated 10,000 times (23/~30 numeric and
+  12/14 categorical columns are one constant value across the whole
+  subset, including a literal `"SYN_MRC_UNKNOWN"` marker), whose label
+  was generated by a formula on two features the model also sees — and
+  this contaminates the test set in the same proportion, because the
   split doesn't account for `data_source`. Quantified precisely: on the
   organic (anchor-only) subset of the canonical test set, ROC-AUC is
   0.7465 and PR-AUC is 0.1138 (vs. 0.8969 / 0.5498 blended) — real,
-  positive signal, but nowhere near the headline numbers. Full breakdown
-  in `DATASET.md` and `WALKTHROUGH.md`'s honest findings.
-- The threshold is selected on the same held-out partition its performance
-  is then reported on — no separate validation set exists. Narrower issue
-  than the above, but means reported precision/recall are somewhat
-  threshold-optimistic.
+  positive signal, but nowhere near the headline numbers. **Tested and
+  confirmed NOT fixable by retraining on clean data alone** — see
+  `SOURCE_CONTAMINATION_INVESTIGATION.md` for the full mechanism trace and
+  the retrain experiment. Full breakdown in `DATASET.md` and
+  `WALKTHROUGH.md`'s honest findings.
+- The original threshold was selected on the same held-out partition its
+  performance was then reported on — no separate validation set existed.
+  **Fixed and re-tested** in the same investigation: a proper train/
+  validation/test split, entirely on organic data, threshold selected on
+  validation only, gives a more honest final-test operating point (21.05%
+  recall @ 8.82% precision) than the earlier threshold-miscalibrated
+  2.55% figure — still nowhere near Recall≥75%, now confirmed via the
+  cleanest methodology available on this dataset.
 - The category classifier's original training data is 40 fixed sentence
   templates — worked around, not eliminated (the deployed model's 78.0%
   accuracy is real, but still template-influenced relative to true
@@ -550,13 +485,20 @@ account: check the dashboard's deploy logs directly.
    production `BASE_URL` the shipped app points at serves nothing.
 2. **~~Delete the dead directories (§9)~~ — DONE, 2026-08-26** (`android/`,
    `backend/`; `PaySense-Android-Client` deliberately kept, see §9).
-3. Retrain on organic-only data (or a genuinely new organic dataset) to
-   close the gap found in §22/`DATASET.md` — 2.55% real recall on organic
-   fraud is the actual number that matters, not the blended 39.53%. This
-   is now the single highest-value remaining item in the entire project.
-4. Formally revise the "Recall≥75%" documented requirement, or fund the
-   model/data work that could make it achievable — confirmed unachievable
-   at any threshold on the current model (§21 design decision).
+3. **~~Retrain on organic-only data~~ — DONE and TESTED, 2026-08-27
+   (`SOURCE_CONTAMINATION_INVESTIGATION.md`): does NOT improve organic
+   performance** (ROC-AUC 0.7260→0.7261, statistically identical) —
+   the contamination inflates blended metrics but wasn't suppressing real
+   capability. A properly re-derived threshold (train/validation/test,
+   organic-only) gives 21.05% recall @ 8.82% precision on an untouched
+   final test set — the honest number, not the earlier 2.55% (which used
+   a threshold calibrated for a different, contaminated distribution).
+   **A genuinely new/better organic dataset is now the only path to real
+   improvement** — this remains the single highest-value remaining item,
+   just no longer an open question about whether retraining alone helps.
+4. Formally revise the "Recall≥75%" documented requirement — confirmed
+   unachievable a third time, now via proper train/validation/test
+   discipline on clean organic-only data, not just methodology cleanup.
 
 **Medium impact:**
 5. **~~Remove the unused `aiosqlite` dependency~~ — DONE, 2026-08-26.**

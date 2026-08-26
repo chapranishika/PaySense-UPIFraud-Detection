@@ -150,12 +150,9 @@ https://uptimerobot.com → New Monitor → HTTP → URL: your /health endpoint
 
 ---
 
-## Portfolio URL
+## Sharing the live URL
 
-Once live, add this to:
-- Your GitHub repo description: `https://paysense-api.onrender.com/docs`
-- Your resume: "Live demo: https://paysense-api.onrender.com/docs"
-- Your LinkedIn project: same URL
-
-The Swagger UI at `/docs` lets anyone explore the 43-field API and make
-test predictions — it's the best demo you can give in an interview.
+Once live, `https://paysense-api.onrender.com/docs` is a good link to put
+in the repo description — the Swagger UI there lets anyone explore the
+43-field API and make test predictions directly, without needing to run
+anything locally.

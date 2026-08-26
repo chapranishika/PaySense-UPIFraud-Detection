@@ -228,16 +228,32 @@ this project was audited with.
 > claim and the 0.8969 ROC-AUC headline are both computed on the
 > contaminated blended set; on organic data alone, PR-AUC (0.1138) is only
 > ~2.8× that subset's own ~4% base rate — real, positive signal, but a very
-> different, much weaker story than the headline number tells. **Not fixed
-> in this pass** — fixing it means either dropping the supplement source
-> entirely and retraining (untested how much organic-only training data
-> would then remain, or how the model would perform), or building a
-> genuinely separate, larger organic dataset, both real projects bigger
-> than a hardening pass. Regression-tested
-> (`test_organic_subset_performance_is_much_weaker_than_blended_headline`
-> in `tests/test_frozen_model_metrics.py`) so this gap can't silently
-> shrink or grow unnoticed the way the raw-XGBoost-vs-ensemble discrepancy
-> did for weeks.
+> different, much weaker story than the headline number tells.
+>
+> **A follow-up forensic investigation** (`SOURCE_CONTAMINATION_
+> INVESTIGATION.md`) traced the mechanism precisely and tested the obvious
+> fix directly, rather than assuming it would work: **23 of ~30 numeric
+> columns and 12 of 14 categorical columns in the supplement subset are a
+> single constant value** across all 10,000 rows (including
+> `receiver_id == "SYN_MRC_UNKNOWN"`, a literal synthetic marker) — it's
+> one templated profile repeated 10,000 times, not diverse synthetic data,
+> and a single column (`device_risk_score.notnull()`) separates it from
+> organic data with exactly 100% accuracy. **Retraining on anchor-only
+> data was tested and does NOT improve organic performance** (ROC-AUC
+> 0.7260→0.7261, statistically identical) — the contamination inflates
+> blended metrics but was never suppressing real capability, so removing
+> it unlocks nothing. A properly re-derived threshold (train→validation→
+> untouched-test, organic-only) gives a more honest number than the 2.55%
+> above, which was measured at a threshold calibrated for a different,
+> contaminated score distribution: **21.05% recall at 8.82% precision**
+> on genuinely held-out data. Still nowhere near Recall≥75%, now confirmed
+> via the cleanest methodology available on this dataset — this is a real
+> data-quantity/quality ceiling, not a fixable methodology bug.
+> Regression-tested
+> (`test_organic_subset_performance_is_much_weaker_than_blended_headline`,
+> `test_supplement_source_is_near_fully_constant_and_perfectly_separable`,
+> in `tests/test_frozen_model_metrics.py`) so none of this drifts
+> unnoticed the way the raw-XGBoost-vs-ensemble discrepancy did for weeks.
 
 > **The documented business requirement (Recall ≥75% AND Precision ≥50%) is
 > not achievable by this model on this test set at any threshold** — traced
@@ -254,10 +270,17 @@ this project was audited with.
 > not the deployed threshold: "Recall ≥75%" as originally stated is not
 > currently achievable without a materially better model or more organic
 > training data (see the finding above — likely the same root cause).
-> Regression-tested (`test_no_swept_threshold_meets_both_business_
-> constraints`, `test_deployed_threshold_does_not_meet_documented_recall_
-> constraint`) so a future retrain that *does* close this gap is a visible,
-> deliberate event, not a silent drift in either direction.
+> **Confirmed a third time via the cleanest methodology available**: a
+> proper train→validation→untouched-test split, entirely on organic data,
+> threshold selected on validation only (`SOURCE_CONTAMINATION_
+> INVESTIGATION.md` §3) — still no threshold clears both constraints; the
+> honest final-test operating point is 21.05% recall at 8.82% precision.
+> This is no longer a methodology question, it's a genuine capability
+> ceiling of this model on this data. Regression-tested
+> (`test_no_swept_threshold_meets_both_business_constraints`,
+> `test_deployed_threshold_does_not_meet_documented_recall_constraint`) so
+> a future retrain that *does* close this gap is a visible, deliberate
+> event, not a silent drift in either direction.
 
 > **Recall plateaued at 69.96%** even at the most aggressive threshold
 > tested. The first hypothesis (a calibration problem, fixable with Platt
