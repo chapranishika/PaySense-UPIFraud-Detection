@@ -70,25 +70,30 @@ diverse synthetic data, one templated profile repeated 10,000 times.
 `device_risk_score.notnull()` alone separates supplement from anchor rows
 with exactly 100% accuracy.
 
-**Tested directly, not assumed: retraining on anchor-only data does NOT
-improve organic-subset performance** (ROC-AUC 0.7260→0.7261,
-statistically identical) — the contamination inflates the *blended*
-metrics dramatically but was never suppressing genuine organic-fraud-
-detection capability, so removing it doesn't unlock any. A properly
-re-derived threshold (train/validation/test split, selected on validation
-only, entirely on organic data) gives a more honest operating point than
-the earlier 2.55% figure — which was measured at threshold 0.50,
-calibrated for a different, contaminated score distribution: **21.05%
-recall at 8.82% precision** (TP=32/152) on a genuinely untouched final
-test set. Neither number meets the documented Recall≥75% constraint;
-full detail, mechanism, and all three experiments in
-`SOURCE_CONTAMINATION_INVESTIGATION.md`. Regression-tested
+**The supplement source is not representative of the organic (real-world)
+deployment distribution and should not be treated as evidence of
+real-world model performance.** Tested directly, not assumed: retraining
+on anchor-only data did **not materially change organic-subset ROC-AUC**
+(0.7260→0.7261, statistically identical) — the contamination inflates
+the *blended* metrics, but removing the contaminated rows from the
+existing dataset, on its own, did not change the model's discrimination
+on organic data. A properly re-derived threshold (train/validation/test
+split, selected on validation only, entirely on organic data) gives the
+**current measured performance under a clean evaluation protocol**:
+**21.05% recall at 8.82% precision** (TP=32/152) on a genuinely untouched
+final test set — not directly comparable to the earlier 2.55% figure,
+which used a threshold selected for a different, contaminated score
+distribution. Neither figure meets the documented Recall≥75% requirement
+at this measurement; full detail, mechanism, and the full A–H experiment
+chain in `SOURCE_CONTAMINATION_INVESTIGATION.md` and `EXPERIMENTS.md`.
+Regression-tested
 (`test_organic_subset_performance_is_much_weaker_than_blended_headline`,
 `test_supplement_source_is_near_fully_constant_and_perfectly_separable`,
 `tests/test_frozen_model_metrics.py`) so none of this drifts unnoticed.
-**Not fixed in the deployed system** — the investigation shows this isn't
-fixable by retraining on existing data; a genuinely new/better organic
-dataset is the only path to real improvement.
+**Not fixed in the deployed system** — cleaning the existing dataset
+alone was tested and did not resolve it; improving on this would need
+different or additional organic training data, which has not been
+sourced as part of this work.
 
 **Feature engineering:** 50 raw columns → 40 model-ready features (README's
 "40 model-ready features" claim, verified consistent with `/health`'s

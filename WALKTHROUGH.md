@@ -176,24 +176,35 @@ codebase — real HTTP requests, real JWT auth, real model inference:
 
 ## Key results
 
-| Metric | Value |
+**The primary result is the clean organic evaluation, not the blended
+test-set numbers below it.** Every headline metric this project reported
+before 2026-08-27 was computed on a test set ~35% contaminated by a
+templated synthetic source (see "Honest findings" below and
+`SOURCE_CONTAMINATION_INVESTIGATION.md`) — those numbers are kept in this
+document as historical record, not as the current claimed result.
+
+| Metric (clean organic evaluation) | Value |
 |---|---:|
-| ROC-AUC (real 3-scorer ensemble, blended test set*) | **0.8969** |
-| PR-AUC (blended test set*) | **0.5498** (13.1× that set's random baseline) |
-| Precision @ deployed threshold (τ=0.50, blended test set*) | **91.74%** |
-| Recall @ deployed threshold (τ=0.50, blended test set*) | **39.53%** |
-| Backend test suite | **214 / 214 passing** |
+| Split | Train (60%) / Validation (20%) / Test (20%), organic data only |
+| Threshold selection | On validation only; final test never touched until frozen |
+| Test ROC-AUC | **0.7050** |
+| Test PR-AUC | **0.0945** |
+| Test precision @ frozen threshold (τ=0.10) | **8.82%** |
+| Test recall @ frozen threshold (τ=0.10) | **21.05%** (32/152) |
+| Recall≥75%/Precision≥50% requirement | **Not met** by the current model/data at this measurement |
+
+| Historical metric (blended, contaminated test set — superseded above) | Value |
+|---|---:|
+| ROC-AUC (3-scorer ensemble, blended test set) | 0.8969 |
+| PR-AUC (blended test set) | 0.5498 |
+| Precision @ deployed threshold (τ=0.50, blended test set) | 91.74% |
+| Recall @ deployed threshold (τ=0.50, blended test set) | 39.53% |
+
+| Other verified results | Value |
+|---|---:|
+| Backend test suite | **215 / 215 passing** |
 | Category classifier, real-world accuracy | **78.0%** deployed (83.0% validated, undeployed — see below) |
 | Android security findings | **4 found, 4 fixed** (3 fully verified, 1 compile-verified) |
-
-**\*Every row above is computed on the canonical test set as a whole — see
-the first item in "Honest findings" directly below.** That set is ~35%
-rows from a source with a near-tautological label relationship; on the
-organic (anchor-only) ~65% majority, ROC-AUC is 0.7465, PR-AUC is 0.1138,
-and recall @ 0.50 is 2.55% (4/157), not 39.53%. This isn't a caveat added
-for completeness — it's the single most important number in this document,
-and it belongs next to the headline figures, not buried in a footnote
-nobody reads.
 
 **Every one of these numbers has a documented negative result sitting next
 to it.** That's not a caveat tacked on afterward — it's the actual method
@@ -239,17 +250,19 @@ this project was audited with.
 > one templated profile repeated 10,000 times, not diverse synthetic data,
 > and a single column (`device_risk_score.notnull()`) separates it from
 > organic data with exactly 100% accuracy. **Retraining on anchor-only
-> data was tested and does NOT improve organic performance** (ROC-AUC
-> 0.7260→0.7261, statistically identical) — the contamination inflates
-> blended metrics but was never suppressing real capability, so removing
-> it unlocks nothing. A properly re-derived threshold (train→validation→
-> untouched-test, organic-only) gives a more honest number than the 2.55%
-> above, which was measured at a threshold calibrated for a different,
-> contaminated score distribution: **21.05% recall at 8.82% precision**
-> on genuinely held-out data. Still nowhere near Recall≥75%, now confirmed
-> via the cleanest methodology available on this dataset — this is a real
-> data-quantity/quality ceiling, not a fixable methodology bug.
-> Regression-tested
+> data was tested and did NOT materially change organic ROC-AUC**
+> (0.7260→0.7261, statistically identical) — the contamination inflates
+> blended metrics, but removing the contaminated rows from the existing
+> dataset, on its own, did not change the model's discrimination on
+> organic data. A properly re-derived threshold (train→validation→
+> untouched-test, organic-only) gives a more directly comparable number
+> than the 2.55% above, which used a threshold selected on a different,
+> contaminated score distribution rather than one calibrated for this
+> evaluation: **21.05% recall at 8.82% precision**, the current measured
+> performance under this clean evaluation protocol. Still short of
+> Recall≥75% at this measurement — not evidence that the target is
+> unreachable for every possible future model or dataset, just that
+> today's model and data don't clear it. Regression-tested
 > (`test_organic_subset_performance_is_much_weaker_than_blended_headline`,
 > `test_supplement_source_is_near_fully_constant_and_perfectly_separable`,
 > in `tests/test_frozen_model_metrics.py`) so none of this drifts
@@ -266,17 +279,17 @@ this project was audited with.
 > false alarms). Deploying that would trade a trustworthy-but-blind system
 > for a noisy one, not a strict improvement. **Decision: keep 0.50** — it's
 > the genuinely best available F1 operating point, not a threshold picked
-> to look good. **The honest fix is revising the documented requirement**,
-> not the deployed threshold: "Recall ≥75%" as originally stated is not
-> currently achievable without a materially better model or more organic
-> training data (see the finding above — likely the same root cause).
-> **Confirmed a third time via the cleanest methodology available**: a
+> to look good. **The current model and available data do not meet the
+> documented Recall≥75% requirement under any threshold tested** — a
+> statement about where things stand today, not a claim that the target
+> is impossible for every future model or dataset, and not a reason to
+> change the documented target to match current capability.
+> **Checked a third time, via the cleanest methodology available**: a
 > proper train→validation→untouched-test split, entirely on organic data,
 > threshold selected on validation only (`SOURCE_CONTAMINATION_
-> INVESTIGATION.md` §3) — still no threshold clears both constraints; the
-> honest final-test operating point is 21.05% recall at 8.82% precision.
-> This is no longer a methodology question, it's a genuine capability
-> ceiling of this model on this data. Regression-tested
+> INVESTIGATION.md` §3) — still no threshold clears both constraints at
+> this measurement; the current measured operating point on the untouched
+> final test is 21.05% recall at 8.82% precision. Regression-tested
 > (`test_no_swept_threshold_meets_both_business_constraints`,
 > `test_deployed_threshold_does_not_meet_documented_recall_constraint`) so
 > a future retrain that *does* close this gap is a visible, deliberate

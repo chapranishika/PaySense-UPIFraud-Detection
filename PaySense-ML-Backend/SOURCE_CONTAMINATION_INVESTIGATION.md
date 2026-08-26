@@ -8,8 +8,9 @@ scoring shows the model's real organic-data performance (ROC-AUC 0.7465,
 PR-AUC 0.1138, recall 2.55%) is far below every headline metric this
 project has ever reported (ROC-AUC 0.8969, PR-AUC 0.5498, recall 39.53%).
 This document is the follow-up forensic investigation into the mechanism,
-whether it's fixable by retraining, and what the honest ceiling is on
-genuinely clean data. Scripts: `investigate_source_safe_retrain.py`,
+whether it's fixable by retraining, and what the current measured
+performance is under a clean evaluation protocol. Scripts:
+`investigate_source_safe_retrain.py`,
 `investigate_organic_only_threshold.py`. Neither touches any deployed
 artifact — both are read-only investigations.
 
@@ -106,7 +107,7 @@ ensemble. Cross-referencing against the ensemble-level test in
 same threshold, means those 4 true positives come entirely from the
 rules/LightLR scorers, not XGBoost's own contribution.)
 
-## 3. What is the honest ceiling on genuinely clean data?
+## 3. Current measured performance under a clean evaluation protocol
 
 Every threshold ever selected in this project — including the 0.50
 currently deployed — was tuned against a score distribution shaped
@@ -136,17 +137,18 @@ FINAL TEST (never touched during threshold selection):
   Business constraint (Recall>=75% AND Precision>=50%): NOT satisfied
 ```
 
-**This 21.05% recall / 8.82% precision figure — not the earlier 2.55% —
-is the most honest number this project has ever produced for organic
-fraud detection.** The 2.55% figure was real but measured at the wrong
-operating point: threshold 0.50 was calibrated for a model trained on
-contaminated data with a different score distribution; applying it to a
-model/evaluation that never saw that distribution understates the model's
-actual (still weak) organic capability. Properly recalibrated, the model
-has real, non-trivial ranking skill on organic fraud (ROC-AUC 0.70,
-~2.5x its own base rate in PR-AUC) — just nowhere near the originally
-documented Recall≥75% target, confirmed now via the cleanest possible
-methodology available on this dataset.
+**21.05% recall at 8.82% precision is the current measured performance
+under this clean evaluation protocol** — both historical figures (39.53%
+blended, 2.55% at the old threshold on organic data alone) are documented
+above because they're useful context, but neither is directly comparable
+to this one: the blended figure is inflated by the contaminated
+supplement subset, and the 2.55% figure used a threshold selected on a
+different, contaminated score distribution rather than one calibrated
+for this evaluation. Under the clean protocol, the model shows real,
+non-trivial ranking skill on organic fraud (validation and test ROC-AUC
+in the 0.65–0.70 range, PR-AUC roughly 2–2.5× the organic subset's own
+base rate) — meaningfully above chance, but well short of the documented
+Recall≥75% target at this measurement.
 
 ## 4. Conclusions and what this means for the deployed system
 
@@ -155,15 +157,19 @@ methodology available on this dataset.
    dataset.** No amount of feature-dropping fixes it; the supplement
    source should be treated as unreliable for both training and
    evaluation going forward, not patched.
-2. **Retraining on clean data alone does not improve organic performance**
-   — this was tested directly, not assumed. Improving real-world fraud
-   detection requires genuinely new/better organic data, not a cleanup of
-   the existing dataset.
-3. **The Recall≥75% business constraint is confirmed unachievable, a
-   third time, via the cleanest methodology available**: proper train/
-   validation/test discipline, organic-only data, threshold frozen before
-   touching the final test set. This is no longer a methodology question
-   — it's a genuine model/data capability ceiling.
+2. **Retraining on clean data alone does not materially improve organic
+   ROC-AUC** — this was tested directly, not assumed (0.7260 before,
+   0.7261 after). This does not mean better organic performance is
+   impossible with different or additional data — only that removing the
+   contaminated rows from the existing dataset, on its own, did not
+   change the model's discrimination on organic data.
+3. **The current model and available dataset do not meet the stated
+   Recall≥75% requirement under the clean organic evaluation protocol.**
+   This has now been checked three times with increasingly rigorous
+   methodology (blended, anchor-only two-way split, and this proper
+   train/validation/test split) and the result is consistent. This is a
+   statement about the current model and current data, not a claim that
+   Recall≥75% is unreachable for every possible future model or dataset.
 4. **The deployed model and threshold are not changed by this
    investigation.** The deployed ensemble was never retrained on
    anchor-only data (that would require re-validating the rules/LightLR

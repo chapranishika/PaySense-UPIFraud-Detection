@@ -9,195 +9,274 @@ index and the throughline connecting them.
 
 ---
 
-## Experiment 1 — Ensemble scoring correction (2026-08-24)
+## Category classifier contamination (2026-08-23/24)
 
-**Initial state:** every fraud-model metric this project had ever
-reported — in `README.md`, in `paysense_report.tex` — was computed by
-calling the frozen XGBoost model's `predict_proba()` directly.
+**Hypothesis:** the category classifier's reported 100% test accuracy
+reflects genuine generalization to real-world bank/UPI text.
 
-**Suspicion raised:** while writing up feature-engineering work
-(`EDA_FEATURE_ENGINEERING.md` §4.5), a discrepancy surfaced between the
-model's documented behavior and what the live `/predict` endpoint
-actually does — `/predict` calls `src.fraud_model.score()`, a 3-scorer
-ensemble (XGBoost weighted 0.60, LightLR 0.25, a hand-tuned rules scorer
-0.15), never the raw model directly.
+**Method:** inspected the training data (FinText-6K) and its relationship
+to the held-out test split.
 
-**Investigation:** `resweep_threshold_against_ensemble.py` re-scored the
-canonical held-out test set through the real ensemble instead of raw
-XGBoost, at the threshold that was deployed at the time (0.30).
+**Result:** the entire 5,000-row training split is generated from only 40
+unique sentence templates, and the test split draws from the same fixed
+template pool — a perfect score measures template memorization, not
+generalization. Built a 200-row, hand-authored, structurally-verified-
+novel test set instead: real accuracy measured at **72.5%**, not 100%.
 
-**Result:**
+**Interpretation:** a perfect score on a real-world text task is itself a
+reason to check the evaluation methodology before trusting the number.
 
-```
-Raw XGBoost only  @ τ=0.30: precision=86.44%  recall=40.32%
-Real ensemble     @ τ=0.30: precision=40.81%  recall=51.78%
-```
-
-Precision more than halved once measured correctly. Root cause: the
-rules scorer's always-on additive score was never jointly calibrated
-against the same threshold XGBoost's own sweep had picked, so rows
-XGBoost alone would score below 0.30 still crossed it once the rules/
-LightLR contributions were blended in.
-
-**Fix:** re-ran the same threshold-selection methodology against the
-real ensemble, swept 0.05–0.95. F1 peaks exactly at τ=0.50. New deployed
-threshold: 0.50 (was 0.30).
-
-**Regression test added:** `test_ensemble_differs_materially_from_raw_
-xgboost_at_threshold` (`tests/test_frozen_model_metrics.py`) — asserts
-raw XGBoost and the real ensemble stay materially different at the
-deployed threshold, so this exact class of "measuring the wrong
-component" mistake can't recur silently.
-
-Full detail: `PaySense-ML-Backend/EDA_FEATURE_ENGINEERING.md` §4.5.
-
----
-
-## Experiment 2 — Category classification contamination (2026-08-23/24)
-
-**Initial state:** the category classifier (TF-IDF + LinearSVC, trained
-on FinText-6K) reported 100% accuracy on its held-out test split.
-
-**Suspicion raised:** a perfect score on a real-world text-classification
-task is itself a reason to look closer, not a reason to stop looking.
-
-**Investigation:** FinText-6K's entire 5,000-row training split turned
-out to be generated from only 40 unique sentence templates — and the test
-split draws from the same fixed template pool, so a perfect score
-measures template memorization, not generalization.
-
-**First correction attempt (v2), later retracted:** a broader synthetic
-template set was generated, but its own templates turned out to be the
-evaluation set's sentence skeletons with only the merchant name swapped —
-a real contamination bug in the fix itself, caught and discarded rather
-than shipped.
-
-**Second, verified correction (v3/v4):** built a 200-row, hand-authored,
-structurally-verified-novel test set (real HDFC/SBI/ICICI/Axis SMS and
-GPay/PhonePe/Paytm formats, checked disjoint from every training
-template). Retrained on FinText-6K blended with 8,000 verified-disjoint
-template rows.
-
-**Result:**
-
-```
-Original (v1), against its own contaminated test split: 100.0% accuracy
-Original (v1), against the 200-row novel test set:       72.5% accuracy
-Retrained (v3/v4), against the 200-row novel test set:   78.0% accuracy
-                    (70.5% both correct and confident enough to deploy)
-```
-
-**Regression tests added:** `test_category_training_v2_disjointness.py`,
-`test_category_training_v3_disjointness.py` — verify the training
-templates are programmatically disjoint from the evaluation set, so the
-exact mechanism behind the original hollow 100% can't recur unnoticed.
+**Conclusion:** retrained on FinText-6K blended with 8,000 hand-built
+template rows, verified programmatically disjoint from the evaluation
+set. New accuracy: **78.0%** (deployed). A first retrain attempt (v2) was
+discarded after its own templates were found to be the eval set's
+sentence skeletons with only the merchant name swapped — a real
+contamination bug in the fix itself, caught before shipping.
 
 Full detail: `PaySense-ML-Backend/CATEGORY_CLASSIFIER.md`,
 `CATEGORY_CLASSIFIER_GENERALIZATION.md`.
 
 ---
 
-## Experiment 3 — DistilBERT architecture ablation (2026-08-23)
+## DistilBERT architecture ablation (2026-08-23)
 
-**Why tested:** Experiment 2 fixed the *data* (broader, verified-disjoint
-templates). The open question it left: was the resulting 78.0% ceiling a
-data-diversity limit, or an architecture limit?
+**Hypothesis:** the 78.0% accuracy ceiling from the experiment above is a
+data-diversity limit, not an architecture limit.
 
-**Methodology:** fine-tuned `distilbert-base-uncased` on the *exact same*
-training data as the v3/v4 retrain — same rows, same evaluation set, only
-the model architecture changed. This isolates architecture as the single
-variable.
+**Method:** fine-tuned `distilbert-base-uncased` on the *exact same*
+training data as the 78.0% retrain — same rows, same evaluation set, only
+the model architecture changed.
 
-**Result:**
+**Result:** 83.0% accuracy, 82.0% correct-and-confident (vs. 78.0%/70.5%
+for the deployed TF-IDF+LinearSVC model) — a larger gain than the data-
+diversity retrain produced, on identical data.
 
-```
-TF-IDF + LinearSVC (deployed):  78.0% accuracy, 70.5% correct-and-confident
-DistilBERT (this experiment):   83.0% accuracy, 82.0% correct-and-confident
-```
+**Interpretation:** real evidence the remaining gap is at least partly
+architectural, not purely a data-diversity problem.
 
-A larger gain than the data-diversity retrain produced, on identical
-data — real evidence the remaining ceiling was architectural, not just a
-data problem.
-
-**Measured trade-off, and why it was not deployed:**
-
-```
-                   Deployed (TF-IDF+LinearSVC)   DistilBERT candidate
-Model size         ~2.1 MB                        267.8 MB (128× larger)
-Inference latency  sub-millisecond                369 ms (370× slower)
-```
-
-No way to verify, from this environment, that the live hosting tier has
-the memory headroom for `torch` + `transformers` alongside the existing
-model stack. An out-of-memory crash on the live service would be a worse
-outcome than staying on the faster, 5-points-less-accurate classifier —
-a deliberate, reasoned trade-off, not an oversight.
+**Conclusion:** not deployed. Measured trade-off: 267.8MB vs ~2.1MB
+(128× larger), 369ms vs sub-millisecond inference (370× slower), and no
+way to verify the live hosting tier's memory headroom for
+`torch`+`transformers` alongside the existing model stack. An
+out-of-memory crash on the live service would be a worse outcome than
+staying on the faster, less accurate classifier.
 
 Full detail: `PaySense-ML-Backend/CATEGORY_CLASSIFIER_V3_ATTEMPT.md`.
 
 ---
 
-## Experiment 4 — Source contamination and the threshold ceiling (2026-08-26/27)
+## The fraud-model investigation: Experiments A–H (2026-08-24 to 2026-08-27)
 
-**Initial state:** a routine audit found the canonical test set inherits
-the same ~35% "supplement"-source contamination already documented in
-training data (a third of rows come from an external synthetic dataset
-schema-bridged into this project's data, whose label was generated by
-thresholding two risk-score features).
+### Experiment A — Initial blended evaluation
 
-**Investigation, Phase 1 — how deep does it go:** checked every column in
-the dataset for source-dependent patterns, not just the two originally
-suspected. Found **23 of ~30 numeric columns and 12 of 14 categorical
-columns are a single constant value across the entire 10,000-row
-supplement subset** — including `receiver_id == "SYN_MRC_UNKNOWN"`, a
-literal synthetic marker. A single column (`device_risk_score.notnull()`)
-separates the two sources with exactly 100% accuracy.
+**Hypothesis:** the deployed 3-scorer ensemble's reported metrics
+(ROC-AUC 0.8969, PR-AUC 0.5498, 91.74% precision / 39.53% recall at
+τ=0.50) reflect its real-world fraud-detection performance.
 
-**Quantified impact:** source-stratified re-scoring of the deployed
-model:
+**Method:** standard held-out test evaluation on
+`paysense_master_dataset.csv`'s canonical 20%-test split (30,000 rows
+total, both "anchor" and "supplement" sources blended together, no
+source-aware stratification).
+
+**Result:** the headline numbers above, computed and reported as the
+project's key results for most of its history.
+
+**Interpretation, at the time:** these looked like strong, usable
+numbers for a UPI fraud classifier.
+
+**Conclusion:** correct arithmetic, but — established later by
+Experiments C onward — computed on a test set with a significant, then-
+undetected data-quality problem. Superseded, not retracted as wrong math;
+the numbers are real outputs of the pipeline as it existed, just not
+representative of organic (real-world-style) performance.
+
+### Experiment B — Scoring-path correction
+
+**Hypothesis:** the model's documented metrics come from the same code
+path that actually serves predictions in production.
+
+**Method:** cross-checked which function the metrics-reporting scripts
+called (`model.predict_proba()` directly) against which function the live
+`/predict` endpoint calls (`src.fraud_model.score()`, a weighted 3-scorer
+ensemble).
+
+**Result:** they were different. Re-scoring the canonical test set
+through the real ensemble instead of raw XGBoost, at the
+then-deployed threshold (0.30): precision dropped from a claimed 86.44%
+to a real 40.81%.
+
+**Interpretation:** the rules scorer's always-on additive score had never
+been jointly calibrated against the same threshold XGBoost's own sweep
+had picked, so rows XGBoost alone would score below 0.30 still crossed it
+once blended in.
+
+**Conclusion:** re-ran threshold selection against the real ensemble;
+threshold moved to 0.50. Regression test added
+(`test_ensemble_differs_materially_from_raw_xgboost_at_threshold`) to
+prevent this exact "measuring the wrong component" mistake recurring
+silently. Full detail: `PaySense-ML-Backend/EDA_FEATURE_ENGINEERING.md` §4.5.
+
+### Experiment C — Supplement/source contamination discovery
+
+**Hypothesis:** the training data's known label-generation quirk (see
+`EDA_FEATURE_ENGINEERING.md` §1.1: `new_device_flag`/
+`ip_location_mismatch` separate the "supplement" source's fraud label
+with zero overlap) is confined to two columns and doesn't affect the
+test set.
+
+**Method:** checked whether the train/test split accounts for
+`data_source`, and audited every column in the dataset for source-
+dependent patterns, not just the two originally suspected.
+
+**Result:** the split does not account for source — the canonical test
+set inherits the same ~35% contamination proportionally. Far beyond two
+columns: **23 of ~30 numeric columns and 12 of 14 categorical columns are
+a single constant value across the entire 10,000-row supplement subset**,
+including `receiver_id == "SYN_MRC_UNKNOWN"` (a literal synthetic
+marker).
+
+**Interpretation:** the supplement source is not diverse synthetic data —
+it is one templated synthetic profile repeated 10,000 times, with only
+`amount`, `hour_of_day`, `transaction_type` (2 values), and the two risk-
+score columns actually varying row to row.
+
+**Conclusion:** source-stratified re-scoring of the deployed model shows
+the two subsets behave completely differently (organic ROC-AUC 0.7465 /
+PR-AUC 0.1138 / recall 2.55%, vs. supplement ROC-AUC 1.0 / PR-AUC 1.0 /
+recall 100%) — the blended headline numbers are dominated by the
+supplement subset. Full detail:
+`PaySense-ML-Backend/SOURCE_CONTAMINATION_INVESTIGATION.md` §1.
+
+### Experiment D — Source-only separability test
+
+**Hypothesis:** the organic/supplement distinction found in Experiment C
+is a real but modest statistical difference, not a trivial shortcut.
+
+**Method:** built the simplest possible classifier —
+`device_risk_score.notnull()` — and measured how well it alone predicts
+`data_source`.
+
+**Result:** **100.0000% accuracy.** A single column perfectly separates
+the two sources.
+
+**Interpretation:** any model with access to this column (or any of the
+~20 other near-constant supplement-only columns) can trivially identify
+which source a row came from, independent of any fraud reasoning.
+
+**Conclusion:** this is not a subtle statistical artifact — it's a
+structural property of how the two data sources were combined. Full
+detail: `PaySense-ML-Backend/SOURCE_CONTAMINATION_INVESTIGATION.md` §1.
+
+### Experiment E — Organic-only retraining
+
+**Hypothesis:** retraining the fraud model on anchor-only (organic) data,
+excluding the contaminated supplement rows, will improve the model's
+ability to detect organic fraud.
+
+**Method:** retrained XGBoost with identical hyperparameters and
+monotonic constraints to the deployed model, on anchor-only training rows
+(16,087 rows, 606 fraud), with `device_risk_score`/`ip_risk_score`
+explicitly excluded. Evaluated on the same held-out test partition used
+throughout this project, sliced by source.
+
+**Result:** organic-subset ROC-AUC was 0.7260 before, 0.7261 after —
+statistically identical. PR-AUC likewise essentially unchanged (0.0971
+vs 0.0993).
+
+**Interpretation:** the hypothesis was wrong. The contamination inflates
+blended metrics, but removing the contaminated rows from the existing
+dataset did not change the model's discrimination on organic data —
+XGBoost appears to solve the (trivially separable) supplement subset
+largely independently of how it learns organic patterns, so training on
+one doesn't meaningfully cost or benefit the other. (A further,
+unexpected observation: the anchor-only-trained model, having never seen
+a single supplement row or the two risk-score columns, still scored a
+perfect 1.0/1.0 ROC-AUC/PR-AUC on the supplement-only test subset — the
+~20 other near-constant columns were sufficient on their own.)
+
+**Conclusion:** cleaning the existing dataset, on its own, is not a fix
+for organic-fraud-detection capability. This does not establish that
+better organic performance is unreachable with different or additional
+data — only that this specific remediation (drop the contaminated rows)
+did not produce it. Full detail:
+`PaySense-ML-Backend/investigate_source_safe_retrain.py`,
+`SOURCE_CONTAMINATION_INVESTIGATION.md` §2.
+
+### Experiment F — Clean 60/20/20 evaluation
+
+**Hypothesis:** a properly-structured train/validation/test split, on
+organic-only data, is needed before any further claim about this model's
+real recall/precision can be trusted — every prior evaluation in this
+project selected its threshold on the same partition it reported
+performance on.
+
+**Method:** split the 20,000-row anchor-only pool into train (60%,
+12,000 rows, 458 fraud), validation (20%, 4,000 rows, 153 fraud), and
+test (20%, 4,000 rows, 152 fraud), stratified. Trained XGBoost (same
+hyperparameters/constraints) on the training partition only.
+
+**Result:** validation ROC-AUC 0.6506, PR-AUC 0.0727.
+
+**Interpretation:** a real, separate validation set now exists for this
+model for the first time in the project's history.
+
+**Conclusion:** proceed to threshold selection on this validation set
+(Experiment G). Full detail:
+`PaySense-ML-Backend/investigate_organic_only_threshold.py`.
+
+### Experiment G — Validation-only threshold selection
+
+**Hypothesis:** some threshold in the 0.05–0.95 range satisfies the
+documented Recall≥75% AND Precision≥50% business constraint on the
+validation set.
+
+**Method:** swept thresholds 0.05–0.95 (step 0.05) against validation
+predictions only; selected the constraint-satisfying threshold with
+maximum F1, or the unconditional max-F1 threshold as a fallback if none
+satisfied both constraints.
+
+**Result:** no threshold in the swept range satisfied both constraints
+simultaneously on the validation set. Frozen threshold (max-F1 fallback):
+**0.10**.
+
+**Interpretation:** consistent with every prior sweep on this project
+(raw XGBoost, real ensemble, and now organic-only data) — the business
+constraint has not been met at any threshold tested so far.
+
+**Conclusion:** freeze τ=0.10, proceed to a single, final evaluation on
+the untouched test set (Experiment H). Full detail:
+`SOURCE_CONTAMINATION_INVESTIGATION.md` §3.
+
+### Experiment H — Final untouched test
+
+**Hypothesis:** none — this is a single, final measurement, performed
+exactly once, on data untouched by any prior step in Experiments F–G.
+
+**Method:** applied the frozen threshold (0.10, selected in Experiment G)
+to the held-out test partition (4,000 rows, 152 fraud) for the first and
+only time.
+
+**Result:**
 
 ```
-                    Blended (every prior headline)   Organic-only   Supplement-only
-ROC-AUC             0.8969                            0.7465          1.0000
-PR-AUC              0.5498                             0.1138          1.0000
-Recall @ τ=0.50     39.53% (100/253)                   2.55% (4/157)   100% (96/96)
+ROC-AUC=0.7050  PR-AUC=0.0945
+Precision=8.82%  Recall=21.05%  (TP=32, FP=331, FN=120, TN=3517)
+Recall>=75% AND Precision>=50%: not met at this measurement
 ```
 
-**Investigation, Phase 2 — does retraining on clean data fix it:** tested
-directly rather than assumed. Retrained XGBoost on anchor-only (organic)
-rows, identical hyperparameters and monotonic constraints, risk-score
-columns dropped. Organic-subset ROC-AUC: 0.7260 → 0.7261 — statistically
-identical. **Removing the contamination did not improve organic
-performance**, because it was never suppressing real capability to begin
-with; the model appears to solve the (trivially separable) supplement
-third almost independently of how it learns the organic two-thirds.
+**Interpretation:** this is the current measured performance of this
+model under a clean evaluation protocol — not a theoretical maximum, not
+a claim about what any future model or dataset could achieve. It differs
+from the earlier 2.55% organic-recall figure because that figure used a
+threshold (0.50) selected for a different, contaminated score
+distribution; the two are not directly comparable.
 
-**Investigation, Phase 3 — what's the honest ceiling on clean data:**
-every threshold this project had ever selected was chosen on the same
-partition its performance was reported on. Ran a proper train (60%) /
-validation (20%) / test (20%) split, entirely on organic data, threshold
-selected on validation only, applied once to an untouched final test set:
-
-```
-Frozen threshold (selected on validation): 0.10
-Final test (never touched during selection):
-  ROC-AUC=0.7050  PR-AUC=0.0945  Precision=8.82%  Recall=21.05%
-```
-
-More honest than the earlier 2.55% figure, which used a threshold
-calibrated for a different (contaminated) score distribution. Still far
-from the documented Recall≥75% business constraint — confirmed
-unachievable a third time, now via the cleanest methodology available on
-this dataset.
-
-**Regression tests added:** `test_organic_subset_performance_is_much_
-weaker_than_blended_headline`, `test_supplement_source_is_near_fully_
-constant_and_perfectly_separable`, `test_no_swept_threshold_meets_both_
-business_constraints` (`tests/test_frozen_model_metrics.py`).
-
-**What this means going forward:** this is not a fixable methodology bug
-— it's a genuine data-quantity/quality ceiling. Improving real-world
-organic fraud detection requires new, genuinely organic training data,
-not further cleanup of what already exists.
-
-Full detail: `PaySense-ML-Backend/SOURCE_CONTAMINATION_INVESTIGATION.md`.
+**Conclusion:** the current model and available dataset do not meet the
+stated Recall≥75% requirement under this clean organic evaluation
+protocol. Regression-tested implicitly via
+`test_organic_subset_performance_is_much_weaker_than_blended_headline`
+and `test_supplement_source_is_near_fully_constant_and_perfectly_
+separable` (`tests/test_frozen_model_metrics.py`), which protect the
+underlying source-contamination finding from silently drifting. The
+deployed model and threshold are unchanged by this investigation — this
+document reports what was found, not a change made to production.

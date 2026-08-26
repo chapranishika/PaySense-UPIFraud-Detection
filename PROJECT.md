@@ -437,17 +437,23 @@ audits:**
   open-domain text).
 
 **Model:**
-- Recall caps at 39.53% at the deployed threshold on the blended test
-  set — but only 2.55% (4/157) on the organic subset alone (see above).
-  The majority of real, organic fraud in this system's own held-out test
-  data is essentially undetected.
-- **The documented business requirement (Recall≥75% AND Precision≥50%) is
-  confirmed, by a full threshold sweep, to be unachievable by this model on
-  this test set at any threshold** — not a threshold-selection oversight.
-  The deployed 0.50 is the best available F1 operating point, not a
-  constraint-satisfying one. The honest resolution is revising the
-  documented requirement, not changing the deployed threshold (see design
-  decision below).
+- Recall is 39.53% at the deployed threshold on the blended (contaminated)
+  test set. Under a clean evaluation protocol (organic-only data, proper
+  train/validation/test split, threshold selected on validation) the
+  current measured performance is 21.05% recall at 8.82% precision on an
+  untouched final test set — not directly comparable to the blended
+  figure or to the earlier 2.55% figure (which used a threshold selected
+  for a different, contaminated distribution). See `EXPERIMENTS.md`
+  (Experiments A–H) for the full chain.
+- **The current model and available dataset do not meet the documented
+  Recall≥75%/Precision≥50% requirement, checked three times with
+  increasingly rigorous methodology** (blended, anchor-only two-way
+  split, and a proper train/validation/test split) — not a
+  threshold-selection oversight; the deployed 0.50 is the best available
+  F1 operating point on the blended set, and 0.10 is the best available
+  F1 operating point under the clean protocol. This is a statement about
+  today's model and data, not a claim that the requirement is unreachable
+  for any future model or dataset.
 - 0/701 real frauds caught on one specific external OOD dataset at the
   production threshold (root-caused, not mysterious, but not fixed either
   — fixing it would require either a currency-aware rules scorer or
@@ -486,19 +492,24 @@ account: check the dashboard's deploy logs directly.
 2. **~~Delete the dead directories (§9)~~ — DONE, 2026-08-26** (`android/`,
    `backend/`; `PaySense-Android-Client` deliberately kept, see §9).
 3. **~~Retrain on organic-only data~~ — DONE and TESTED, 2026-08-27
-   (`SOURCE_CONTAMINATION_INVESTIGATION.md`): does NOT improve organic
-   performance** (ROC-AUC 0.7260→0.7261, statistically identical) —
-   the contamination inflates blended metrics but wasn't suppressing real
-   capability. A properly re-derived threshold (train/validation/test,
-   organic-only) gives 21.05% recall @ 8.82% precision on an untouched
-   final test set — the honest number, not the earlier 2.55% (which used
-   a threshold calibrated for a different, contaminated distribution).
-   **A genuinely new/better organic dataset is now the only path to real
-   improvement** — this remains the single highest-value remaining item,
-   just no longer an open question about whether retraining alone helps.
-4. Formally revise the "Recall≥75%" documented requirement — confirmed
-   unachievable a third time, now via proper train/validation/test
-   discipline on clean organic-only data, not just methodology cleanup.
+   (`SOURCE_CONTAMINATION_INVESTIGATION.md`): did NOT materially change
+   organic ROC-AUC** (0.7260→0.7261, statistically identical) — the
+   contamination inflates blended metrics, but removing the contaminated
+   rows from the existing dataset, on its own, did not change the
+   model's discrimination on organic data. A properly re-derived
+   threshold (train/validation/test, organic-only) gives the current
+   measured performance under this clean protocol: 21.05% recall @ 8.82%
+   precision on an untouched final test set — not directly comparable to
+   the earlier 2.55% figure (which used a threshold selected for a
+   different, contaminated distribution). This remains the single
+   highest-value remaining item; it's no longer an open question whether
+   cleaning the existing dataset alone helps (it doesn't), but whether
+   different or additional organic data would is untested.
+4. The documented "Recall≥75%" requirement is not met by the current
+   model/data under any evaluation protocol tested so far (checked three
+   times with increasingly rigorous methodology). Whoever owns this
+   requirement should decide, with this evidence, whether to invest in
+   closing the gap or revise the target — that decision is not made here.
 
 **Medium impact:**
 5. **~~Remove the unused `aiosqlite` dependency~~ — DONE, 2026-08-26.**
