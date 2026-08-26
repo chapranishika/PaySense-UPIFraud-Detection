@@ -1,0 +1,158 @@
+{
+  "anchor_pool_size": 20000,
+  "anchor_fraud": 763,
+  "train_size": 12000,
+  "val_size": 4000,
+  "test_size": 4000,
+  "val_roc_auc": 0.6505790948213617,
+  "val_pr_auc": 0.0727129437696435,
+  "validation_sweep": [
+    {
+      "threshold": 0.05,
+      "precision": 0.06832971800433839,
+      "recall": 0.4117647058823529,
+      "f1": 0.1172093023255814,
+      "meets_constraint": false
+    },
+    {
+      "threshold": 0.1,
+      "precision": 0.082687338501292,
+      "recall": 0.20915032679738563,
+      "f1": 0.11851851851851852,
+      "meets_constraint": false
+    },
+    {
+      "threshold": 0.15,
+      "precision": 0.10160427807486631,
+      "recall": 0.12418300653594772,
+      "f1": 0.11176470588235295,
+      "meets_constraint": false
+    },
+    {
+      "threshold": 0.2,
+      "precision": 0.12222222222222222,
+      "recall": 0.0718954248366013,
+      "f1": 0.09053497942386832,
+      "meets_constraint": false
+    },
+    {
+      "threshold": 0.25,
+      "precision": 0.12,
+      "recall": 0.0392156862745098,
+      "f1": 0.059113300492610835,
+      "meets_constraint": false
+    },
+    {
+      "threshold": 0.3,
+      "precision": 0.2,
+      "recall": 0.032679738562091505,
+      "f1": 0.056179775280898875,
+      "meets_constraint": false
+    },
+    {
+      "threshold": 0.35,
+      "precision": 0.23076923076923078,
+      "recall": 0.0196078431372549,
+      "f1": 0.03614457831325301,
+      "meets_constraint": false
+    },
+    {
+      "threshold": 0.4,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "meets_constraint": false
+    },
+    {
+      "threshold": 0.45,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "meets_constraint": false
+    },
+    {
+      "threshold": 0.5,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "meets_constraint": false
+    },
+    {
+      "threshold": 0.55,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "meets_constraint": false
+    },
+    {
+      "threshold": 0.6,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "meets_constraint": false
+    },
+    {
+      "threshold": 0.65,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "meets_constraint": false
+    },
+    {
+      "threshold": 0.7,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "meets_constraint": false
+    },
+    {
+      "threshold": 0.75,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "meets_constraint": false
+    },
+    {
+      "threshold": 0.8,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "meets_constraint": false
+    },
+    {
+      "threshold": 0.85,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "meets_constraint": false
+    },
+    {
+      "threshold": 0.9,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "meets_constraint": false
+    },
+    {
+      "threshold": 0.95,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "meets_constraint": false
+    }
+  ],
+  "frozen_threshold": 0.1,
+  "selection_reason": "No validation threshold met both constraints -- fallback to max-F1",
+  "final_test": {
+    "roc_auc": 0.7050296121019806,
+    "pr_auc": 0.09452252791923205,
+    "precision": 0.0881542699724518,
+    "recall": 0.21052631578947367,
+    "f1": 0.12427184466019417,
+    "tp": 32,
+    "fp": 331,
+    "fn": 120,
+    "tn": 3517,
+    "constraint_satisfied": false
+  }
+}
