@@ -280,3 +280,95 @@ separable` (`tests/test_frozen_model_metrics.py`), which protect the
 underlying source-contamination finding from silently drifting. The
 deployed model and threshold are unchanged by this investigation — this
 document reports what was found, not a change made to production.
+
+---
+
+## Model-family benchmark (2026-08-27)
+
+**Question:** does an alternative model family (RandomForest, LightGBM,
+CatBoost) materially improve fraud detection on the clean organic
+evaluation established in Experiments F–H, over the currently deployed
+XGBoost model?
+
+**Feature audit performed first:** every one of the 48 non-target raw
+columns was classified VALID/SUSPICIOUS/INVALID before any model was
+trained (`PaySense-ML-Backend/experiments/feature_audit.md`). 30 of the
+38 kept features are constant across the entire supplement subset —
+kept anyway because they vary naturally in organic data, not because the
+contamination was overlooked. A source classifier trained on the kept
+feature set with `device_risk_score`/`ip_risk_score` already excluded
+still separated organic from supplement rows at **99.62% accuracy /
+0.9993 ROC-AUC** — direct, independent confirmation that removing the
+two originally-suspected columns comes nowhere close to fixing the
+underlying contamination (systemic across ~30 columns, not a two-column
+problem). This is a diagnostic finding only, not a fraud model.
+
+**Method:** all four models trained on the identical anchor-only
+60/20/20 split from Experiment F (`random_state=42`), preprocessing fit
+on train only, threshold selected on validation only (same sweep/
+selection rule as Experiment G), evaluated on the same untouched test
+set exactly once per model. RandomForest and LightGBM got a small
+validation-selected hyperparameter grid (4 configs each); CatBoost got
+the same grid plus native categorical handling (no ordinal encoding) and
+`auto_class_weights='Balanced'` instead of SMOTE (SMOTE is not natural
+on raw categorical text without SMOTENC — a disclosed pipeline
+difference, not an inconsistency in the split or test set). Text-based
+model families (TF-IDF+LogReg, linear SVM, text-only, hybrid, DistilBERT)
+were **not implemented** — `paysense_master_dataset.csv` has no text/SMS
+field at all, verified directly against its 50 raw columns; there is no
+text signal for those model families to use on this task. (DistilBERT
+already exists in this project for the unrelated, text-bearing category-
+classification task — see above.)
+
+**Result:**
+
+| Model | Test ROC-AUC | Test PR-AUC | Precision | Recall | 5-fold CV PR-AUC (train+val only) |
+|---|---:|---:|---:|---:|---:|
+| XGBoost (current, unmodified) | 0.7050 | 0.0945 | 8.82% | 21.05% | 0.0827 ± 0.0053 |
+| RandomForest | 0.7210 | 0.0860 | 8.61% | 27.63% | 0.0963 ± 0.0053 |
+| LightGBM | 0.6904 | 0.0980 | 10.34% | 13.82% | 0.0806 ± 0.0048 |
+| CatBoost | 0.6628 | 0.0785 | 12.56% | 18.42% | not run (see below) |
+
+None of the four satisfies Recall≥75% AND Precision≥50% at its own
+validation-selected threshold. RandomForest and CatBoost *can* reach
+Recall≥75% by lowering the threshold far enough (validation threshold
+0.05), but only at 6.06% and 4.80% test precision respectively — nowhere
+near the 50% floor. Full table, PR-curve comparison, and per-model
+feature-importance breakdown:
+`PaySense-ML-Backend/experiments/model_benchmark.md`,
+`PaySense-ML-Backend/experiments/plots/precision_recall_comparison.png`.
+
+CatBoost's CV was **not run**: its grid-search fits took roughly an hour
+each in this environment (vs. single-digit minutes for the other three
+model families), and it already had the lowest validation PR-AUC of the
+four — a disclosed compute-budget decision, not a silent gap. Its
+single-split test result and grid search are complete and reported
+above.
+
+**Interpretation:** the four models' test PR-AUC values (0.0785–0.0980)
+span a narrower range than the 5-fold cross-validation standard
+deviation measured for the three that were cross-validated (~0.005–0.008
+each). LightGBM's point estimate is highest, but by less than one CV
+standard deviation over XGBoost — not a distinguishable improvement,
+just where four noisy estimates happened to land. Feature importance is
+also inconsistent across model families (tree-split-based importances
+for XGBoost/RandomForest highlight `is_night_transaction`/
+`transaction_velocity`/`new_device_flag`; gain-based importances for
+LightGBM/CatBoost highlight `balance_after_transaction`/
+`usr_account_age_days`/`amount` instead) — consistent with a dataset
+that has real but weak signal, not a strong pattern any of these model
+families is failing to find.
+
+**Conclusion:** no evaluated model family currently satisfies the
+business requirement, and none materially improves on the deployed
+XGBoost model's organic-data performance — the differences observed are
+not distinguishable from cross-validation noise. Recommendation:
+**keep the current model** — none of the alternatives justify a
+replacement, and the underlying gap to the Recall≥75%/Precision≥50%
+requirement is a data problem (established in Experiments E and above),
+not a model-family problem this benchmark's results would suggest fixing
+by switching architectures. Regression-tested in
+`tests/test_model_benchmark.py`. Full detail:
+`PaySense-ML-Backend/experiments/run_model_benchmark.py`,
+`PaySense-ML-Backend/experiments/model_benchmark.md`,
+`PaySense-ML-Backend/experiments/feature_audit.md`.

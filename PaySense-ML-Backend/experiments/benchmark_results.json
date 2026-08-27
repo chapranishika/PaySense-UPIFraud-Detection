@@ -1,0 +1,1073 @@
+{
+  "protocol": "anchor-only (organic) 60/20/20 split, threshold selected on validation only, final test evaluated exactly once per model",
+  "random_seed": 42,
+  "kept_features": [
+    "receiver_type",
+    "amount",
+    "hour_of_day",
+    "day_of_week",
+    "is_weekend",
+    "is_night_transaction",
+    "time_since_last_txn_min",
+    "transaction_type",
+    "payment_app",
+    "device_type",
+    "user_city_tier",
+    "user_avg_monthly_txn",
+    "user_avg_txn_value",
+    "user_loyalty_score",
+    "new_device_flag",
+    "ip_location_mismatch",
+    "failed_attempts_last_24h",
+    "transaction_velocity",
+    "amount_deviation_score",
+    "recurring_payment_flag",
+    "balance_after_transaction",
+    "transaction_frequency_score",
+    "txn_success_flag",
+    "kyc_verified_flag",
+    "usr_age_group",
+    "usr_home_city_tier",
+    "usr_account_age_days",
+    "usr_linked_bank_count",
+    "usr_avg_monthly_txn_profile",
+    "usr_avg_txn_value_profile",
+    "usr_preferred_app",
+    "usr_preferred_device",
+    "usr_is_high_risk",
+    "mrc_category",
+    "mrc_size",
+    "mrc_avg_daily_txn",
+    "mrc_is_registered",
+    "mrc_rating"
+  ],
+  "n_kept_features": 38,
+  "models": {
+    "A_XGBoost_current": {
+      "model": "A_XGBoost_current",
+      "feature_set": "structured (shared ordinal-encoded)",
+      "data_source": "anchor (organic) only",
+      "split_strategy": "60/20/20 stratified, two sequential train_test_split calls, random_state=42",
+      "random_seed": 42,
+      "validation": {
+        "roc_auc": 0.6505790948213617,
+        "pr_auc": 0.0727129437696435
+      },
+      "threshold": 0.1,
+      "threshold_selection_reason": "No validation threshold met both constraints -- fallback to max-F1",
+      "validation_sweep": [
+        {
+          "threshold": 0.05,
+          "precision": 0.06832971800433839,
+          "recall": 0.4117647058823529,
+          "f1": 0.1172093023255814,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.1,
+          "precision": 0.082687338501292,
+          "recall": 0.20915032679738563,
+          "f1": 0.11851851851851852,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.15,
+          "precision": 0.10160427807486631,
+          "recall": 0.12418300653594772,
+          "f1": 0.11176470588235295,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.2,
+          "precision": 0.12222222222222222,
+          "recall": 0.0718954248366013,
+          "f1": 0.09053497942386832,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.25,
+          "precision": 0.12,
+          "recall": 0.0392156862745098,
+          "f1": 0.059113300492610835,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.3,
+          "precision": 0.2,
+          "recall": 0.032679738562091505,
+          "f1": 0.056179775280898875,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.35,
+          "precision": 0.23076923076923078,
+          "recall": 0.0196078431372549,
+          "f1": 0.03614457831325301,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.4,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.45,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.5,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.55,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.6,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.65,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.7,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.75,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.8,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.85,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.9,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.95,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "meets_constraint": false
+        }
+      ],
+      "test": {
+        "roc_auc": 0.7050296121019806,
+        "pr_auc": 0.09452252791923205,
+        "precision": 0.0881542699724518,
+        "recall": 0.21052631578947367,
+        "f1": 0.12427184466019417,
+        "tp": 32,
+        "fp": 331,
+        "fn": 120,
+        "tn": 3517,
+        "constraint_satisfied": false
+      },
+      "precision_at_recall_targets": {
+        "recall_50": {
+          "achievable_on_validation": false,
+          "note": "No swept threshold reaches recall>=50% on validation."
+        },
+        "recall_60": {
+          "achievable_on_validation": false,
+          "note": "No swept threshold reaches recall>=60% on validation."
+        },
+        "recall_75": {
+          "achievable_on_validation": false,
+          "note": "No swept threshold reaches recall>=75% on validation."
+        },
+        "recall_80": {
+          "achievable_on_validation": false,
+          "note": "No swept threshold reaches recall>=80% on validation."
+        }
+      },
+      "latency_ms_per_row": 0.005046724996645935,
+      "cross_validation_train_val_only": {
+        "mean_pr_auc": 0.0826828149611888,
+        "std_pr_auc": 0.00532038103936008,
+        "folds": [
+          0.07278648960679492,
+          0.0880678125463988,
+          0.0821932837429723,
+          0.08614576234761474,
+          0.08422072656216321
+        ]
+      },
+      "top_feature_importance": [
+        {
+          "feature": "is_night_transaction",
+          "importance": 0.18396173417568207
+        },
+        {
+          "feature": "transaction_velocity",
+          "importance": 0.10403180867433548
+        },
+        {
+          "feature": "new_device_flag",
+          "importance": 0.10103972256183624
+        },
+        {
+          "feature": "recurring_payment_flag",
+          "importance": 0.06705434620380402
+        },
+        {
+          "feature": "is_weekend",
+          "importance": 0.06660435348749161
+        },
+        {
+          "feature": "mrc_size",
+          "importance": 0.050458669662475586
+        },
+        {
+          "feature": "usr_linked_bank_count",
+          "importance": 0.04503709822893143
+        },
+        {
+          "feature": "device_type",
+          "importance": 0.04021545127034187
+        },
+        {
+          "feature": "receiver_type",
+          "importance": 0.0328134223818779
+        },
+        {
+          "feature": "kyc_verified_flag",
+          "importance": 0.0320025198161602
+        }
+      ]
+    },
+    "D_RandomForest": {
+      "model": "D_RandomForest",
+      "feature_set": "structured (shared ordinal-encoded)",
+      "data_source": "anchor (organic) only",
+      "split_strategy": "60/20/20 stratified, two sequential train_test_split calls, random_state=42",
+      "random_seed": 42,
+      "validation": {
+        "roc_auc": 0.6973110360165207,
+        "pr_auc": 0.07631090878301124
+      },
+      "threshold": 0.15,
+      "threshold_selection_reason": "No validation threshold met both constraints -- fallback to max-F1",
+      "validation_sweep": [
+        {
+          "threshold": 0.05,
+          "precision": 0.05809698078682525,
+          "recall": 0.8300653594771242,
+          "f1": 0.1085934159897392,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.1,
+          "precision": 0.06956521739130435,
+          "recall": 0.47058823529411764,
+          "f1": 0.12121212121212122,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.15,
+          "precision": 0.0925553319919517,
+          "recall": 0.3006535947712418,
+          "f1": 0.14153846153846153,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.2,
+          "precision": 0.09375,
+          "recall": 0.13725490196078433,
+          "f1": 0.11140583554376658,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.25,
+          "precision": 0.058823529411764705,
+          "recall": 0.0392156862745098,
+          "f1": 0.047058823529411764,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.3,
+          "precision": 0.08823529411764706,
+          "recall": 0.0196078431372549,
+          "f1": 0.03208556149732621,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.35,
+          "precision": 0.16666666666666666,
+          "recall": 0.013071895424836602,
+          "f1": 0.024242424242424242,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.4,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.45,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.5,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.55,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.6,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.65,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.7,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.75,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.8,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.85,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.9,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.95,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "meets_constraint": false
+        }
+      ],
+      "test": {
+        "roc_auc": 0.721034166757851,
+        "pr_auc": 0.08604409879985163,
+        "precision": 0.0860655737704918,
+        "recall": 0.27631578947368424,
+        "f1": 0.13125,
+        "tp": 42,
+        "fp": 446,
+        "fn": 110,
+        "tn": 3402,
+        "constraint_satisfied": false
+      },
+      "precision_at_recall_targets": {
+        "recall_50": {
+          "achievable_on_validation": true,
+          "threshold": 0.05,
+          "validation_precision": 0.05809698078682525,
+          "validation_recall": 0.8300653594771242,
+          "test_precision": 0.06063389986219568,
+          "test_recall": 0.868421052631579
+        },
+        "recall_60": {
+          "achievable_on_validation": true,
+          "threshold": 0.05,
+          "validation_precision": 0.05809698078682525,
+          "validation_recall": 0.8300653594771242,
+          "test_precision": 0.06063389986219568,
+          "test_recall": 0.868421052631579
+        },
+        "recall_75": {
+          "achievable_on_validation": true,
+          "threshold": 0.05,
+          "validation_precision": 0.05809698078682525,
+          "validation_recall": 0.8300653594771242,
+          "test_precision": 0.06063389986219568,
+          "test_recall": 0.868421052631579
+        },
+        "recall_80": {
+          "achievable_on_validation": true,
+          "threshold": 0.05,
+          "validation_precision": 0.05809698078682525,
+          "validation_recall": 0.8300653594771242,
+          "test_precision": 0.06063389986219568,
+          "test_recall": 0.868421052631579
+        }
+      },
+      "latency_ms_per_row": 0.03418987499753712,
+      "hyperparameter_search": {
+        "search_space": [
+          [
+            300,
+            8
+          ],
+          [
+            300,
+            16
+          ],
+          [
+            600,
+            8
+          ],
+          [
+            600,
+            16
+          ]
+        ],
+        "selection_metric": "validation PR-AUC",
+        "selected": {
+          "n_estimators": 300,
+          "max_depth": 16
+        },
+        "selected_validation_pr_auc": 0.07631090878301124,
+        "note": "No monotonic-constraint support in sklearn RandomForestClassifier -- a real engineering limitation of this model family for this use case, not applied."
+      },
+      "cross_validation_train_val_only": {
+        "mean_pr_auc": 0.09634510420541975,
+        "std_pr_auc": 0.0053271032540454285,
+        "folds": [
+          0.10210079223920336,
+          0.08746042573467078,
+          0.10157473471012209,
+          0.09566173754915702,
+          0.09492783079394548
+        ]
+      },
+      "top_feature_importance": [
+        {
+          "feature": "transaction_velocity",
+          "importance": 0.13989955280691926
+        },
+        {
+          "feature": "is_night_transaction",
+          "importance": 0.1032684428186594
+        },
+        {
+          "feature": "new_device_flag",
+          "importance": 0.10018367672064167
+        },
+        {
+          "feature": "mrc_size",
+          "importance": 0.05850208940554465
+        },
+        {
+          "feature": "recurring_payment_flag",
+          "importance": 0.05131832231194589
+        },
+        {
+          "feature": "usr_linked_bank_count",
+          "importance": 0.04830574796808827
+        },
+        {
+          "feature": "failed_attempts_last_24h",
+          "importance": 0.04021166793679137
+        },
+        {
+          "feature": "usr_home_city_tier",
+          "importance": 0.037355085564766057
+        },
+        {
+          "feature": "receiver_type",
+          "importance": 0.03444341967954812
+        },
+        {
+          "feature": "user_city_tier",
+          "importance": 0.032176167272292396
+        }
+      ]
+    },
+    "E_LightGBM": {
+      "model": "E_LightGBM",
+      "feature_set": "structured (shared ordinal-encoded)",
+      "data_source": "anchor (organic) only",
+      "split_strategy": "60/20/20 stratified, two sequential train_test_split calls, random_state=42",
+      "random_seed": 42,
+      "validation": {
+        "roc_auc": 0.6481291762870993,
+        "pr_auc": 0.0722490060514685
+      },
+      "threshold": 0.1,
+      "threshold_selection_reason": "No validation threshold met both constraints -- fallback to max-F1",
+      "validation_sweep": [
+        {
+          "threshold": 0.05,
+          "precision": 0.07482993197278912,
+          "recall": 0.2875816993464052,
+          "f1": 0.11875843454790823,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.1,
+          "precision": 0.10619469026548672,
+          "recall": 0.1568627450980392,
+          "f1": 0.1266490765171504,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.15,
+          "precision": 0.10619469026548672,
+          "recall": 0.0784313725490196,
+          "f1": 0.09022556390977443,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.2,
+          "precision": 0.10714285714285714,
+          "recall": 0.0392156862745098,
+          "f1": 0.05741626794258373,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.25,
+          "precision": 0.13333333333333333,
+          "recall": 0.026143790849673203,
+          "f1": 0.04371584699453552,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.3,
+          "precision": 0.15384615384615385,
+          "recall": 0.013071895424836602,
+          "f1": 0.024096385542168676,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.35,
+          "precision": 0.2,
+          "recall": 0.013071895424836602,
+          "f1": 0.024539877300613498,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.4,
+          "precision": 0.25,
+          "recall": 0.006535947712418301,
+          "f1": 0.012738853503184714,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.45,
+          "precision": 0.3333333333333333,
+          "recall": 0.006535947712418301,
+          "f1": 0.01282051282051282,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.5,
+          "precision": 0.3333333333333333,
+          "recall": 0.006535947712418301,
+          "f1": 0.01282051282051282,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.55,
+          "precision": 0.3333333333333333,
+          "recall": 0.006535947712418301,
+          "f1": 0.01282051282051282,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.6,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.65,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.7,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.75,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.8,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.85,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.9,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.95,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "meets_constraint": false
+        }
+      ],
+      "test": {
+        "roc_auc": 0.6903740152095413,
+        "pr_auc": 0.09802754728397355,
+        "precision": 0.10344827586206896,
+        "recall": 0.13815789473684212,
+        "f1": 0.11830985915492957,
+        "tp": 21,
+        "fp": 182,
+        "fn": 131,
+        "tn": 3666,
+        "constraint_satisfied": false
+      },
+      "precision_at_recall_targets": {
+        "recall_50": {
+          "achievable_on_validation": false,
+          "note": "No swept threshold reaches recall>=50% on validation."
+        },
+        "recall_60": {
+          "achievable_on_validation": false,
+          "note": "No swept threshold reaches recall>=60% on validation."
+        },
+        "recall_75": {
+          "achievable_on_validation": false,
+          "note": "No swept threshold reaches recall>=75% on validation."
+        },
+        "recall_80": {
+          "achievable_on_validation": false,
+          "note": "No swept threshold reaches recall>=80% on validation."
+        }
+      },
+      "latency_ms_per_row": 0.020303199999034405,
+      "hyperparameter_search": {
+        "search_space": [
+          [
+            31,
+            0.05
+          ],
+          [
+            31,
+            0.1
+          ],
+          [
+            63,
+            0.05
+          ],
+          [
+            63,
+            0.1
+          ]
+        ],
+        "selection_metric": "validation PR-AUC",
+        "selected": {
+          "num_leaves": 31,
+          "learning_rate": 0.05
+        },
+        "selected_validation_pr_auc": 0.0722490060514685
+      },
+      "cross_validation_train_val_only": {
+        "mean_pr_auc": 0.0805711848200622,
+        "std_pr_auc": 0.004774334016328196,
+        "folds": [
+          0.07745742025388822,
+          0.0853386583784913,
+          0.0795455109618368,
+          0.07392085240665493,
+          0.0865934820994398
+        ]
+      },
+      "top_feature_importance": [
+        {
+          "feature": "time_since_last_txn_min",
+          "importance": 950.0
+        },
+        {
+          "feature": "balance_after_transaction",
+          "importance": 759.0
+        },
+        {
+          "feature": "usr_account_age_days",
+          "importance": 709.0
+        },
+        {
+          "feature": "transaction_frequency_score",
+          "importance": 668.0
+        },
+        {
+          "feature": "user_loyalty_score",
+          "importance": 666.0
+        },
+        {
+          "feature": "amount",
+          "importance": 608.0
+        },
+        {
+          "feature": "user_avg_monthly_txn",
+          "importance": 534.0
+        },
+        {
+          "feature": "user_avg_txn_value",
+          "importance": 515.0
+        },
+        {
+          "feature": "mrc_category",
+          "importance": 399.0
+        },
+        {
+          "feature": "mrc_avg_daily_txn",
+          "importance": 390.0
+        }
+      ]
+    },
+    "F_CatBoost": {
+      "model": "F_CatBoost",
+      "feature_set": "structured (native categorical, no SMOTE -- auto_class_weights='Balanced')",
+      "data_source": "anchor (organic) only",
+      "split_strategy": "60/20/20 stratified, two sequential train_test_split calls, random_state=42",
+      "random_seed": 42,
+      "validation": {
+        "roc_auc": 0.6018491618118523,
+        "pr_auc": 0.06530414525923103
+      },
+      "threshold": 0.35,
+      "threshold_selection_reason": "No validation threshold met both constraints -- fallback to max-F1",
+      "validation_sweep": [
+        {
+          "threshold": 0.05,
+          "precision": 0.04337985665786496,
+          "recall": 0.7516339869281046,
+          "f1": 0.08202567760342368,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.1,
+          "precision": 0.051932367149758456,
+          "recall": 0.5620915032679739,
+          "f1": 0.09508015478164732,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.15,
+          "precision": 0.05097312326227989,
+          "recall": 0.35947712418300654,
+          "f1": 0.08928571428571429,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.2,
+          "precision": 0.06666666666666667,
+          "recall": 0.3202614379084967,
+          "f1": 0.11036036036036036,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.25,
+          "precision": 0.08677685950413223,
+          "recall": 0.27450980392156865,
+          "f1": 0.13186813186813187,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.3,
+          "precision": 0.09411764705882353,
+          "recall": 0.20915032679738563,
+          "f1": 0.12981744421906694,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.35,
+          "precision": 0.11203319502074689,
+          "recall": 0.17647058823529413,
+          "f1": 0.13705583756345177,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.4,
+          "precision": 0.13291139240506328,
+          "recall": 0.13725490196078433,
+          "f1": 0.13504823151125403,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.45,
+          "precision": 0.11818181818181818,
+          "recall": 0.08496732026143791,
+          "f1": 0.09885931558935361,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.5,
+          "precision": 0.0759493670886076,
+          "recall": 0.0392156862745098,
+          "f1": 0.05172413793103448,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.55,
+          "precision": 0.10526315789473684,
+          "recall": 0.0392156862745098,
+          "f1": 0.05714285714285714,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.6,
+          "precision": 0.07692307692307693,
+          "recall": 0.0196078431372549,
+          "f1": 0.03125,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.65,
+          "precision": 0.038461538461538464,
+          "recall": 0.006535947712418301,
+          "f1": 0.0111731843575419,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.7,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.75,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.8,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.85,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.9,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "meets_constraint": false
+        },
+        {
+          "threshold": 0.95,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "meets_constraint": false
+        }
+      ],
+      "test": {
+        "roc_auc": 0.6628409153080206,
+        "pr_auc": 0.07846308352339121,
+        "precision": 0.12556053811659193,
+        "recall": 0.18421052631578946,
+        "f1": 0.14933333333333335,
+        "tp": 28,
+        "fp": 195,
+        "fn": 124,
+        "tn": 3653,
+        "constraint_satisfied": false
+      },
+      "precision_at_recall_targets": {
+        "recall_50": {
+          "achievable_on_validation": true,
+          "threshold": 0.1,
+          "validation_precision": 0.051932367149758456,
+          "validation_recall": 0.5620915032679739,
+          "test_precision": 0.056063375990249846,
+          "test_recall": 0.6052631578947368
+        },
+        "recall_60": {
+          "achievable_on_validation": true,
+          "threshold": 0.05,
+          "validation_precision": 0.04337985665786496,
+          "validation_recall": 0.7516339869281046,
+          "test_precision": 0.04798534798534799,
+          "test_recall": 0.8618421052631579
+        },
+        "recall_75": {
+          "achievable_on_validation": true,
+          "threshold": 0.05,
+          "validation_precision": 0.04337985665786496,
+          "validation_recall": 0.7516339869281046,
+          "test_precision": 0.04798534798534799,
+          "test_recall": 0.8618421052631579
+        },
+        "recall_80": {
+          "achievable_on_validation": false,
+          "note": "No swept threshold reaches recall>=80% on validation."
+        }
+      },
+      "latency_ms_per_row": 0.013514700000087032,
+      "hyperparameter_search": {
+        "search_space": [
+          [
+            6,
+            0.05
+          ],
+          [
+            6,
+            0.1
+          ],
+          [
+            8,
+            0.05
+          ],
+          [
+            8,
+            0.1
+          ]
+        ],
+        "selection_metric": "validation PR-AUC",
+        "selected": {
+          "depth": 8,
+          "learning_rate": 0.05
+        },
+        "selected_validation_pr_auc": 0.06530414525923103,
+        "note": "Uses auto_class_weights='Balanced' instead of SMOTE -- SMOTE is not natural on raw (unencoded) categorical text without SMOTENC. A deliberate, disclosed pipeline difference from A/D/E, not an inconsistency in the split or the test set."
+      },
+      "cross_validation_train_val_only": null,
+      "top_feature_importance": [
+        {
+          "feature": "user_loyalty_score",
+          "importance": 7.4384665324215815
+        },
+        {
+          "feature": "balance_after_transaction",
+          "importance": 6.756198720029726
+        },
+        {
+          "feature": "amount",
+          "importance": 6.541556725429972
+        },
+        {
+          "feature": "usr_account_age_days",
+          "importance": 6.391532932583897
+        },
+        {
+          "feature": "time_since_last_txn_min",
+          "importance": 6.349263358691633
+        },
+        {
+          "feature": "transaction_frequency_score",
+          "importance": 6.083170092718999
+        },
+        {
+          "feature": "mrc_avg_daily_txn",
+          "importance": 4.075337234208994
+        },
+        {
+          "feature": "hour_of_day",
+          "importance": 4.046789942277912
+        },
+        {
+          "feature": "day_of_week",
+          "importance": 3.7986643727506704
+        },
+        {
+          "feature": "mrc_rating",
+          "importance": 3.662655788583131
+        }
+      ]
+    }
+  }
+}

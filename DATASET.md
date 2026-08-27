@@ -95,6 +95,16 @@ alone was tested and did not resolve it; improving on this would need
 different or additional organic training data, which has not been
 sourced as part of this work.
 
+**Re-verified independently in the 2026-08-27 model-family benchmark:**
+a plain logistic regression trained on the 38-feature "kept" set (with
+`device_risk_score`/`ip_risk_score` already excluded) still predicts
+`data_source` at **99.62% accuracy / 0.9993 ROC-AUC** —
+confirming the contamination is not fixed by removing the two originally
+-suspected columns; 30 of those 38 kept features are themselves constant
+across the entire supplement subset. Full detail:
+`PaySense-ML-Backend/experiments/feature_audit.md`,
+`PaySense-ML-Backend/experiments/source_classifier_results.json`.
+
 **Feature engineering:** 50 raw columns → 40 model-ready features (README's
 "40 model-ready features" claim, verified consistent with `/health`'s
 `feature_count: 40` this session). Includes both raw signal columns

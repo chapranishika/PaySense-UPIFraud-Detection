@@ -1,0 +1,59 @@
+{
+  "purpose": "Diagnostic only -- NOT a fraud model. Reproduces/quantifies source separability.",
+  "trivial_single_feature_check": {
+    "feature": "device_risk_score.notnull()",
+    "accuracy": 1.0,
+    "matches_prior_documented_finding_of_100pct": true
+  },
+  "full_classifier_excluding_known_leak_columns": {
+    "features_used": 38,
+    "excludes": [
+      "device_risk_score",
+      "ip_risk_score"
+    ],
+    "test_accuracy": 0.9961666666666666,
+    "test_roc_auc": 0.999312375,
+    "top_10_features_by_abs_coefficient": [
+      {
+        "feature": "day_of_week",
+        "coefficient": -7.467772605307245
+      },
+      {
+        "feature": "recurring_payment_flag",
+        "coefficient": -4.86387593852449
+      },
+      {
+        "feature": "usr_preferred_device",
+        "coefficient": -4.3069278517912455
+      },
+      {
+        "feature": "mrc_size",
+        "coefficient": 4.0646453110047975
+      },
+      {
+        "feature": "device_type",
+        "coefficient": -3.6619609566915514
+      },
+      {
+        "feature": "transaction_velocity",
+        "coefficient": -3.3514993106812367
+      },
+      {
+        "feature": "failed_attempts_last_24h",
+        "coefficient": -3.3007933310023603
+      },
+      {
+        "feature": "transaction_type",
+        "coefficient": -2.6538139688530427
+      },
+      {
+        "feature": "kyc_verified_flag",
+        "coefficient": 1.6516982130012712
+      },
+      {
+        "feature": "txn_success_flag",
+        "coefficient": 1.6046402363427108
+      }
+    ]
+  }
+}

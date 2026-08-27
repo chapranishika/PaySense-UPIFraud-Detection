@@ -1,0 +1,8 @@
+# Additional dependencies for experiments/run_model_benchmark.py ONLY.
+# NOT part of the deployed API's requirements.txt -- these model families are
+# not used in production. Installed into the project's existing venv
+# alongside requirements.txt's pinned versions (numpy 1.26.4, scikit-learn
+# 1.5.1, xgboost 2.1.1, imbalanced-learn 0.12.3, pandas 2.2.2), which the
+# benchmark depends on for reproducibility.
+lightgbm==4.7.0
+catboost==1.2.10
