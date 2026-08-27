@@ -105,6 +105,27 @@ across the entire supplement subset. Full detail:
 `PaySense-ML-Backend/experiments/feature_audit.md`,
 `PaySense-ML-Backend/experiments/source_classifier_results.json`.
 
+**A follow-up forensic pass (same day) classified all 38 features
+individually and found this is not one single cause:** 30/38 are a
+synthetic-generation artifact (the supplement's generator simply didn't
+vary these fields — 0 features showed a missingness-pattern or other
+collection-style artifact, and 0 showed hidden inference-time-
+unavailable leakage, checked directly against the real `/predict`
+request schema). But **5 of the 8 naturally-varying features also show
+large, genuine distributional shift** between the two sources — most
+strikingly `mrc_category` (Cramér's V=0.848; the two sources barely
+share a merchant-category vocabulary) and `amount` (Cohen's d=0.818;
+organic transactions average ₹876.85 vs. supplement's ₹178.14, a ~5×
+scale difference). Removing the 25 features confirmed to be pure
+artifacts with no organic fraud-signal value does **not** improve
+fraud-detection performance on the frozen organic test set (PR-AUC 0.0867
+vs. the full-feature-set 0.0945 — marginally lower, not higher), and the
+resulting reduced-feature source classifier still separates sources at
+90.73% accuracy / 0.9624 ROC-AUC. **The evidence points to a real,
+severe domain-shift between the two source populations, compounded by —
+not solely explained by — the synthetic-generation artifact.** Full
+detail: `PaySense-ML-Backend/experiments/source_forensics/`.
+
 **Feature engineering:** 50 raw columns → 40 model-ready features (README's
 "40 model-ready features" claim, verified consistent with `/health`'s
 `feature_count: 40` this session). Includes both raw signal columns

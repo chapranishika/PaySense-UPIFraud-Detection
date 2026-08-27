@@ -117,7 +117,7 @@ above, kept for record):**
 | Precision @ deployed threshold (t=0.50) | **91.74%** |
 | Recall @ deployed threshold (t=0.50) | **39.53%** |
 
-**Other verified results:** 251 tests passing (223 backend pytest + 28
+**Other verified results:** 258 tests passing (230 backend pytest + 28
 Android unit tests). Category classifier: 78.0% real-world accuracy
 (deployed), 83.0% (DistilBERT candidate, validated but not deployed —
 see [`EXPERIMENTS.md`](EXPERIMENTS.md)). Android security: 4 findings, 4
@@ -125,6 +125,10 @@ fixed. A 2026-08-27 benchmark against RandomForest, LightGBM, and
 CatBoost on the same clean evaluation found none materially improve on
 XGBoost's numbers above, and none meet the business requirement either —
 see [`EXPERIMENTS.md`](EXPERIMENTS.md)'s "Model-family benchmark"
+section. A same-day follow-up traced the model benchmark's source
+classifier (99.62% accuracy) to a mix of a synthetic-generation artifact
+and real domain shift between the two data sources, not hidden leakage —
+see [`EXPERIMENTS.md`](EXPERIMENTS.md)'s "Source-domain forensics"
 section.
 
 Accuracy is not reported as a headline metric here on purpose — a model
@@ -147,7 +151,7 @@ repository.
 ## 9. Testing
 
 ```bash
-# Backend (223 tests)
+# Backend (230 tests)
 cd PaySense-ML-Backend && pytest tests/ -v
 
 # Android (28 tests)

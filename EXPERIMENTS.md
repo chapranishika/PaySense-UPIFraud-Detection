@@ -372,3 +372,112 @@ by switching architectures. Regression-tested in
 `PaySense-ML-Backend/experiments/run_model_benchmark.py`,
 `PaySense-ML-Backend/experiments/model_benchmark.md`,
 `PaySense-ML-Backend/experiments/feature_audit.md`.
+
+---
+
+## Source-domain forensics (2026-08-27)
+
+**Question:** the model benchmark's source classifier separated organic
+from supplement rows at 99.62% accuracy using the 38 kept features, even
+with the two previously-known leak columns already excluded. Why? Is
+this hidden leakage, a synthetic-generation artifact, real domain shift,
+or a mixture?
+
+**Method:** classified every one of the 38 kept features into
+VALID_SIGNAL / DOMAIN_SHIFT / COLLECTION_ARTIFACT / SYNTHETIC_ARTIFACT /
+LEAKAGE / UNKNOWN, using computed statistics rather than assumption for
+each: constant/near-constant analysis per source, missingness per
+source, a standardized effect size (Cohen's d for numeric, Cramér's V
+for categorical) between organic and supplement, and — critically — a
+SEPARATE effect size measuring each feature's association with
+`is_fraud` *within anchor-only (organic) rows*, so a feature that is
+constant in supplement isn't automatically judged worthless for fraud
+modelling. `legitimate_at_inference` was checked directly against
+`main.py`'s real `/predict` request schema (every one of the 38 is a
+literal field there — 37 required, `mrc_rating` optional) rather than
+assumed.
+
+**Result:**
+
+- **30 of 38 features: SYNTHETIC_ARTIFACT.** Constant in the supplement
+  source specifically — the supplement's own generation process simply
+  didn't vary these fields. This mechanically explains most of the
+  99.62% separability.
+- **5 of 38 features: DOMAIN_SHIFT** — vary naturally in *both* sources,
+  but with a large, real distributional difference: `mrc_category`
+  (Cramér's V=0.848 — organic spans 10 merchant categories dominated by
+  P2P Transfer, supplement is dominated by Food/Clothing/Electronics,
+  categories neither source shares), `transaction_type` (Cramér's
+  V=0.676 — supplement introduces an "ATM" transaction type organic data
+  never has), `amount` (Cohen's d=0.818 — organic mean ₹876.85 vs.
+  supplement mean ₹178.14, a ~5× scale difference), `is_night_transaction`
+  (d=0.499), `hour_of_day` (d=0.436).
+- **3 of 38 features: VALID_SIGNAL** — `new_device_flag`,
+  `ip_location_mismatch`, `transaction_frequency_score` show no material
+  source-separability at all.
+- **0 features: COLLECTION_ARTIFACT or LEAKAGE.** No hidden hard-leakage
+  or missingness-pattern-based source tell was found among these 38
+  (the two real leak columns, `device_risk_score`/`ip_risk_score`, were
+  already excluded before this analysis — see `SOURCE_CONTAMINATION_
+  INVESTIGATION.md`).
+- Of the 30 SYNTHETIC_ARTIFACT features, **5 also show real organic
+  fraud-signal** (`transaction_velocity`, `failed_attempts_last_24h`,
+  `amount_deviation_score` — the three monotonic-constraint behavioral
+  features — plus `kyc_verified_flag`, `usr_is_high_risk`) and were kept
+  rather than removed; removing genuinely useful signal to fix a
+  dataset-generation problem elsewhere would be the wrong trade.
+- **Feature-set ablation on the frozen organic 60/20/20 split:** SET A
+  (all 38) reproduces the established baseline exactly (ROC-AUC 0.7050,
+  PR-AUC 0.0945). SET B (13 features — the 30 pure artifacts removed,
+  the 8 naturally-varying features plus the 5 fraud-signal-bearing
+  artifact-tainted ones kept) scores ROC-AUC 0.7018, PR-AUC 0.0867 —
+  **not better**, marginally lower on both threshold-independent
+  metrics. Its validation-selected threshold happened to land much lower
+  (0.05 vs. 0.10), producing a very different-looking operating point
+  (65.79% recall at 6.78% precision) — a different point on a
+  similar-quality curve, not a real improvement; reported here
+  specifically so it isn't misread as one. SET C (deployment-available-
+  only) is **bit-for-bit identical to SET A** — verified, not assumed:
+  every one of the 38 kept features is already a required/optional field
+  in the real `/predict` schema, so there is no stricter
+  deployment-availability boundary to draw here.
+- **Source classifier retrained on SET B (post-cleaning):** accuracy
+  drops from 99.62%/0.9993 ROC-AUC to **90.73%/0.9624 ROC-AUC** —
+  substantially lower, but still very high. Removing the confirmed pure
+  artifacts does not come close to eliminating source separability.
+
+**Interpretation:** the evidence supports a **combination of causes**,
+not a single tidy answer. The dominant mechanism (30/38 features) is a
+synthetic-generation artifact — the supplement source is a templated
+profile that fails to vary most fields, confirming and quantifying the
+2026-08-27 model-benchmark's finding further. But a second, independent
+cause is also real and evidenced: 5 of the 8 naturally-varying features
+show large, genuine distributional shift, consistent with the two
+sources representing different transaction populations (smaller
+amounts, different hours, non-overlapping merchant-category and
+transaction-type vocabularies) rather than one dataset simply being a
+noisier version of the other. No evidence of hidden leakage was found —
+every feature is legitimately available at real inference time, checked
+directly. Critically, removing the confirmed artifacts does **not**
+improve fraud-detection performance on organic data (PR-AUC 0.0867 vs.
+0.0945, marginally lower, not higher) — consistent with, and extending,
+the earlier finding that cleaning this dataset does not by itself fix
+organic fraud-detection capability (Experiment E). 99.62% source-
+separability is not, on its own, proof of fraud-relevant leakage — three
+of the most fraud-relevant features (`new_device_flag`,
+`ip_location_mismatch`, `transaction_frequency_score`) show no source
+separability at all, and the features that do separate strongly are
+mostly ones a real fraud model would legitimately need regardless of
+this dataset's specific generation quirks.
+
+**Conclusion:** the remaining evidence indicates the dominant limitation
+is representation/domain coverage — a real, severe difference between
+the two data sources' transaction populations, compounded by a
+synthetic-generation artifact in the supplement source — rather than a
+model-family choice (Experiments A–H, model-family benchmark above) or
+a small, fixable set of leaking columns (this analysis found none).
+Regression-tested in `tests/test_source_forensics.py`. Full detail and
+every feature's individual classification:
+`PaySense-ML-Backend/experiments/source_forensics/feature_validity_audit.md`,
+`source_feature_importance.csv`, `distribution_shift.csv`,
+`fraud_feature_ablation.csv`, `source_classifier_before_after.json`.

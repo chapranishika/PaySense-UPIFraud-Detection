@@ -202,7 +202,7 @@ document as historical record, not as the current claimed result.
 
 | Other verified results | Value |
 |---|---:|
-| Backend test suite | **223 / 223 passing** |
+| Backend test suite | **230 / 230 passing** |
 | Category classifier, real-world accuracy | **78.0%** deployed (83.0% validated, undeployed — see below) |
 | Android security findings | **4 found, 4 fixed** (3 fully verified, 1 compile-verified) |
 
@@ -212,7 +212,13 @@ this project was audited with. Most recently: a 2026-08-27 benchmark
 against RandomForest, LightGBM, and CatBoost on the same clean organic
 evaluation found none of them materially improve on XGBoost's numbers
 above, and none meet the business requirement either — see
-[`EXPERIMENTS.md`](EXPERIMENTS.md)'s "Model-family benchmark" section.
+[`EXPERIMENTS.md`](EXPERIMENTS.md)'s "Model-family benchmark" section. A
+same-day follow-up classified every feature behind that benchmark's
+99.62%-accurate source classifier and found a mix of causes (mostly a
+synthetic-generation artifact, plus real domain shift in several
+naturally-varying features) rather than hidden leakage — and confirmed
+that removing the artifacts doesn't improve fraud detection either — see
+"Source-domain forensics" in the same document.
 
 ---
 
