@@ -20,7 +20,13 @@ matplotlib==3.9.0
 # pip-audit found real CVEs in the previously-pinned versions. All bumps
 # verified against the full test suite (214/214 passing) before pinning.
 # cryptography is python-jose's own dependency, bumped for the same reason.
-python-jose[cryptography]==3.4.0
+# 2026-08-28: python-jose bumped 3.4.0->3.5.0 specifically because it relaxes
+# its own pyasn1 pin from "<0.5.0" to ">=0.5.0" -- that pin was blocking a fix
+# for 6 known pyasn1 CVEs (PYSEC-2026-2263/3455/3456/3457). pyasn1 pinned to
+# the fixed 0.6.4 in the same pass. Verified against the full test suite
+# (230/230 passing) before pinning.
+python-jose[cryptography]==3.5.0
+pyasn1==0.6.4
 slowapi==0.1.9
 python-dotenv==1.2.2
 passlib[bcrypt]==1.7.4

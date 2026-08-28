@@ -111,10 +111,9 @@ findings; not fixed as of this audit.
   allowlist — verified rejected with 422 for injection-style payloads in
   `tests/test_api.py::TestInsights::test_weekly_insights_rejects_prompt_injection_category`.
 
-**INFERENCE, not independently re-verified this session.** CORS is
-configured via `ALLOWED_ORIGINS` (`.env.example` documents `*` for dev). Not
-re-checked what the production Render deployment actually sets — **NOT
-VERIFIED**.
+CORS is configured via `ALLOWED_ORIGINS` — see §6 for the 2026-08-28
+live-verified finding (wildcard behavior confirmed locally, production
+value NOT VERIFIED) and the startup-warning fix.
 
 ---
 
@@ -159,13 +158,9 @@ not been adversarially red-teamed beyond the 4 phrasings tested.
 
 ## 5. Dependency security
 
-**FACT.** `aiosqlite==0.20.0` is declared in `requirements.txt` (labeled
-"Phase 2 — weekly insights persistence") but `grep -rln "aiosqlite"
---include="*.py" .` returns **zero matches** anywhere in the codebase — it
-is fully unused. Not a security vulnerability by itself, but dead weight in
-every deployed bundle, and exactly the kind of "planned but never wired up"
-dependency the size-constrained Vercel deployment path (`DEPLOY_VERCEL.md`)
-can't afford. **Recommendation: remove it** (P2 — see remediation plan).
+**FACT, corrected in the 2026-08-28 audit.** `aiosqlite` is **not** in
+`requirements.txt` — it was removed in an earlier pass (this document
+previously said otherwise; that was stale).
 
 **Real scan run, 2026-08-26, `pip-audit` against the actual project venv:**
 
@@ -178,37 +173,177 @@ passing throughout):* `python-jose` 3.3.0→3.4.0, `cryptography` 49.0.0→
 50.0.0, `python-dotenv` 1.0.1→1.2.2, `python-multipart` 0.0.9→0.0.31 — all
 CVEs in these four packages fully cleared.
 
-*Not fixed, documented honestly:*
-- **`starlette` 0.38.6** (8 CVE entries, fix versions 0.40.0+/1.x) — FastAPI
-  0.115.0 pins `starlette<0.39.0,>=0.37.2`; every fix version is outside
-  that range. Fixing this requires a coordinated FastAPI+starlette upgrade
-  with real regression testing (OpenAPI schema generation, response model
-  behavior can change between major Starlette versions) — out of scope for
-  this pass, flagged as P1.
-- **`ecdsa` 0.19.2** (1 CVE, no fix version listed upstream) — transitive
-  dependency, nothing to upgrade to yet.
-- **`pyasn1` 0.4.8** (multiple CVEs) — transitive dependency.
-- **`pip` 24.0` / `setuptools` 78.1.0`** — packaging tooling, not code that
-  runs in the deployed service.
-
 *Result as of 2026-08-26:* 27 known vulnerabilities remain in 5 packages
-(down from 35 in 8). **No claim of "secure"** — this is the actual,
-current, dated result of one tool's scan, not a guarantee.
+(down from 35 in 8).
+
+**Re-scanned 2026-08-28, same tool, fresh run: 16 vulnerabilities in 3
+packages** (`pyasn1==0.4.8`: 6, `starlette==0.38.6`: 9, `ecdsa==0.19.2`: 1)
+— fewer packages/CVEs than the 2026-08-26 number above; the vulnerability
+database itself changes over time (entries added/reclassified), so this is
+a fresh count, not a claim that 11 CVEs were silently fixed between scans.
+
+**Fixed in this pass:** `python-jose` 3.4.0→3.5.0. This was not primarily
+about python-jose's own CVE history — it was pinned specifically because
+**3.5.0 relaxes python-jose's own `pyasn1` constraint from `<0.5.0` to
+`>=0.5.0`**, which had been blocking every pyasn1 fix version. `pyasn1`
+bumped 0.4.8→0.6.4 in the same pass, clearing all 6 pyasn1 CVEs. Verified
+safe via the full test suite (230/230 passing) before pinning either
+version. **Result: 10 vulnerabilities remain in 2 packages** (`starlette`:
+9, `ecdsa`: 1).
+
+*Not fixed, documented honestly:*
+- **`starlette` 0.38.6`** (9 CVE entries in the current scan) — FastAPI
+  0.115.0 pins `starlette<0.39.0,>=0.37.2` (re-verified 2026-08-28 via
+  `importlib.metadata.requires('fastapi')`); every fix version pip-audit
+  lists is outside that range. Fixing this requires a coordinated
+  FastAPI+starlette upgrade with real regression testing (OpenAPI schema
+  generation, response model behavior can change between major Starlette
+  versions) — out of scope for this pass, flagged as P1. Some of
+  pip-audit's reported `fix_versions` for starlette (e.g. `1.0.1`, `1.3.0`)
+  don't match Starlette's actual release history (which has never reached
+  a 1.x version) — reported here exactly as the tool returned them, not
+  edited, but flagged as a possible vulnerability-database data-quality
+  issue rather than asserted as fact either way.
+- **`ecdsa` 0.19.2`** (1 CVE, `fix_versions=[]` — pip-audit reports no
+  patched version exists upstream at all) — transitive dependency of
+  `python-jose`, nothing to upgrade to.
+- **`pip`/`setuptools`** — packaging tooling, not code that runs in the
+  deployed service; not re-scanned this pass.
+
+**No claim of "secure"** — this is the actual, current, dated result of
+one tool's scan against one file, not a guarantee, and not a claim that no
+other vulnerability classes exist.
 
 ---
 
-## 6. What this document does NOT cover
+## 6. Configuration: fail-open defaults (found and hardened 2026-08-28)
 
-- Formal penetration testing of the live Render deployment (which, as of
-  this audit, is not responding at all — see `PROJECT.md`'s known
-  limitations).
-- The remaining 27 dependency vulnerabilities documented above as not yet
-  fixed (starlette, ecdsa, pyasn1, pip, setuptools).
+**FACT.** Two config values default to their MORE PERMISSIVE state when
+unset, rather than failing closed:
+- `APP_ENV` defaults to `"development"` if unset — in that mode,
+  `get_current_user()` accepts requests to `/predict`, `/classify`, and
+  `/insights/weekly` with **no** `Authorization` header at all (a
+  documented local-curl convenience). A deployment that forgets to set
+  `APP_ENV=production` would silently run with this bypass active.
+- `ALLOWED_ORIGINS` defaults to no origins if unset, but the documented
+  `.env.example` value for local dev is `*` (any origin). **Verified live**
+  against a local server: a CORS preflight from `Origin:
+  https://evil.example.com` got back `Access-Control-Allow-Origin: *`
+  when `ALLOWED_ORIGINS=*` was set. The API uses Bearer-token auth (not
+  cookies) with no `allow_credentials=True`, so this is not a classic
+  cookie-based CSRF vector — but it does mean any website's JavaScript
+  could call `/health` (non-sensitive) or attempt credential-stuffing
+  against `/auth/token` from a visitor's browser if this were ever left at
+  `*` on a real deployment.
+
+**Fixed:** neither default was changed (both have genuine local-dev value,
+and changing either risks breaking existing setups) — instead, `main.py`
+now logs a loud `WARNING` at startup for either condition, so a deployer
+who forgot to override one sees it immediately in their logs instead of
+finding out never or with a network-security-scan noticing a live gap.
+Regression-tested: `tests/test_security_hardening.py::
+test_non_production_app_env_would_trigger_a_warning` guards that these
+checks stay in `main.py`.
+
+**Live production CORS/APP_ENV configuration is NOT VERIFIED** — no
+dashboard access to the Render deployment exists in this environment. The
+finding above is about the CODE's behavior and the documented default, not
+a claim about what is currently set on the live service.
+
+---
+
+## 7. `/auth/token` had no rate limit (found and fixed 2026-08-28)
+
+**FACT, verified live against a running server.** Every other endpoint in
+this API has a `@limiter.limit(...)` decorator; `/auth/token` — the only
+unauthenticated endpoint that accepts a secret (username/password) — had
+none. Confirmed empirically: 20 rapid wrong-password requests against a
+local server all returned `401`, zero `429`s.
+
+Practical severity is low today: the demo credentials are already
+intentionally public (printed in the OpenAPI docs and this repo's own
+README), so there is nothing secret left to brute-force. This is flagged
+and fixed anyway because the code pattern — an auth endpoint with no rate
+limit — would be a real brute-force vector if this project (or anyone
+copying its structure) ever added real, non-public per-user credentials
+without revisiting this endpoint.
+
+**Fixed:** added `@limiter.limit("10/minute")` to `POST /auth/token`.
+Regression-tested: `tests/test_security_hardening.py::
+test_zz_auth_token_endpoint_is_rate_limited`.
+
+---
+
+## 8. Unbounded numeric input cannot crash the server or produce NaN
+
+**FACT, verified live.** `amount_deviation_score` (and a few other
+numeric fields) have no `ge`/`le` bound in `TransactionInput`, unlike most
+other fields. Sent extreme values (`1e300`, `-1e300`) directly to a
+running `/predict` endpoint: the response was `200`, with a finite
+`fraud_score` in `[0, 1]` both times — `src/fraud_model.score()`'s final
+`min(max(ensemble, 0.0), 1.0)` clamp, plus each individual scorer's own
+`try/except`, holds up under this input. No fix was needed here; this is
+recorded as a verified-safe finding, not a gap. Regression-tested:
+`tests/test_security_hardening.py::
+test_predict_extreme_unbounded_field_does_not_crash_or_produce_nan`
+(parametrized over `1e300`, `-1e300`, `1e15`, `-1e15`).
+
+---
+
+## 9. Dockerfile was broken (found and fixed 2026-08-28)
+
+**FACT, verified via a real `docker build`/`docker run` — Docker is
+installed and was actually exercised, not just read.** `render.yaml` uses
+Render's native Python buildpack (`env: python`), **not Docker** — the
+Dockerfile/`docker-compose.yml` are an optional local-dev path only, never
+used by the live deployment. That path was nonetheless completely broken,
+two different ways:
+
+1. `COPY artefacts/ artefacts/ 2>/dev/null || true` — Dockerfile `COPY`
+   has no shell/conditional syntax; this was parsed as literal extra
+   arguments and failed every build (`"/||": not found`). Fixed: plain
+   `COPY artefacts/ artefacts/` (the directory is tracked in git and
+   always present at build time, so no conditional was ever needed).
+2. Once the build succeeded, the container **crashed on every startup**:
+   the Dockerfile copied a hand-picked list of files that never included
+   `src/`, and `main.py` does `from src.fraud_model import ...`
+   (`ModuleNotFoundError: No module named 'src'`). Fixed by switching to
+   `COPY . .` with a new `.dockerignore` (excludes `venv/`, datasets,
+   logs, `.env`, `.git/`) — avoids this whole class of "forgot to list a
+   file" bug rather than patching the specific omission.
+
+**Verified fixed end-to-end:** a real `docker build` now succeeds, and a
+real `docker run` (with the required env vars set) starts the full
+ensemble (`GET /health` returns `ensemble_ready: true`,
+`active_scorers: ["rules","paysense","light_lr"]`) — checked directly,
+not inferred from the build succeeding alone.
+
+---
+
+## 10. Production deployment status (re-verified 2026-08-27/28)
+
+**FACT, re-checked fresh (not assumed from an earlier session's finding).**
+`https://paysense-api.onrender.com/health` and the root path both
+returned `503 Service Unavailable` (with a `Retry-After: 5` header) across
+3 separate requests. This environment has no Render dashboard access, so
+the cause (suspended free-tier instance, a crash, or an intentional pause)
+is **NOT VERIFIED** — only the symptom (currently down) is confirmed.
+**Production deployment status: DOWN as of this check, cause unknown.**
+
+---
+
+## 11. What this document does NOT cover
+
+- Formal penetration testing of the live Render deployment (currently
+  down — see §10).
+- Live production CORS/`APP_ENV` configuration (§6) — no dashboard access.
+- The remaining 10 dependency vulnerabilities documented in §5 as not yet
+  fixed (starlette, ecdsa).
 - Anything about `PaySense-Android-Client` (no "-New") — explicitly kept
   by the project owner per an existing README.md comment ("early,
   incomplete scaffold — superseded by -New, kept for history"), a
   deliberate choice this audit did not override. `android/` and `backend/`
   — the two undocumented, unreferenced first-commit scaffolds with no such
-  comment anywhere — were removed via `git rm -r` in this audit; their
-  full history remains in git regardless. See `PROJECT.md`'s repository
-  map for the distinction.
+  comment anywhere — were removed via `git rm -r` in an earlier audit;
+  their full history remains in git regardless. See `PROJECT.md`'s
+  repository map for the distinction.

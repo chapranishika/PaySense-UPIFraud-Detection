@@ -125,6 +125,28 @@ log = logging.getLogger("paysense")
 log.handlers = [_handler]
 log.propagate = False
 
+# ── Fail-open config guards ────────────────────────────────────────────────────
+# Both APP_ENV and ALLOWED_ORIGINS default to their MORE PERMISSIVE state when
+# unset (APP_ENV defaults to "development", which bypasses JWT auth entirely
+# for requests without a token; ALLOWED_ORIGINS defaults to no origins allowed,
+# but the documented .env.example dev convenience value is "*"). Neither
+# default is changed here — "development" and "*" both have real local-dev
+# value and changing either would break existing setups — but a deployer who
+# forgets to override one of these should not find out silently. Loud
+# startup warnings, not a behavior change.
+if APP_ENV != "production":
+    log.warning(
+        f"APP_ENV={APP_ENV!r}, not 'production' — /predict, /classify, and "
+        f"/insights/weekly will accept requests with NO Authorization header "
+        f"at all (auth bypass). Set APP_ENV=production for any real deployment."
+    )
+if os.environ.get("ALLOWED_ORIGINS", "") == "*":
+    log.warning(
+        "ALLOWED_ORIGINS=* — CORS will allow requests from ANY origin. Safe "
+        "for local development only; set a real comma-separated origin list "
+        "for any real deployment."
+    )
+
 # ── Rate limiter ──────────────────────────────────────────────────────────────
 limiter = Limiter(key_func=get_remote_address)
 
@@ -253,12 +275,18 @@ class TokenResponse(BaseModel):
 
 @app.post("/auth/token", response_model=TokenResponse, tags=["Auth"],
           summary="Get a JWT access token")
-async def get_token(body: TokenRequest):
+@limiter.limit("10/minute")
+async def get_token(request: Request, body: TokenRequest):
     """
     Demo credentials (change via env vars in production):
     - username: `paysense`   password: `guardian2025`
 
     Returns a Bearer token valid for 60 minutes.
+
+    **Rate limit:** 10 requests per minute per IP — this is the only
+    unauthenticated endpoint that accepts a secret, so it's rate-limited
+    against brute-force guessing separately from /predict's higher limit.
+
     Use it as: `Authorization: Bearer <token>`
     """
     if body.username != API_DEMO_USER or body.password != API_DEMO_PASS:
@@ -417,26 +445,6 @@ class WeeklyInsight(BaseModel):
 
 
 # ════════════════════════════════════════════════════════════════════════════
-#  HELPERS
-# ════════════════════════════════════════════════════════════════════════════
-def _mock_score(txn: TransactionInput) -> float:
-    """
-    Deterministic mock scorer used when model artefacts are absent.
-    Combines the most important known signals in a simple formula so the
-    /predict endpoint remains usable for integration testing without .pkl files.
-    """
-    score = 0.05
-    if txn.new_device_flag:       score += 0.35
-    if txn.ip_location_mismatch:  score += 0.20
-    if txn.usr_is_high_risk:      score += 0.15
-    if txn.amount_deviation_score and txn.amount_deviation_score > 3.0:
-        score += 0.15
-    if txn.is_night_transaction:  score += 0.05
-    if txn.kyc_verified_flag == 0:score += 0.05
-    return min(round(score, 4), 0.99)
-
-
-# ════════════════════════════════════════════════════════════════════════════
 #  /predict  — MAIN INFERENCE ENDPOINT  (rate-limited, JWT-protected)
 # ════════════════════════════════════════════════════════════════════════════
 @app.post(
@@ -457,10 +465,13 @@ async def predict(
     **Rate limit:** 60 requests per minute per IP.
 
     Returns fraud_score (0–1), binary decision, and graduated alert level.
-    The scoring pipeline:
-    1. Runs PaySense's UPI-native XGBoost (43 features, per-user z-score).
-    2. Falls back to a deterministic mock scorer if artefacts are absent
-       (useful for integration testing without running the full pipeline).
+    A 3-scorer ensemble (see GET /health for which are currently active):
+    1. PaySense XGBoost (40 features, primary, weight 0.60).
+    2. LightLR, a 5-feature fallback model (weight 0.25).
+    3. A deterministic rules scorer (weight 0.15) that is always on.
+    If XGBoost or LightLR artefacts are missing, the ensemble degrades
+    gracefully — the rules scorer alone still produces a real score rather
+    than the request failing (see `src/fraud_model.score`).
     """
     rid = _request_id_ctx.get("-")
     txn_dict = transaction.model_dump()

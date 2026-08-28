@@ -1,0 +1,15 @@
+# Keep the build context (and resulting image) small and avoid ever baking
+# local secrets, the venv, or large scratch/dataset files into an image.
+venv/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.git/
+.env
+*.csv
+*.log
+experiments/
+distilbert_train_tmp/
+plots/
+.vercel/

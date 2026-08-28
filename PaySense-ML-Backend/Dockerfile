@@ -6,15 +6,13 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy source
-COPY paysense_pipeline.py .
-COPY paysense_ml_pipeline.py .
-COPY paysense_phase3.py .
-COPY main.py .
-
-# If artefacts/ directory exists (pre-built model), copy it
-# Otherwise the startup script will generate it
-COPY artefacts/ artefacts/ 2>/dev/null || true
+# Copy source. A previous version hand-picked individual files here and
+# never included src/ -- main.py's `from src.fraud_model import ...` then
+# failed at container startup every time (verified: `docker run` crashed
+# with ModuleNotFoundError: No module named 'src'). Copying everything not
+# excluded by .dockerignore (venv/, datasets, logs, secrets) avoids this
+# whole class of "forgot to list a file" bug.
+COPY . .
 
 EXPOSE 8000
 
