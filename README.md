@@ -6,7 +6,7 @@
 > each user's own spending history. A full web dashboard shares the same
 > backend API.
 
-**Author:** Nishika Chapra | KJ Somaiya Institute of Technology | 2025
+**Author:** Nishika Chapra |
 
 **Full documentation:** [`WALKTHROUGH.md`](WALKTHROUGH.md) (live screenshots
 and results) · [`ARCHITECTURE.md`](ARCHITECTURE.md) ·
@@ -205,4 +205,4 @@ Verify: `curl http://localhost:8000/health`. Swagger UI at `/docs`.
 
 ---
 
-*PaySense — Nishika Chapra · KJ Somaiya Institute of Technology · 2025*
+*PaySense — Nishika Chapra · 
