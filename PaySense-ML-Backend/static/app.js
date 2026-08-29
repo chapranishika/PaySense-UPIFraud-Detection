@@ -46,6 +46,14 @@ let state = {
     ],
     fraudAlerts: 0,
     monthlySpent: 1700.00,
+    // BUG FIX: budgetLimit was read in renderFinance()/the chatbot's budget
+    // summary (state.budgetLimit.toFixed(...)) but never initialized here or
+    // settable anywhere in the UI -- every dashboard render threw an
+    // uncaught TypeError ("Cannot read properties of undefined") at
+    // startup, which silently aborted the rest of initAuth()'s setup code,
+    // including the Log Out button's click handler. A real default fixes
+    // both the crash and the knock-on "Log Out does nothing" symptom.
+    budgetLimit: 20000.00,
     activeTab: "overview",
     healthInterval: null
 };
