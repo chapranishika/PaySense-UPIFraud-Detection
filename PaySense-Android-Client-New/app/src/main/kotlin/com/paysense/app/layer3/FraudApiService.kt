@@ -83,7 +83,7 @@ private class AuthInterceptor(private val context: Context) : okhttp3.Intercepto
 class FraudApiService private constructor(private val context: Context) {
 
     companion object {
-        private const val BASE_URL        = "https://paysense-api.onrender.com/"
+        private const val BASE_URL        = "https://paysense-upifraud-detection.onrender.com/"
         private const val STATS_WINDOW_MS = 90L * 24 * 60 * 60 * 1000
 
         @Volatile private var INSTANCE: FraudApiService? = null

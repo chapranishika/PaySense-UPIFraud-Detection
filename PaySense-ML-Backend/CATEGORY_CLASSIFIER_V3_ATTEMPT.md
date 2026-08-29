@@ -274,7 +274,7 @@ meaningfully different decision than v2/v4 (which weren't deployed because
 they weren't actually better). This one *is* actually better, and stays
 undeployed anyway because the risk profile is different in kind from a
 pickle-file swap: the production backend
-(`paysense-api.onrender.com`) already loads XGBoost, LightLR, and the TF-IDF
+(`paysense-upifraud-detection.onrender.com`) already loads XGBoost, LightLR, and the TF-IDF
 classifier, and this environment has no way to verify that adding a 268MB
 transformer plus its runtime won't exceed whatever memory limit that
 deployment's hosting tier actually has. An out-of-memory crash on the live

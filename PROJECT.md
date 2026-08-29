@@ -484,6 +484,16 @@ NOT VERIFIED** from this environment — no Render dashboard access exists
 here. This is the highest-priority action item for whoever owns the Render
 account: check the dashboard's deploy logs directly.
 
+**Update, 2026-08-29:** checked, with dashboard access. The actual cause
+was simpler than any guess above — the Production environment had zero
+services in it; the old service no longer existed. Redeployed as a new
+Web Service, `https://paysense-upifraud-detection.onrender.com` — its
+first build also failed (Render defaulted to Python 3.14, and
+`pandas==2.2.2` has no prebuilt wheel for it), fixed by setting
+`PYTHON_VERSION=3.11.0` explicitly and redeploying. `GET /health` now
+returns `status: ok` on the new URL. All references to the old URL
+throughout this repo have been updated.
+
 ## 24. Future improvements
 
 **High impact:**

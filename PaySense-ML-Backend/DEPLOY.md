@@ -85,18 +85,18 @@ Render will build and deploy — first build takes ~3–5 minutes.
 After deployment completes, Render shows:
 
 ```
-https://paysense-api.onrender.com
+https://paysense-upifraud-detection.onrender.com
 ```
 
 (The exact subdomain is auto-generated from your service name.)
 
 **Verify it's working:**
 ```bash
-curl https://paysense-api.onrender.com/health
+curl https://paysense-upifraud-detection.onrender.com/health
 # Expected: {"status":"ok","model_loaded":true,"threshold":0.5,"feature_count":41}
 ```
 
-**Swagger UI:** https://paysense-api.onrender.com/docs
+**Swagger UI:** https://paysense-upifraud-detection.onrender.com/docs
 
 ---
 
@@ -109,7 +109,7 @@ In `FraudApiService.kt`, change:
 private const val BASE_URL = "http://10.0.2.2:8000/"
 
 // AFTER (live Render deployment)
-private const val BASE_URL = "https://paysense-api.onrender.com/"
+private const val BASE_URL = "https://paysense-upifraud-detection.onrender.com/"
 ```
 
 Rebuild and run the Android app — it now calls the live deployed API.
@@ -152,7 +152,7 @@ https://uptimerobot.com → New Monitor → HTTP → URL: your /health endpoint
 
 ## Sharing the live URL
 
-Once live, `https://paysense-api.onrender.com/docs` is a good link to put
+Once live, `https://paysense-upifraud-detection.onrender.com/docs` is a good link to put
 in the repo description — the Swagger UI there lets anyone explore the
 43-field API and make test predictions directly, without needing to run
 anything locally.

@@ -330,6 +330,24 @@ the cause (suspended free-tier instance, a crash, or an intentional pause)
 is **NOT VERIFIED** — only the symptom (currently down) is confirmed.
 **Production deployment status: DOWN as of this check, cause unknown.**
 
+**Update, 2026-08-29:** the actual cause turned out to be simpler than
+either guess above — the Render dashboard showed the Production
+environment had **zero services in it at all**; the service behind the
+old URL no longer existed. A new Web Service was created
+(`https://paysense-upifraud-detection.onrender.com`) from the same repo.
+Its first deploy also failed, for an unrelated reason: Render's default
+build image used Python 3.14, and `pandas==2.2.2` (pinned in
+`requirements.txt`) has no prebuilt wheel for that version, so pip tried
+to compile it from source and hit a Cython/C++ incompatibility. Fixed by
+setting `PYTHON_VERSION=3.11.0` as an environment variable (the value
+`render.yaml` already specified, but which only auto-applies via a
+Blueprint deploy, not a manually-created service) and redeploying.
+**Re-verified live:** `GET /health` on the new URL now returns
+`status: ok`, `mode: production`, all three scorers active. Every
+reference to the old URL in this repo (Android's `FraudApiService.kt`,
+`README.md`, `DEPLOY.md`, `ARCHITECTURE.md`, and elsewhere) has been
+updated to the new one.
+
 ---
 
 ## 11. What this document does NOT cover

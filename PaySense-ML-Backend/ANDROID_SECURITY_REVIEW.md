@@ -32,7 +32,7 @@ focused on the login flow, token handling, and network layer.
   `POST /auth/token` call and trusts only the server's response — confirmed
   by reading `FraudApiService.kt:127-151`. This was the "auth theater" bug
   found and fixed earlier tonight; re-reading it now confirms the fix holds.
-- **Transport is HTTPS.** `BASE_URL = "https://paysense-api.onrender.com/"`
+- **Transport is HTTPS.** `BASE_URL = "https://paysense-upifraud-detection.onrender.com/"`
   (`FraudApiService.kt:82`). No endpoint in `PaySenseApi` uses `http://`.
 
 ## Fixed and verified via a real build

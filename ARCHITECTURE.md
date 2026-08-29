@@ -196,7 +196,7 @@ GitHub (chapranishika/PaySense-UPIFraud-Detection)
    │     • backend pytest (211 tests)
    │     • Android unit tests + assembleDebug
    │
-   └─→ Render (paysense-api.onrender.com)
+   └─→ Render (paysense-upifraud-detection.onrender.com)
          • uvicorn main:app, single web service
          • NOT RESPONDING as of this audit — see
            PROJECT.md §Known Limitations. Zero bytes

@@ -117,7 +117,7 @@ above, kept for record):**
 | Precision @ deployed threshold (t=0.50) | **91.74%** |
 | Recall @ deployed threshold (t=0.50) | **39.53%** |
 
-**Other verified results:** 258 tests passing (230 backend pytest + 28
+**Other verified results:** 265 tests passing (237 backend pytest + 28
 Android unit tests). Category classifier: 78.0% real-world accuracy
 (deployed), 83.0% (DistilBERT candidate, validated but not deployed —
 see [`EXPERIMENTS.md`](EXPERIMENTS.md)). Android security: 4 findings, 4
@@ -151,7 +151,7 @@ repository.
 ## 9. Testing
 
 ```bash
-# Backend (230 tests)
+# Backend (237 tests)
 cd PaySense-ML-Backend && pytest tests/ -v
 
 # Android (28 tests)
@@ -179,7 +179,7 @@ Verify: `curl http://localhost:8000/health`. Swagger UI at `/docs`.
 
 **Android:** open `PaySense-Android-Client-New/` in Android Studio
 (SDK Platform 34+, JDK 17), let Gradle sync, then Run. The app points at
-`https://paysense-api.onrender.com/` by default (`FraudApiService.kt`'s
+`https://paysense-upifraud-detection.onrender.com/` by default (`FraudApiService.kt`'s
 `BASE_URL`) — see §11 for current deployment status.
 
 ## 11. Limitations

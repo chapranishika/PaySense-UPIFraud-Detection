@@ -202,7 +202,7 @@ document as historical record, not as the current claimed result.
 
 | Other verified results | Value |
 |---|---:|
-| Backend test suite | **230 / 230 passing** |
+| Backend test suite | **237 / 237 passing** |
 | Category classifier, real-world accuracy | **78.0%** deployed (83.0% validated, undeployed — see below) |
 | Android security findings | **4 found, 4 fixed** (3 fully verified, 1 compile-verified) |
 

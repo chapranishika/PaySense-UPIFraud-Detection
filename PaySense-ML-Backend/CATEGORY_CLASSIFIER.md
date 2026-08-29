@@ -169,7 +169,7 @@ new), run via the project's existing `venv/`.
   untouched and applies uniformly to both keyword and API results — below
   threshold or on `null`, it falls through to Tier 3 HITL exactly as before.
 
-`BASE_URL` (`https://paysense-api.onrender.com/`) is unchanged; `/classify`
+`BASE_URL` (`https://paysense-upifraud-detection.onrender.com/`) is unchanged; `/classify`
 is a new relative path on the same host and won't be live there until this
 backend change is deployed — the code is correct and ready for that.
 
