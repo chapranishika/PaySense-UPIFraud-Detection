@@ -93,9 +93,49 @@ body {
 /* Auth Screen */
 #auth-screen {
     justify-content: center;
-    align-items: center;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 24px;
     padding: 20px;
     background: radial-gradient(circle at center, #0f172a 0%, #020617 100%);
+}
+
+.get-app-card {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.get-app-note {
+    font-size: 13px;
+    color: var(--text-secondary, #94a3b8);
+    line-height: 1.5;
+}
+
+.get-app-note a {
+    color: inherit;
+    text-decoration: underline;
+}
+
+.get-app-videos {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.get-app-video-block video {
+    width: 100%;
+    max-width: 100%;
+    border-radius: 12px;
+    display: block;
+    background: #000;
+}
+
+.get-app-video-block p {
+    font-size: 13px;
+    color: var(--text-secondary, #94a3b8);
+    margin-top: 8px;
+    line-height: 1.5;
 }
 
 .auth-card {

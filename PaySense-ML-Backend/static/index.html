@@ -46,6 +46,41 @@
                 <p>🔒 Demo Mode: `paysense` & `guardian2025` · Powered by XGBoost Scorer</p>
             </div>
         </div>
+
+        <div class="auth-card glass get-app-card">
+            <div class="auth-header">
+                <h2>Get the Real App</h2>
+                <p>This dashboard is one client. The primary experience is the Android
+                   app, which parses bank SMS on-device and scores it in real time.</p>
+            </div>
+
+            <a class="btn btn-primary btn-block" href="/static/downloads/paysense-debug.apk" download>
+                <span>Download APK (debug build, ~10MB)</span>
+            </a>
+            <p class="get-app-note">
+                This is a debug build for demo purposes, not a signed release —
+                Android will warn about installing from an unknown source, which
+                is expected. Don't want to install it? Watch it running below.
+            </p>
+
+            <div class="get-app-videos">
+                <div class="get-app-video-block">
+                    <video controls preload="metadata" src="/static/videos/demo1_sms.mp4"></video>
+                    <p>A bank SMS arrives → parsed on-device → scored against the
+                       user's own history → <strong>Safe</strong>, no alert.</p>
+                </div>
+                <div class="get-app-video-block">
+                    <video controls preload="metadata" src="/static/videos/demo2_manual.mp4"></video>
+                    <p>A transaction with a new device, IP mismatch, and an unusual
+                       hour stacked together → <strong>92.7% fraud score, high alert</strong>.</p>
+                </div>
+            </div>
+
+            <p class="get-app-note">
+                Full write-up, architecture, and the model's known limitations:
+                <a href="https://github.com/chapranishika/PaySense-UPIFraud-Detection" target="_blank" rel="noopener">README.md on GitHub</a>.
+            </p>
+        </div>
     </div>
 
     <!-- ========================================== -->
